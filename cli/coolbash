@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  CoolBash CLI
+#  Auteur : Seb (SINCE&CO)
+#  Licence : MIT
+#  Description : Interface CLI pour gérer l'installation et les modules CoolBash
+# =============================================================================
+
+VERSION="0.1.0"
+PREFIX="${HOME}/.coolbash"
+MODULE_DIR="${PREFIX}/modules"
+BASHRC="${HOME}/.bashrc"
+
+# -----------------------------------------------------------------------------
+#  Helpers d'affichage
+log()   { printf "\e[32m[CoolBash]\e[0m %s\n" "$@"; }
+error() { printf "\e[31m[Error]\e[0m %s\n" "$@" >&2; }
+
+# -----------------------------------------------------------------------------
+#  Commandes principales
+cmd_install() {
+  log "Installing CoolBash into ${PREFIX}..."
+  mkdir -p "${MODULE_DIR}"
+  cp -r "$(dirname "$0")/../modules/"* "${MODULE_DIR}/"
+  grep -q "coolbash init" "${BASHRC}" || echo 'source ~/.coolbash/cli/coolbash init' >> "${BASHRC}"
+  log "Installation complete ✅"
+}
+
+cmd_update() {
+  if [ -d "$(dirname "$0")/../.git" ]; then
+    git -C "$(dirname "$0")/.." pull --rebase
+    log "Repository updated."
+  else
+    error "Not a git clone. Please reinstall CoolBash."
+  fi
+}
+
+cmd_verify() {
+  log "Verifying module syntax..."
+  bash -n "${MODULE_DIR}"/*.bash && log "All modules valid ✅" || error "Syntax error detected."
+}
+
+cmd_uninstall() {
+  log "Removing CoolBash..."
+  rm -rf "${PREFIX}"
+  sed -i '/coolbash init/d' "${BASHRC}"
+  log "CoolBash uninstalled."
+}
+
+cmd_init() {
+  # FR : Charge tous les modules ~/.coolbash/modules/*.bash
+  local f
+  for f in "${MODULE_DIR}"/*.bash; do
+    [[ -r "$f" ]] && source "$f"
+  done
+}
+
+cmd_help() {
+  cat <<EOF
+CoolBash v${VERSION} — Modern Bash configuration manager 😎
+
+Usage: coolbash <command>
+
+Commands:
+  install     Install CoolBash into ~/.coolbash
+  update      Update from GitHub (if git clone)
+  verify      Check syntax of all modules
+  uninstall   Remove CoolBash
+  init        Load all modules into current shell
+  help        Display this help message
+
+EOF
+}
+
+# -----------------------------------------------------------------------------
+#  Router
+case "$1" in
+  install)    cmd_install ;;
+  update)     cmd_update ;;
+  verify)     cmd_verify ;;
+  uninstall)  cmd_uninstall ;;
+  init)       cmd_init ;;
+  help|"")    cmd_help ;;
+  *)          error "Unknown command: $1" && cmd_help ;;
+esac
