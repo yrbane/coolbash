@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.0 — 2026-09-07 · « Prompt sans trap, git en un appel, budget de démarrage »
+### Modifié
+- **Durée des commandes sans `trap DEBUG`** : mesure par `PS0` + `EPOCHREALTIME` (bash ≥ 4.4),
+  précision à la milliseconde (`1.23s`, `1m05s`), seuil d'affichage `COOLBASH_PROMPT_MIN_MS`
+  (défaut 1000). Le trap DEBUG, exécuté à chaque commande, était la source des blocages.
+- **Segment git en un seul appel** : `git status --porcelain=v2 --branch` avec
+  `GIT_OPTIONAL_LOCKS=0` (ne bloque jamais), au lieu de trois commandes. Nouveaux indicateurs :
+  `?` non suivis, `!` conflits, `↑N`/`↓N` avance/retard sur l'upstream, sha court si HEAD détachée.
+  Réglages : `COOLBASH_PROMPT_GIT=0`, `COOLBASH_PROMPT_GIT_UNTRACKED=0` (gros dépôts).
+- Le module ne définit plus que des noms `COOLBASH_PROMPT_*` / `_coolbash_prompt_*` : fini
+  `reset`, `bold`, `blue`, `yellow`, `rgb`, `user_fg`… dans le shell de l'utilisateur.
+- Emoji de session forçable ou désactivable via `COOLBASH_PROMPT_EMOJI` (vide = aucun).
+### Ajouté
+- `tests/test_prompt.sh` : absence de trap, mesure réelle en shell interactif, formatage,
+  segment git sur un dépôt jetable (propre, `?`, `*`, `+`, `↑`, détaché), isolation des noms.
+- `tests/test_perf.sh` : budget de démarrage de `init` complet (`COOLBASH_TEST_INIT_BUDGET_MS`,
+  défaut 200 ms ; mesuré ≈ 20 ms).
+
 ## 0.2.4 — 2026-09-07 · « Bannières ASCII partout »
 - Bannières ASCII ajoutées aux modules qui n'en avaient pas : `50-prompt`, `60-completion`,
   `90-local-overrides`. En-têtes harmonisés (`# shellcheck shell=bash`, bannière, séparateur, description FR).
