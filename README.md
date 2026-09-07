@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.2-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -11,7 +11,7 @@
 
 ## 🚀 Quick Install
 
-Installe CoolBash en une seule commande :
+Installe CoolBash en une seule commande (dépôt public requis pour l'URL brute) :
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yrbane/coolbash/main/install.sh | bash
@@ -127,13 +127,16 @@ coolbash/
 ## 🖥️ Example Prompt
 
 ```bash
-🐧 [14:32:10] Seb at sinceco-server  main  .venv  3s
+🐧 [14:32:10]  seb at  laptop  main*+?↑1  .venv  1.23s  ✖ 130
 ~/projects/coolbash $
 ```
 
-🔹 Emoji aléatoire par session
+🔹 Emoji aléatoire par session (aucun en mode `safe`)
 🔹 Couleurs dynamiques (TrueColor si supporté)
 🔹 Segments : utilisateur, host, git, venv, durée, code retour
+🔹 Git en **un seul appel** sans verrou : `*` indexé, `+` modifié, `?` non suivi, `!` conflit,
+   `↑N`/`↓N` avance/retard sur l'upstream, sha court si HEAD détachée
+🔹 Durée mesurée par `PS0` + `EPOCHREALTIME` (sans `trap DEBUG`), affichée à partir de 1 s
 
 ---
 
@@ -158,10 +161,14 @@ make verify             # bash -n + shellcheck
 | Fichier                       | Ce qui est vérifié                                                                 |
 | ----------------------------- | ---------------------------------------------------------------------------------- |
 | `tests/test_cli_isolation.sh` | La CLI sourcée ne laisse **rien** dans le shell hors `COOLBASH_*` / `coolbash*` ; le garde-fou de nvm (`PREFIX`) est rejoué |
-| `tests/test_cli_commands.sh`  | `help`, `version` (cohérente avec le CHANGELOG), ordre de chargement, module en échec, `coolbash` hors clone |
-| `tests/test_modules.sh`       | Chaque module se charge sans erreur ni sortie parasite et renvoie 0                |
-| `tests/test_make.sh`          | `make install` / réinstall / `uninstall` dans un HOME jetable, sur une copie du clone |
+| `tests/test_cli_commands.sh`  | `help`, `version` (cohérente avec le CHANGELOG), `doctor`, ordre de chargement, module en échec, `coolbash` hors clone |
+| `tests/test_modules.sh`       | Chaque module se charge sans erreur ni sortie parasite et renvoie 0 ; locale ; historique écrit dès le prompt suivant ; completion différée |
+| `tests/test_make.sh`          | `make install` / réinstall / `uninstall` / `update` dans un HOME jetable, sur une copie du clone |
 | `tests/test_syntax.sh`        | `bash -n` sur tout + shellcheck                                                    |
+| `tests/test_prompt.sh`        | Pas de trap DEBUG, durée réelle mesurée en shell interactif, formatage, segment git sur un dépôt jetable, isolation des noms du prompt |
+| `tests/test_isolation_modules.sh` | Chaque module n'expose que `COOLBASH_*`, des variables MAJUSCULES, `_coolbash_*` ou l'API publique documentée ici |
+| `tests/test_mode_safe.sh`     | `COOLBASH_MODE=safe` (emoji, git, MOTD, completion) et `COOLBASH_DISABLE`          |
+| `tests/test_perf.sh`          | Budget de démarrage : `init` complet ≤ 200 ms (`COOLBASH_TEST_INIT_BUDGET_MS`)     |
 
 ### ⚠️ Règle d'or de la CLI
 

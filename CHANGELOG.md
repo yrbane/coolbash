@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2 — 2026-09-07 · « README à jour »
+- README : exemple de prompt avec les nouveaux indicateurs git et la durée en ms, tableau des tests
+  complété (`test_prompt`, `test_isolation_modules`, `test_mode_safe`, `test_perf`, `update`, `doctor`).
+  Aucun changement de code.
+
 ## 0.4.1 — 2026-09-07 · « make update passe par les tests »
 - `make update` (et `coolbash update`) enchaîne `git pull --rebase`, `make test`, `make install` :
   une régression tirée du dépôt n'atteint plus le shell. Test : un dépôt jetable avec un test cassé
