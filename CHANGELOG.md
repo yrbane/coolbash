@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 — 2026-09-07 · « make update passe par les tests »
+- `make update` (et `coolbash update`) enchaîne `git pull --rebase`, `make test`, `make install` :
+  une régression tirée du dépôt n'atteint plus le shell. Test : un dépôt jetable avec un test cassé
+  fait échouer `update` et rien n'est installé.
+
 ## 0.4.0 — 2026-09-07 · « Isolation, doctor, mode safe, modules désactivables »
 ### Corrigé
 - **Historique partagé jamais branché** : `__history_sync` n'était pas dans `PROMPT_COMMAND`, les

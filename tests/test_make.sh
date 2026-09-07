@@ -66,4 +66,22 @@ assert_failure "make uninstall PREFIX=<clone> refuse de supprimer le dépôt" \
 assert_file "…et le clone est toujours là" "${CLONE}/Makefile"
 assert_file "…avec ses modules" "${CLONE}/modules/00-core.bash"
 
+# --- update : pull → tests → install, et rien n'est installé si un test échoue -
+upd="${COOLBASH_TEST_TMP}/upd"; mkdir -p "${upd}"
+git init -q --bare -b main "${upd}/origin.git"
+make_fake_clone "${upd}/clone"
+rm -f "${upd}/clone"/tests/test_*.sh
+printf '#!/usr/bin/env bash\nexit 0\n' > "${upd}/clone/tests/test_ok.sh"
+git -C "${upd}/clone" init -q -b main; git -C "${upd}/clone" config user.email t@t; git -C "${upd}/clone" config user.name t
+git -C "${upd}/clone" add -A; git -C "${upd}/clone" commit -qm init
+git -C "${upd}/clone" remote add origin "${upd}/origin.git"; git -C "${upd}/clone" push -q -u origin main
+mkup() { make -s -C "${upd}/clone" update PREFIX="${upd}/.coolbash" BASHRC="${upd}/.bashrc"; }
+assert_success "make update réussit quand les tests passent" mkup
+assert_file "…et installe" "${upd}/.coolbash/cli/coolbash"
+printf '#!/usr/bin/env bash\nexit 1\n' > "${upd}/clone/tests/test_ko.sh"
+git -C "${upd}/clone" add -A; git -C "${upd}/clone" commit -qm "casse"; git -C "${upd}/clone" push -q
+rm -rf "${upd}/.coolbash"
+assert_failure "make update échoue si un test échoue" mkup
+assert_no_path "…et n'installe rien" "${upd}/.coolbash/cli/coolbash"
+
 t_done

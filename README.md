@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -55,7 +55,7 @@ coolbash <command>
 | Commande    | Description                                   |
 | ----------- | --------------------------------------------- |
 | `install`   | Installe CoolBash dans `~/.coolbash`          |
-| `update`    | Met à jour depuis GitHub (clone git requis)   |
+| `update`    | `git pull`, puis tests, puis install (clone git requis) |
 | `verify`    | Vérifie la syntaxe (+ shellcheck si présent)  |
 | `test`      | Lance la suite de tests                       |
 | `uninstall` | Supprime complètement CoolBash                |

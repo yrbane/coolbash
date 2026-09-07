@@ -28,7 +28,9 @@ install:
 	@echo "[CoolBash] Installation complete ✅"
 
 update:
+	@# FR : jamais d'installation sans suite de tests verte après le pull.
 	@git -C "$(ROOT)" pull --rebase
+	@$(MAKE) -C "$(ROOT)" test
 	@$(MAKE) -C "$(ROOT)" install
 
 uninstall:
