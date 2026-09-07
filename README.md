@@ -1,5 +1,9 @@
 # 🧊 CoolBash
 
+[![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](CHANGELOG.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 > **Make your Bash cool again.**  
 > Modern, modular, and maintainable Bash configuration — the *cool* way 😎
 
@@ -10,13 +14,13 @@
 Installe CoolBash en une seule commande :
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/coolbash/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/yrbane/coolbash/main/install.sh | bash
 ````
 
 Ou clone le dépôt manuellement :
 
 ```bash
-git clone https://github.com/yourusername/coolbash.git
+git clone https://github.com/yrbane/coolbash.git
 cd coolbash
 make install
 ```
@@ -51,11 +55,17 @@ coolbash <command>
 | Commande    | Description                                   |
 | ----------- | --------------------------------------------- |
 | `install`   | Installe CoolBash dans `~/.coolbash`          |
-| `update`    | Met à jour depuis GitHub                      |
-| `verify`    | Vérifie la syntaxe de tous les modules        |
+| `update`    | Met à jour depuis GitHub (clone git requis)   |
+| `verify`    | Vérifie la syntaxe (+ shellcheck si présent)  |
+| `test`      | Lance la suite de tests                       |
 | `uninstall` | Supprime complètement CoolBash                |
 | `init`      | Charge tous les modules dans le shell courant |
+| `version`   | Affiche la version                            |
 | `help`      | Affiche l’aide de la CLI                      |
+
+La fonction shell `coolbash` est disponible dès que `~/.bashrc` a chargé CoolBash.
+Les commandes `install`/`update`/`verify`/`test`/`uninstall` délèguent au `Makefile` du clone git,
+retrouvé via `COOLBASH_REPO`, le fichier `~/.coolbash/.repo` écrit à l'installation, ou le parent du script.
 
 ---
 
@@ -78,9 +88,15 @@ coolbash/
 │   ├─ 50-prompt.bash
 │   ├─ 60-completion.bash
 │   ├─ 70-motd.bash
-│   └─ 90-local-overrides.bash
+│   └─ 90-local-overrides.bash  # jamais écrasé par make install
+├─ tests/
+│   ├─ run.sh                 # lanceur (bash pur, zéro dépendance)
+│   ├─ lib.sh                 # assertions
+│   └─ test_*.sh
+├─ .github/workflows/ci.yml
 ├─ Makefile
 ├─ install.sh
+├─ CHANGELOG.md
 ├─ README.md
 └─ LICENSE
 ```
@@ -122,13 +138,36 @@ coolbash/
 
 ## 🛠️ Development
 
-Tester en local :
+Installer depuis le clone et recharger :
 
 ```bash
-make verify
-./cli/coolbash install
+make install
 source ~/.bashrc
 ```
+
+### 🧪 Tests
+
+Suite de tests en bash pur, sans dépendance (shellcheck est utilisé s'il est présent) :
+
+```bash
+make test               # ou : bash tests/run.sh [motif]
+make verify             # bash -n + shellcheck
+```
+
+| Fichier                       | Ce qui est vérifié                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------------------- |
+| `tests/test_cli_isolation.sh` | La CLI sourcée ne laisse **rien** dans le shell hors `COOLBASH_*` / `coolbash*` ; le garde-fou de nvm (`PREFIX`) est rejoué |
+| `tests/test_cli_commands.sh`  | `help`, `version` (cohérente avec le CHANGELOG), ordre de chargement, module en échec, `coolbash` hors clone |
+| `tests/test_modules.sh`       | Chaque module se charge sans erreur ni sortie parasite et renvoie 0                |
+| `tests/test_make.sh`          | `make install` / réinstall / `uninstall` dans un HOME jetable, sur une copie du clone |
+| `tests/test_syntax.sh`        | `bash -n` sur tout + shellcheck                                                    |
+
+### ⚠️ Règle d'or de la CLI
+
+`cli/coolbash` est **sourcé** par `~/.bashrc` : tout ce qu'il définit reste dans le shell de
+l'utilisateur. Variables préfixées `COOLBASH_`, fonctions préfixées `coolbash` / `_coolbash_`,
+jamais de `set -e`. Un `PREFIX=` générique a déjà cassé nvm (« nvm is not compatible with the
+PREFIX environment variable ») — `tests/test_cli_isolation.sh` empêche la récidive.
 
 Mettre à jour depuis le dépôt :
 
@@ -152,7 +191,8 @@ CoolBash respecte la simplicité et la lisibilité :
 * Documentation en **français**
 * Modules **indépendants et ordonnés**
 * Compatibilité **serveur / dev local**
-* **Zéro dépendance** obligatoire (juste Bash)
+* **Zéro dépendance** obligatoire (juste Bash) — tests compris
+* **Bug driven development** : chaque bug rencontré devient un test (voir `CHANGELOG.md`)
 
 ---
 

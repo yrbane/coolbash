@@ -4,82 +4,91 @@
 #  Auteur : Seb (SINCE&CO)
 #  Licence : MIT
 #  Description : Interface CLI pour gérer l'installation et les modules CoolBash
+#
+#  ⚠️  Ce fichier est SOURCÉ par ~/.bashrc (`source .../cli/coolbash init`).
+#      Tout ce qu'il définit reste dans le shell de l'utilisateur. Règles :
+#        - variables préfixées COOLBASH_, fonctions préfixées coolbash / _coolbash_
+#        - jamais de `set -e` ni d'`exit` hors du routeur exécuté
+#      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-VERSION="0.1.0"
-PREFIX="${HOME}/.coolbash"
-MODULE_DIR="${PREFIX}/modules"
-BASHRC="${HOME}/.bashrc"
+COOLBASH_VERSION="0.2.0"
+COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
+COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
 
 # -----------------------------------------------------------------------------
 #  Helpers d'affichage
-log()   { printf "\e[32m[CoolBash]\e[0m %s\n" "$@"; }
-error() { printf "\e[31m[Error]\e[0m %s\n" "$@" >&2; }
+_coolbash_log()   { printf '\e[32m[CoolBash]\e[0m %s\n' "$*"; }
+_coolbash_error() { printf '\e[31m[Error]\e[0m %s\n' "$*" >&2; }
 
 # -----------------------------------------------------------------------------
-#  Commandes principales
-cmd_install() {
-  log "Installing CoolBash into ${PREFIX}..."
-  mkdir -p "${MODULE_DIR}"
-  cp -r "$(dirname "$0")/../modules/"* "${MODULE_DIR}/"
-  grep -q "coolbash init" "${BASHRC}" || echo 'source ~/.coolbash/cli/coolbash init' >> "${BASHRC}"
-  log "Installation complete ✅"
-}
-
-cmd_update() {
-  if [ -d "$(dirname "$0")/../.git" ]; then
-    git -C "$(dirname "$0")/.." pull --rebase
-    log "Repository updated."
-  else
-    error "Not a git clone. Please reinstall CoolBash."
+#  FR : les commandes de gestion délèguent au Makefile du clone git.
+#       Le clone est retrouvé via COOLBASH_REPO, le fichier .repo écrit par
+#       `make install`, ou à défaut le répertoire parent de ce script.
+_coolbash_make() {
+  local repo
+  repo="${COOLBASH_REPO:-$(cat "${COOLBASH_PREFIX}/.repo" 2>/dev/null)}"
+  repo="${repo:-${COOLBASH_ROOT}}"
+  if [[ ! -f "${repo}/Makefile" ]]; then
+    _coolbash_error "Aucun Makefile dans ${repo} : lance cette commande depuis un clone git de CoolBash (ou définis COOLBASH_REPO)."
+    return 1
   fi
+  make -C "${repo}" "$@"
 }
 
-cmd_verify() {
-  log "Verifying module syntax..."
-  bash -n "${MODULE_DIR}"/*.bash && log "All modules valid ✅" || error "Syntax error detected."
-}
+# -----------------------------------------------------------------------------
+#  Commandes
+_coolbash_cmd_install()   { _coolbash_make install; }
+_coolbash_cmd_update()    { _coolbash_make update; }
+_coolbash_cmd_verify()    { _coolbash_make verify; }
+_coolbash_cmd_test()      { _coolbash_make test; }
+_coolbash_cmd_uninstall() { _coolbash_make uninstall; }
+_coolbash_cmd_version()   { printf '%s\n' "${COOLBASH_VERSION}"; }
 
-cmd_uninstall() {
-  log "Removing CoolBash..."
-  rm -rf "${PREFIX}"
-  sed -i '/coolbash init/d' "${BASHRC}"
-  log "CoolBash uninstalled."
-}
-
-cmd_init() {
-  # FR : Charge tous les modules ~/.coolbash/modules/*.bash
+# FR : charge ~/.coolbash/modules/*.bash dans l'ordre lexical (00-… avant 90-…),
+#      le glob bash étant trié. Un module en échec n'empêche pas les suivants.
+_coolbash_cmd_init() {
   local f
-  for f in "${MODULE_DIR}"/*.bash; do
-    [[ -r "$f" ]] && source "$f"
+  for f in "${COOLBASH_MODULE_DIR}"/*.bash; do
+    [[ -r "$f" ]] || continue
+    # shellcheck disable=SC1090
+    source "$f" || _coolbash_error "module en échec : $f"
   done
+  # FR : expose `coolbash <command>` dans le shell courant.
+  coolbash() { bash "${COOLBASH_ROOT}/cli/coolbash" "$@"; }
+  return 0
 }
 
-cmd_help() {
-  cat <<EOF
-CoolBash v${VERSION} — Modern Bash configuration manager 😎
+_coolbash_cmd_help() {
+  cat <<HELP
+CoolBash v${COOLBASH_VERSION} — Modern Bash configuration manager 😎
 
 Usage: coolbash <command>
 
 Commands:
   install     Install CoolBash into ~/.coolbash
-  update      Update from GitHub (if git clone)
+  update      Update from GitHub (git clone required)
   verify      Check syntax of all modules
+  test        Run the test suite
   uninstall   Remove CoolBash
   init        Load all modules into current shell
+  version     Print CoolBash version
   help        Display this help message
 
-EOF
+HELP
 }
 
 # -----------------------------------------------------------------------------
 #  Router
-case "$1" in
-  install)    cmd_install ;;
-  update)     cmd_update ;;
-  verify)     cmd_verify ;;
-  uninstall)  cmd_uninstall ;;
-  init)       cmd_init ;;
-  help|"")    cmd_help ;;
-  *)          error "Unknown command: $1" && cmd_help ;;
+case "${1:-}" in
+  install)    _coolbash_cmd_install ;;
+  update)     _coolbash_cmd_update ;;
+  verify)     _coolbash_cmd_verify ;;
+  test)       _coolbash_cmd_test ;;
+  uninstall)  _coolbash_cmd_uninstall ;;
+  init)       _coolbash_cmd_init ;;
+  version)    _coolbash_cmd_version ;;
+  help|"")    _coolbash_cmd_help ;;
+  *)          _coolbash_error "Unknown command: $1"; _coolbash_cmd_help >&2; false ;;
 esac

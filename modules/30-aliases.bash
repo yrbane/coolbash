@@ -1,0 +1,65 @@
+# shellcheck shell=bash
+#    █████   ██      █████    █████    █████   ██████   █████
+#   ██   ██  ██        █     ██   ██  ██      ██       ██
+#   ███████  ██        █     ███████   █████   █████    █████
+#   ██   ██  ██        █     ██   ██       ██  ██           ██
+#   ██   ██  ██████  █████   ██   ██   █████   ██████   █████    MODULE: ALIASES
+# ─────────────────────────────────────────────────────────────────────────────
+# FR: Alias lisibles, sûrs et idempotents.
+
+# --- LS / EZA / LSD avec fallback sécurisé ---
+if command -v eza >/dev/null 2>&1; then
+  alias ls='eza --group-directories-first --git --icons=auto'
+  alias ll='eza -l --group-directories-first --git --icons=auto'
+  alias la='eza -la --group-directories-first --git --icons=auto'
+elif command -v lsd >/dev/null 2>&1; then
+  alias ls='lsd --group-dirs=first'
+  alias ll='lsd -l --group-dirs=first'
+  alias la='lsd -la --group-dirs=first'
+else
+  # Vérifie si "ls" supporte --group-directories-first
+  if ls --group-directories-first >/dev/null 2>&1; then
+    alias ls='ls --color=auto --group-directories-first'
+    alias ll='ls -alF --color=auto --group-directories-first'
+    alias la='ls -A --color=auto --group-directories-first'
+  else
+    alias ls='ls --color=auto'
+    alias ll='ls -alF --color=auto'
+    alias la='ls -A --color=auto'
+  fi
+fi
+
+# FR: grep colorisé (fgrep/egrep redirigés vers grep moderne).
+alias grep='grep --color=auto'
+alias fgrep='grep -F --color=auto'
+alias egrep='grep -E --color=auto'
+
+# FR: Affichages pratiques.
+alias df='df -h'
+alias free='free -h'
+
+# FR: Sécurité douce (n'affecte pas les scripts).
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+
+# FR: Sudo helpers (NB: espace final sur 'pls' pour chaîner d'autres alias).
+alias please='sudo !!'
+alias pls='sudo '
+alias sano='sudo -E nano'
+
+# FR: APT (seulement si apt présent).
+if command -v apt >/dev/null 2>&1; then
+  alias au='sudo apt update'
+  alias aug='sudo apt update && sudo apt -y upgrade'
+  alias asr='apt search'
+  alias ain='sudo apt -y install'
+  alias arm='sudo apt -y remove'
+  alias apc='sudo apt -y autoremove && sudo apt -y autoclean'
+fi
+
+# FR: Fichiers d'alias utilisateur (optionnel).
+if [[ -f "$HOME/.bash_aliases" ]]; then
+  # shellcheck disable=SC1091
+  . "$HOME/.bash_aliases"
+fi
