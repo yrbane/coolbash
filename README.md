@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.4.2-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -137,6 +137,8 @@ coolbash/
 🔹 Git en **un seul appel** sans verrou : `*` indexé, `+` modifié, `?` non suivi, `!` conflit,
    `↑N`/`↓N` avance/retard sur l'upstream, sha court si HEAD détachée
 🔹 Durée mesurée par `PS0` + `EPOCHREALTIME` (sans `trap DEBUG`), affichée à partir de 1 s
+🔹 À l'Entrée, `PS0` affiche l'heure réelle de départ en gris (`  ⏱ 14:32:41`) et met la commande
+   en cours dans le titre du terminal ; le prompt suivant remet `user@host: dossier`
 
 ---
 
@@ -203,6 +205,9 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_GIT=0`         | Désactive le segment git                                              |
 | `COOLBASH_PROMPT_GIT_UNTRACKED=0` | Ignore les fichiers non suivis (gros dépôts)                        |
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
+| `COOLBASH_PS0_STAMP=0`          | Pas d'heure de départ en gris sous la commande                        |
+| `COOLBASH_PS0_TITLE=0`          | Ne pas mettre la commande en cours dans le titre du terminal          |
+| `COOLBASH_PS0_EXTRA`            | Fragment ajouté à la fin de `PS0` (PS0 personnel)                     |
 | `COOLBASH_MOTD=0` / `MOTD_DISABLE=1` | Pas de MOTD                                                      |
 
 Fichiers utilisateur chargés s'ils existent : `~/.bash_aliases` (par `30-aliases`), `~/.dircolors`

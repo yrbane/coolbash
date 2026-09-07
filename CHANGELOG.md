@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0 — 2026-09-07 · « PS0 utile : heure de départ et titre du terminal »
+### Ajouté
+- À l'Entrée, `PS0` affiche en gris l'heure réelle de départ de la commande (`  ⏱ 14:32:41`) :
+  l'heure du prompt date de son affichage, pas du moment où l'on valide. `COOLBASH_PS0_STAMP=0`.
+- `PS0` met la commande en cours dans le titre du terminal (xterm, tmux, screen, alacritty, foot,
+  kitty, wezterm…) ; `PS1` remet `user@host: dossier`. `COOLBASH_PS0_TITLE=0`.
+- `COOLBASH_PS0_EXTRA` : fragment personnel ajouté à la fin de `PS0`.
+### Modifié
+- Le top départ du chrono passe par un tableau dédié `COOLBASH_PROMPT_PS0_SINK` au lieu de `$_`.
+- Tests : rendu de `PS0` (`${PS0@P}`), titre en shell interactif, absence de `\[ \]` dans `PS0`.
+
 ## 0.4.2 — 2026-09-07 · « README à jour »
 - README : exemple de prompt avec les nouveaux indicateurs git et la durée en ms, tableau des tests
   complété (`test_prompt`, `test_isolation_modules`, `test_mode_safe`, `test_perf`, `update`, `doctor`).

@@ -8,8 +8,10 @@
 # FR: Prompt dynamique (git, venv, durée, code retour, emoji).
 #     - Durée : PS0 + EPOCHREALTIME (bash ≥ 4.4), zéro trap DEBUG.
 #     - Git : un seul `git status --porcelain=v2 --branch`, sans verrou optionnel.
+#     - PS0 : heure de départ en gris + commande dans le titre du terminal.
 #     Réglages : COOLBASH_PROMPT_MIN_MS (défaut 1000), COOLBASH_PROMPT_GIT=0,
-#                COOLBASH_PROMPT_GIT_UNTRACKED=0 (ignore les fichiers non suivis).
+#                COOLBASH_PROMPT_GIT_UNTRACKED=0, COOLBASH_PS0_STAMP=0,
+#                COOLBASH_PS0_TITLE=0, COOLBASH_PS0_EXTRA="…".
 
 if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4) )); then
   return 0
@@ -55,15 +57,47 @@ else
   COOLBASH_PROMPT_EMOJI="${COOLBASH_PROMPT_EMOJI-$(_coolbash_prompt_pick_emoji)}"
 fi
 
-# --- Durée de la dernière commande (PS0, sans trap) --------------------------
-# FR : PS0 est développé dans le shell courant juste avant l'exécution d'une
-#      commande : l'affectation arithmétique placée dans un indice y persiste,
-#      et `${…:+}` garantit qu'il ne s'affiche rien. EPOCHREALTIME suit le
-#      séparateur décimal de la locale (« . » ou « , »), d'où le nettoyage.
+# --- PS0 : développé à l'Entrée, juste avant l'exécution de la commande -------
+# FR : trois rôles, dans cet ordre :
+#      1. top départ du chrono : l'affectation arithmétique placée dans un
+#         indice de tableau persiste dans le shell courant, et `${…:+}` garantit
+#         qu'elle n'affiche rien. EPOCHREALTIME suit le séparateur décimal de
+#         la locale (« . » ou « , »), d'où le nettoyage ;
+#      2. titre du terminal = commande en cours (COOLBASH_PS0_TITLE=0 pour
+#         désactiver) ; PS1 le remet ensuite à « user@host: dossier » ;
+#      3. heure réelle de départ en gris (COOLBASH_PS0_STAMP=0 pour désactiver),
+#         car l'heure du prompt date de son affichage, pas de l'Entrée.
+#      COOLBASH_PS0_EXTRA est ajouté tel quel à la fin (PS0 personnel).
+#      Pas de `\[ \]` ici : hors PS1/PS2, bash les imprimerait.
 COOLBASH_PROMPT_T0=0
 COOLBASH_PROMPT_LAST_MS=0
-# shellcheck disable=SC2016
-PS0='${_[$((COOLBASH_PROMPT_T0 = ${EPOCHREALTIME//[.,]/}))]:+}'
+COOLBASH_PROMPT_PS0_SINK=()
+
+_coolbash_prompt_ps0_title() {
+  local n cmd
+  read -r n cmd <<< "$(HISTTIMEFORMAT='' builtin history 1)"
+  [[ -n "${cmd:-}" ]] || return 0
+  printf '\e]0;%s\a' "${cmd:0:70}"
+}
+
+_coolbash_prompt_ps0_build() {
+  # shellcheck disable=SC2016
+  local ps0='${COOLBASH_PROMPT_PS0_SINK[$((COOLBASH_PROMPT_T0 = ${EPOCHREALTIME//[.,]/}))]:+}'
+  if [[ "${COOLBASH_PS0_TITLE:-1}" != 0 ]] && _coolbash_prompt_term_has_title; then
+    # shellcheck disable=SC2016
+    ps0+='$(_coolbash_prompt_ps0_title)'
+  fi
+  [[ "${COOLBASH_PS0_STAMP:-1}" != 0 ]] && ps0+='\e[2m  ⏱ \t\e[0m\n'
+  PS0="${ps0}${COOLBASH_PS0_EXTRA:-}"
+}
+
+_coolbash_prompt_term_has_title() {
+  case "${TERM:-}" in
+    xterm*|rxvt*|tmux*|screen*|alacritty*|foot*|kitty*|wezterm*|contour*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+_coolbash_prompt_ps0_build
 
 _coolbash_prompt_elapsed() {
   local now="${EPOCHREALTIME//[.,]/}"
@@ -144,9 +178,11 @@ _coolbash_prompt_build() {
   seg="$(_coolbash_prompt_venv)";      [[ -n "$seg" ]] && venv=" ${c[info]}${s[venv]} ${seg}${c[reset]}"
   seg="$(_coolbash_prompt_duration)";  [[ -n "$seg" ]] && dur=" ${c[info]}${s[time]} ${seg}${c[reset]}"
   seg="$(_coolbash_prompt_status "$ec")"; [[ -n "$seg" ]] && err=" ${c[err]} ${seg} ${c[reset]}"
-  PS1=$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}[\t]${c[reset]} ${who} at ${host}${git}${venv}${dur}${err}"$'\n'"${c[bold]}${c[path]}\w${c[reset]} ${chevron} "
+  local title=""
+  [[ "${COOLBASH_PS0_TITLE:-1}" != 0 ]] && _coolbash_prompt_term_has_title && title='\[\e]0;\u@\h: \w\a\]'
+  PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}[\t]${c[reset]} ${who} at ${host}${git}${venv}${dur}${err}"$'\n'"${c[bold]}${c[path]}\w${c[reset]} ${chevron} "
 }
 
 # --- Enregistrement dans PROMPT_COMMAND (helper commun de 00-core) -----------
 _coolbash_prompt_command_add _coolbash_prompt_build
-unset -f _coolbash_prompt_pick_emoji _coolbash_prompt_init_colors _coolbash_prompt_rgb _coolbash_prompt_bgrgb
+unset -f _coolbash_prompt_pick_emoji _coolbash_prompt_init_colors _coolbash_prompt_rgb _coolbash_prompt_bgrgb _coolbash_prompt_ps0_build

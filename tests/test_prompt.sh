@@ -17,7 +17,18 @@ with_prompt() { HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c 'source "
 # --- 1. Plus aucun trap DEBUG, la durée passe par PS0 -----------------------
 assert_empty "aucun trap DEBUG après chargement" "$(with_prompt 'trap -p DEBUG')"
 assert_contains "PS0 mesure le départ via EPOCHREALTIME" "$(with_prompt 'printf %s "$PS0"')" "EPOCHREALTIME"
-assert_contains "PS0 n'affiche rien" "$(with_prompt 'printf "[%s]" "${PS0@P}"')" "[]"
+assert_contains "PS0 muet si horodatage et titre désactivés" "$(COOLBASH_PS0_STAMP=0 COOLBASH_PS0_TITLE=0 with_prompt 'printf "[%s]" "${PS0@P}"')" "[]"
+stamp="$(TERM=dumb with_prompt 'printf "%s" "${PS0@P}"')"
+assert_contains "PS0 affiche l'heure de départ (⏱)" "${stamp}" "⏱"
+assert_eq "…au format HH:MM:SS, en gris, suivi d'un retour à la ligne" "1" "$(printf '%s' "${stamp}" | grep -cE $'\e\[2m  ⏱ [0-9]{2}:[0-9]{2}:[0-9]{2}\e\[0m$')"
+assert_contains "PS0 met la commande dans le titre du terminal (xterm)" "$(TERM=xterm-256color with_prompt 'printf %s "$PS0"')" "_coolbash_prompt_ps0_title"
+assert_eq "…mais pas sur un terminal sans titre (dumb)" "0" "$(TERM=dumb with_prompt 'printf %s "$PS0"' | grep -c ps0_title)"
+assert_contains "PS1 remet le titre à user@host: dossier" "$(TERM=xterm with_prompt '_coolbash_prompt_build; printf %s "$PS1"')" '\e]0;\u@\h: \w\a'
+assert_contains "COOLBASH_PS0_EXTRA est conservé en fin de PS0" "$(COOLBASH_PS0_EXTRA='MON-PS0' with_prompt 'printf %s "$PS0"')" "MON-PS0"
+assert_eq "aucun \\[ \\] dans PS0 (bash les imprimerait)" "0" "$(with_prompt 'printf %s "$PS0"' | grep -cF '\[')"
+title="$(printf 'source "%s"; source "%s"\ntrue\n' "${CORE}" "${PROMPT}" \
+        | TERM=xterm HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -i 2>&1 | grep -c $'\e]0;true\a')"
+assert_eq "en shell interactif, le titre reçoit la commande saisie" "1" "${title}"
 assert_contains "_coolbash_prompt_build est dans PROMPT_COMMAND" "$(with_prompt 'printf %s "${PROMPT_COMMAND[*]}"')" "_coolbash_prompt_build"
 
 # --- 2. Durée mesurée en shell interactif (PS0 réel) ------------------------
