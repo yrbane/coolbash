@@ -1,13 +1,11 @@
-# =============================================================================
-#  CoolBash Prompt Module (50-prompt.bash)
-#  Version: 0.1.2 - Safe Trap Edition
-# =============================================================================
-#  ✅ Corrige :
-#    - warning "grep: stray \ before -"
-#    - erreur "opérateur unaire attendu"
-#    - blocage terminal au démarrage
-#    - crash sur VIRTUAL_ENV non défini
-# =============================================================================
+# shellcheck shell=bash
+#  ██████  ██████   █████  ███    ███ ██████  ███████
+#  ██   ██ ██   ██ ██   ██ ████  ████ ██   ██    █
+#  ██████  ██████  ██   ██ ██ ████ ██ ██████     █
+#  ██      ██   ██ ██   ██ ██  ██  ██ ██         █
+#  ██      ██   ██  █████  ██      ██ ██         █      MODULE: PROMPT
+# ─────────────────────────────────────────────────────────────────────────────
+# FR: Prompt dynamique (git, venv, durée, code retour, emoji), trap DEBUG sûr.
 
 # --- Color helpers -----------------------------------------------------------
 rgb()   { printf "\e[38;2;%s;%s;%sm" "$1" "$2" "$3"; }

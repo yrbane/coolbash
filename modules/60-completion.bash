@@ -1,7 +1,11 @@
-# =============================================================================
-#  CoolBash Completions (60-completion.bash)
-#  Version: Safe Lazy-Load Edition
-# =============================================================================
+# shellcheck shell=bash
+#   █████   █████  ███    ███ ██████  ██      ██████  ███████ █████  █████  ██   ██
+#  ██      ██   ██ ████  ████ ██   ██ ██      ██         █      █   ██   ██ ███  ██
+#  ██      ██   ██ ██ ████ ██ ██████  ██      █████      █      █   ██   ██ ██ ██ ██
+#  ██      ██   ██ ██  ██  ██ ██      ██      ██         █      █   ██   ██ ██  ███
+#   █████   █████  ██      ██ ██      ██████  ██████     █    █████  █████  ██   ██   MODULE: COMPLETION
+# ─────────────────────────────────────────────────────────────────────────────
+# FR: Completions Bash/Git/fzf chargées de façon différée (évite le blocage).
 
 # FR: Fonction de chargement différé (évite blocage terminal)
 _load_completions_safely() {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4 — 2026-09-07 · « Bannières ASCII partout »
+- Bannières ASCII ajoutées aux modules qui n'en avaient pas : `50-prompt`, `60-completion`,
+  `90-local-overrides`. En-têtes harmonisés (`# shellcheck shell=bash`, bannière, séparateur, description FR).
+- Aucun changement fonctionnel.
+
 ## 0.2.3 — 2026-09-07 · « Lint des tests (suite) »
 - shellcheck (info) sur `tests/test_modules.sh` : SC2016, SC2018, SC2019. Aucun changement fonctionnel.
 
