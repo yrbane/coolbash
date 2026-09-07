@@ -178,8 +178,12 @@ _coolbash_prompt_build() {
   seg="$(_coolbash_prompt_venv)";      [[ -n "$seg" ]] && venv=" ${c[info]}${s[venv]} ${seg}${c[reset]}"
   seg="$(_coolbash_prompt_duration)";  [[ -n "$seg" ]] && dur=" ${c[info]}${s[time]} ${seg}${c[reset]}"
   seg="$(_coolbash_prompt_status "$ec")"; [[ -n "$seg" ]] && err=" ${c[err]} ${seg} ${c[reset]}"
+  # FR : titre remis par PS1, sauf si la distribution le fait déjà dans
+  #      PROMPT_COMMAND (Arch : /etc/bash.bashrc écrit \033]0;…).
   local title=""
-  [[ "${COOLBASH_PS0_TITLE:-1}" != 0 ]] && _coolbash_prompt_term_has_title && title='\[\e]0;\u@\h: \w\a\]'
+  if [[ "${COOLBASH_PS0_TITLE:-1}" != 0 && "${PROMPT_COMMAND[*]}" != *']0;'* ]] && _coolbash_prompt_term_has_title; then
+    title='\[\e]0;\u@\h: \w\a\]'
+  fi
   PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}[\t]${c[reset]} ${who} at ${host}${git}${venv}${dur}${err}"$'\n'"${c[bold]}${c[path]}\w${c[reset]} ${chevron} "
 }
 

@@ -10,7 +10,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 CLI="${COOLBASH_TEST_ROOT}/cli/coolbash"
 MODS="${COOLBASH_TEST_ROOT}/modules"
-run() { HOME="${COOLBASH_TEST_TMP}" COOLBASH_MODULE_DIR="${MODS}" bash --norc --noprofile -c 'source "$1" init; shift; eval "$*"' _ "${CLI}" "$@" 2>&1; }
+# FR : env -u — le shell qui lance les tests peut avoir hérité de ces variables
+#      exportées par un CoolBash déjà chargé (MOTD déjà affiché…).
+run() { env -u COOLBASH_MOTD_SHOWN -u COOLBASH_COMPLETION_LOADED HOME="${COOLBASH_TEST_TMP}" COOLBASH_MODULE_DIR="${MODS}" bash --norc --noprofile -c 'source "$1" init; shift; eval "$*"' _ "${CLI}" "$@" 2>&1; }
 
 # --- mode par défaut ---------------------------------------------------------
 assert_eq "utilisateur normal : COOLBASH_MODE=normal" "normal" "$(run 'echo "$COOLBASH_MODE"')"

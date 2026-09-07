@@ -23,6 +23,7 @@ assert_contains "PS0 affiche l'heure de départ (⏱)" "${stamp}" "⏱"
 assert_eq "…au format HH:MM:SS, en gris, suivi d'un retour à la ligne" "1" "$(printf '%s' "${stamp}" | grep -cE $'\e\[2m  ⏱ [0-9]{2}:[0-9]{2}:[0-9]{2}\e\[0m$')"
 assert_contains "PS0 met la commande dans le titre du terminal (xterm)" "$(TERM=xterm-256color with_prompt 'printf %s "$PS0"')" "_coolbash_prompt_ps0_title"
 assert_eq "…mais pas sur un terminal sans titre (dumb)" "0" "$(TERM=dumb with_prompt 'printf %s "$PS0"' | grep -c ps0_title)"
+assert_eq "…sauf si PROMPT_COMMAND pose déjà un titre (Arch)" "0" "$(TERM=xterm with_prompt 'PROMPT_COMMAND="printf \"\\033]0;x\\007\"; $PROMPT_COMMAND"; _coolbash_prompt_build; printf %s "$PS1"' | grep -c ']0;')"
 assert_contains "PS1 remet le titre à user@host: dossier" "$(TERM=xterm with_prompt '_coolbash_prompt_build; printf %s "$PS1"')" '\e]0;\u@\h: \w\a'
 assert_contains "COOLBASH_PS0_EXTRA est conservé en fin de PS0" "$(COOLBASH_PS0_EXTRA='MON-PS0' with_prompt 'printf %s "$PS0"')" "MON-PS0"
 assert_eq "aucun \\[ \\] dans PS0 (bash les imprimerait)" "0" "$(with_prompt 'printf %s "$PS0"' | grep -cF '\[')"

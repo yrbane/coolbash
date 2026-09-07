@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1 — 2026-09-07 · « Titre unique, tests hermétiques »
+- `PS1` ne repose plus le titre du terminal quand la distribution le fait déjà dans
+  `PROMPT_COMMAND` (Arch, `/etc/bash.bashrc`) : il était écrit deux fois.
+- `tests/test_mode_safe.sh` n'hérite plus de `COOLBASH_MOTD_SHOWN` / `COOLBASH_COMPLETION_LOADED`
+  exportés par un CoolBash déjà chargé dans le shell qui lance les tests.
+
 ## 0.5.0 — 2026-09-07 · « PS0 utile : heure de départ et titre du terminal »
 ### Ajouté
 - À l'Entrée, `PS0` affiche en gris l'heure réelle de départ de la commande (`  ⏱ 14:32:41`) :
