@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.0 — 2026-09-07 · « Icônes dans le prompt »
+### Ajouté
+- Icônes Nerd Font devant chaque segment du prompt : utilisateur, host, branche git, venv, durée,
+  dossier courant, cadenas pour root. Le tableau `COOLBASH_PROMPT_SYM` existait mais ne
+  contenait que des chaînes vides (hors root) : le prompt n'affichait aucune icône.
+- `COOLBASH_PROMPT_ICONS` : `nerd` (défaut), `basic` (symboles Unicode standard `⎇ ⚗ ⧗ ⚠`,
+  sans police spéciale), `0` (aucune). Résolution par défaut : `0` sur la console (`TERM=linux`),
+  `basic` en mode `safe`, `nerd` sinon ; une valeur inconnue retombe sur `basic`.
+### Modifié
+- Les glyphes Nerd Font sont écrits `$'\uXXXX'` dans le source (lisibles, pas de caractère
+  invisible) ; plus d'espace orpheline devant `\u`, `\h` ou `\w` quand l'icône est absente.
+- Tests : jeu complet en mode `nerd`, absence de glyphe zone privée en `basic`/`0`, résolution
+  du mode (`TERM=linux`, safe, réglage explicite, valeur inconnue).
+
 ## 0.5.1 — 2026-09-07 · « Titre unique, tests hermétiques »
 - `PS1` ne repose plus le titre du terminal quand la distribution le fait déjà dans
   `PROMPT_COMMAND` (Arch, `/etc/bash.bashrc`) : il était écrit deux fois.

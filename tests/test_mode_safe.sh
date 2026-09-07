@@ -22,6 +22,8 @@ assert_eq "COOLBASH_MODE est respecté s'il est déjà défini" "safe" "$(COOLBA
 assert_eq "safe : pas d'emoji dans le prompt" "" "$(COOLBASH_MODE=safe run 'echo "$COOLBASH_PROMPT_EMOJI"')"
 assert_eq "normal : un emoji de session" "1" "$(run '[[ -n "$COOLBASH_PROMPT_EMOJI" ]] && echo 1')"
 assert_eq "safe : segment git désactivé même dans un dépôt" "" "$(cd "${COOLBASH_TEST_ROOT}" && COOLBASH_MODE=safe run '_coolbash_prompt_git')"
+assert_eq "safe : icônes « basic » (pas de glyphe Nerd Font)" "basic" "$(TERM=xterm COOLBASH_MODE=safe run 'echo "$COOLBASH_PROMPT_ICONS"')"
+assert_eq "safe : COOLBASH_PROMPT_ICONS explicite respecté" "nerd" "$(TERM=xterm COOLBASH_MODE=safe COOLBASH_PROMPT_ICONS=nerd run 'echo "$COOLBASH_PROMPT_ICONS"')"
 assert_eq "safe : MOTD désactivé" "off" "$(MOTD_DISABLE='' COOLBASH_MODE=safe run '_coolbash_motd_enabled && echo on || echo off')"
 assert_eq "normal : MOTD activé" "on" "$(MOTD_DISABLE='' run '_coolbash_motd_enabled && echo on || echo off')"
 assert_eq "MOTD_DISABLE reste honoré" "off" "$(MOTD_DISABLE=1 run '_coolbash_motd_enabled && echo on || echo off')"

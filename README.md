@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.5.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -37,7 +37,7 @@ source ~/.bashrc
 
 ✨ **Modular design** — chaque domaine (historique, prompt, couleurs, etc.) a son module dédié.
 🧠 **Documenté** — commentaires détaillés en français, code en anglais.
-🎨 **Prompt stylé** — couleurs adaptatives, emoji différents pour root et user.
+🎨 **Prompt stylé** — couleurs adaptatives, icônes Nerd Font, emoji différents pour root et user.
 ⚡ **Performant** — historique partagé sans rechargement complet, prompt léger.
 🔐 **Safe by default** — `umask`, `noclobber`, et alias protecteurs (`rm -i`, `cp -i`, `mv -i`).
 🐧 **Compatible serveurs** — fonctionne sans dépendances inutiles.
@@ -117,7 +117,7 @@ coolbash/
 | `33-devtools.bash`        | Symfony, PHP, yt-dlp                                |
 | `34-python-venv.bash`     | Helpers pour venv Python                            |
 | `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`…) |
-| `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji)          |
+| `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji, icônes)  |
 | `60-completion.bash`      | Completions Bash/Git/fzf                            |
 | `70-motd.bash`            | Fortune + neofetch (affichage une fois par session) |
 | `90-local-overrides.bash` | Surcharges locales (vide par défaut)                |
@@ -127,11 +127,16 @@ coolbash/
 ## 🖥️ Example Prompt
 
 ```bash
-🐧 [14:32:10]  seb at  laptop  main*+?↑1  .venv  1.23s  ✖ 130
-~/projects/coolbash $
+🐧 [14:32:10]  seb at  laptop   main*+?↑1   .venv   1.23s  ✖ 130
+ ~/projects/coolbash $
 ```
 
 🔹 Emoji aléatoire par session (aucun en mode `safe`)
+🔹 Icônes **Nerd Font** devant chaque segment (utilisateur, host, branche, venv, durée, dossier,
+   cadenas pour root) : il faut une [Nerd Font](https://www.nerdfonts.com/) dans le terminal.
+   `COOLBASH_PROMPT_ICONS=basic` bascule sur des symboles Unicode standard (`⎇ ⚗ ⧗ ⚠`),
+   `COOLBASH_PROMPT_ICONS=0` les retire. Par défaut : `basic` en mode `safe`, `0` sur la console
+   (`TERM=linux`), `nerd` sinon
 🔹 Couleurs dynamiques (TrueColor si supporté)
 🔹 Segments : utilisateur, host, git, venv, durée, code retour
 🔹 Git en **un seul appel** sans verrou : `*` indexé, `+` modifié, `?` non suivi, `!` conflit,
@@ -167,7 +172,7 @@ make verify             # bash -n + shellcheck
 | `tests/test_modules.sh`       | Chaque module se charge sans erreur ni sortie parasite et renvoie 0 ; locale ; historique écrit dès le prompt suivant ; completion différée |
 | `tests/test_make.sh`          | `make install` / réinstall / `uninstall` / `update` dans un HOME jetable, sur une copie du clone |
 | `tests/test_syntax.sh`        | `bash -n` sur tout + shellcheck                                                    |
-| `tests/test_prompt.sh`        | Pas de trap DEBUG, durée réelle mesurée en shell interactif, formatage, segment git sur un dépôt jetable, isolation des noms du prompt |
+| `tests/test_prompt.sh`        | Pas de trap DEBUG, durée réelle mesurée en shell interactif, formatage, segment git sur un dépôt jetable, isolation des noms du prompt, icônes (`nerd`/`basic`/`0`, résolution du mode) |
 | `tests/test_isolation_modules.sh` | Chaque module n'expose que `COOLBASH_*`, des variables MAJUSCULES, `_coolbash_*` ou l'API publique documentée ici |
 | `tests/test_mode_safe.sh`     | `COOLBASH_MODE=safe` (emoji, git, MOTD, completion) et `COOLBASH_DISABLE`          |
 | `tests/test_perf.sh`          | Budget de démarrage : `init` complet ≤ 200 ms (`COOLBASH_TEST_INIT_BUDGET_MS`)     |
@@ -205,6 +210,7 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_GIT=0`         | Désactive le segment git                                              |
 | `COOLBASH_PROMPT_GIT_UNTRACKED=0` | Ignore les fichiers non suivis (gros dépôts)                        |
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
+| `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
 | `COOLBASH_PS0_STAMP=0`          | Pas d'heure de départ en gris sous la commande                        |
 | `COOLBASH_PS0_TITLE=0`          | Ne pas mettre la commande en cours dans le titre du terminal          |
 | `COOLBASH_PS0_EXTRA`            | Fragment ajouté à la fin de `PS0` (PS0 personnel)                     |

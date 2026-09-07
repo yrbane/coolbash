@@ -5,13 +5,15 @@
 #  ██      ██   ██ ██   ██ ██  ██  ██ ██         █
 #  ██      ██   ██  █████  ██      ██ ██         █      MODULE: PROMPT
 # ─────────────────────────────────────────────────────────────────────────────
-# FR: Prompt dynamique (git, venv, durée, code retour, emoji).
+# FR: Prompt dynamique (git, venv, durée, code retour, emoji, icônes).
 #     - Durée : PS0 + EPOCHREALTIME (bash ≥ 4.4), zéro trap DEBUG.
 #     - Git : un seul `git status --porcelain=v2 --branch`, sans verrou optionnel.
 #     - PS0 : heure de départ en gris + commande dans le titre du terminal.
+#     - Icônes : Nerd Font par défaut, repli « basic » (Unicode standard) ou 0.
 #     Réglages : COOLBASH_PROMPT_MIN_MS (défaut 1000), COOLBASH_PROMPT_GIT=0,
 #                COOLBASH_PROMPT_GIT_UNTRACKED=0, COOLBASH_PS0_STAMP=0,
-#                COOLBASH_PS0_TITLE=0, COOLBASH_PS0_EXTRA="…".
+#                COOLBASH_PS0_TITLE=0, COOLBASH_PS0_EXTRA="…",
+#                COOLBASH_PROMPT_ICONS=nerd|basic|0.
 
 if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4) )); then
   return 0
@@ -19,7 +21,38 @@ fi
 
 # --- Couleurs & symboles -----------------------------------------------------
 declare -gA COOLBASH_PROMPT_COLOR COOLBASH_PROMPT_SYM
-COOLBASH_PROMPT_SYM=([branch]="" [time]="" [venv]="" [host]="" [user]="" [root]="󰌾")
+
+# FR : jeu d'icônes du prompt. Trois modes :
+#      - nerd  : glyphes Nerd Font (zones privées Unicode, écrits en `\uXXXX`
+#                pour rester lisibles dans le source) — il faut une Nerd Font
+#                dans le terminal ;
+#      - basic : symboles Unicode standard, rendus par n'importe quelle police ;
+#      - 0     : aucune icône.
+#      Défaut : 0 sur la console (TERM=linux), basic en mode safe, nerd sinon.
+#      Une valeur explicite de COOLBASH_PROMPT_ICONS est toujours respectée ;
+#      une valeur inconnue retombe sur basic.
+_coolbash_prompt_init_icons() {
+  local -n s=COOLBASH_PROMPT_SYM
+  if [[ -z "${COOLBASH_PROMPT_ICONS:-}" ]]; then
+    if [[ "${TERM:-}" == linux ]]; then COOLBASH_PROMPT_ICONS=0
+    elif _coolbash_safe; then COOLBASH_PROMPT_ICONS=basic
+    else COOLBASH_PROMPT_ICONS=nerd
+    fi
+  fi
+  case "${COOLBASH_PROMPT_ICONS}" in
+    nerd)
+      # FR : nf-fa-user, nf-fa-desktop, nf-dev-git_branch, nf-dev-python,
+      #      nf-fa-hourglass_half, nf-fa-folder_open, nf-md-lock.
+      s=([user]=$'\uf007' [host]=$'\uf108' [branch]=$'\ue725' [venv]=$'\ue73c'
+         [time]=$'\uf252' [path]=$'\uf07c' [root]=$'\U000f033e') ;;
+    0)
+      s=([user]="" [host]="" [branch]="" [venv]="" [time]="" [path]="" [root]="") ;;
+    *)
+      COOLBASH_PROMPT_ICONS=basic
+      s=([user]="" [host]="" [branch]="⎇" [venv]="⚗" [time]="⧗" [path]="" [root]="⚠") ;;
+  esac
+}
+_coolbash_prompt_init_icons
 
 _coolbash_prompt_rgb()   { printf '\[\e[38;2;%s;%s;%sm\]' "$1" "$2" "$3"; }
 _coolbash_prompt_bgrgb() { printf '\[\e[48;2;%s;%s;%sm\]' "$1" "$2" "$3"; }
@@ -165,18 +198,20 @@ _coolbash_prompt_build() {
   _coolbash_prompt_elapsed
   local -n c=COOLBASH_PROMPT_COLOR s=COOLBASH_PROMPT_SYM
   local who host chevron git="" venv="" dur="" err="" seg
+  # FR : `${s[x]:+${s[x]} }` — icône suivie d'une espace, ou rien du tout
+  #      (mode 0) : jamais d'espace orpheline.
   if [[ $EUID -eq 0 ]]; then
-    who="${c[root]}${c[bold]}${s[root]} root${c[reset]}"
-    host="${c[root_accent]} ${s[host]} \h${c[reset]}"
+    who="${c[root]}${c[bold]}${s[root]:+${s[root]} }root${c[reset]}"
+    host="${c[root_accent]} ${s[host]:+${s[host]} }\h${c[reset]}"
     chevron="${c[root]}#${c[reset]}"
   else
-    who="${c[user]}${c[bold]}${s[user]} \u${c[reset]}"
-    host="${c[user_accent]} ${s[host]} \h${c[reset]}"
+    who="${c[user]}${c[bold]}${s[user]:+${s[user]} }\u${c[reset]}"
+    host="${c[user_accent]} ${s[host]:+${s[host]} }\h${c[reset]}"
     chevron="${c[user]}\$${c[reset]}"
   fi
-  seg="$(_coolbash_prompt_git)";       [[ -n "$seg" ]] && git=" ${c[git]}${s[branch]} ${seg}${c[reset]}"
-  seg="$(_coolbash_prompt_venv)";      [[ -n "$seg" ]] && venv=" ${c[info]}${s[venv]} ${seg}${c[reset]}"
-  seg="$(_coolbash_prompt_duration)";  [[ -n "$seg" ]] && dur=" ${c[info]}${s[time]} ${seg}${c[reset]}"
+  seg="$(_coolbash_prompt_git)";       [[ -n "$seg" ]] && git=" ${c[git]}${s[branch]:+${s[branch]} }${seg}${c[reset]}"
+  seg="$(_coolbash_prompt_venv)";      [[ -n "$seg" ]] && venv=" ${c[info]}${s[venv]:+${s[venv]} }${seg}${c[reset]}"
+  seg="$(_coolbash_prompt_duration)";  [[ -n "$seg" ]] && dur=" ${c[info]}${s[time]:+${s[time]} }${seg}${c[reset]}"
   seg="$(_coolbash_prompt_status "$ec")"; [[ -n "$seg" ]] && err=" ${c[err]} ${seg} ${c[reset]}"
   # FR : titre remis par PS1, sauf si la distribution le fait déjà dans
   #      PROMPT_COMMAND (Arch : /etc/bash.bashrc écrit \033]0;…).
@@ -184,9 +219,9 @@ _coolbash_prompt_build() {
   if [[ "${COOLBASH_PS0_TITLE:-1}" != 0 && "${PROMPT_COMMAND[*]}" != *']0;'* ]] && _coolbash_prompt_term_has_title; then
     title='\[\e]0;\u@\h: \w\a\]'
   fi
-  PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}[\t]${c[reset]} ${who} at ${host}${git}${venv}${dur}${err}"$'\n'"${c[bold]}${c[path]}\w${c[reset]} ${chevron} "
+  PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}[\t]${c[reset]} ${who} at ${host}${git}${venv}${dur}${err}"$'\n'"${c[bold]}${c[path]}${s[path]:+${s[path]} }\w${c[reset]} ${chevron} "
 }
 
 # --- Enregistrement dans PROMPT_COMMAND (helper commun de 00-core) -----------
 _coolbash_prompt_command_add _coolbash_prompt_build
-unset -f _coolbash_prompt_pick_emoji _coolbash_prompt_init_colors _coolbash_prompt_rgb _coolbash_prompt_bgrgb _coolbash_prompt_ps0_build
+unset -f _coolbash_prompt_pick_emoji _coolbash_prompt_init_colors _coolbash_prompt_init_icons _coolbash_prompt_rgb _coolbash_prompt_bgrgb _coolbash_prompt_ps0_build

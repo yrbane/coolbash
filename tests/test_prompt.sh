@@ -88,4 +88,29 @@ leaks="$(HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c '
 ' _ "${CORE}" "${PROMPT}" "${COOLBASH_TEST_TMP}")"
 assert_empty "50-prompt ne définit que COOLBASH_*, PS0/PS1/PROMPT_COMMAND et _coolbash_*" "${leaks}"
 
+# --- 7. Icônes : Nerd Font par défaut, repli « basic », désactivables --------
+# FR : les glyphes Nerd Font vivent dans les zones privées Unicode (PUA) ;
+#      un prompt sans icône Nerd Font n'en contient donc aucun.
+ps1_of() { with_prompt '_coolbash_prompt_build; printf %s "$PS1"'; }
+pua_count() { LC_ALL=C.UTF-8 grep -cP '[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}]'; }
+assert_eq "mode résolu par défaut : nerd" "nerd" "$(TERM=xterm-256color with_prompt 'echo "$COOLBASH_PROMPT_ICONS"')"
+assert_empty "nerd : toutes les icônes sont définies" \
+  "$(with_prompt 'for k in user host branch venv time path root; do [[ -n "${COOLBASH_PROMPT_SYM[$k]}" ]] || echo "$k"; done')"
+assert_contains "nerd : icône utilisateur devant \\u" "$(ps1_of)" $'\uf007 \\u'
+assert_contains "nerd : icône hôte devant \\h" "$(ps1_of)" $'\uf108 \\h'
+assert_contains "nerd : icône dossier devant \\w" "$(ps1_of)" $'\uf07c \\w'
+assert_contains "nerd : icône branche devant le segment git" "$(cd "${COOLBASH_TEST_ROOT}" && ps1_of)" $'\ue725 '
+assert_contains "nerd : icône venv devant le nom du venv" "$(VIRTUAL_ENV=/x/.venv ps1_of)" $'\ue73c .venv'
+assert_contains "nerd : icône sablier devant la durée" \
+  "$(with_prompt 'COOLBASH_PROMPT_T0=$(( ${EPOCHREALTIME//[.,]/} - 2000000 )); _coolbash_prompt_build; printf %s "$PS1"')" $'\uf252 2.0'
+assert_eq "COOLBASH_PROMPT_ICONS=0 : aucun glyphe zone privée" "0" "$(COOLBASH_PROMPT_ICONS=0 ps1_of | pua_count)"
+assert_eq "…ni symbole ⎇" "0" "$(COOLBASH_PROMPT_ICONS=0 ps1_of | grep -c '⎇')"
+assert_contains "…et pas d'espace orphelin devant \\u" "$(COOLBASH_PROMPT_ICONS=0 ps1_of)" '\[\e[1m\]\u'
+assert_contains "…ni devant \\w" "$(COOLBASH_PROMPT_ICONS=0 ps1_of)" '\[\e[1;34m\]\w'
+assert_eq "COOLBASH_PROMPT_ICONS=basic : ⎇ pour la branche" "⎇" "$(COOLBASH_PROMPT_ICONS=basic with_prompt 'printf %s "${COOLBASH_PROMPT_SYM[branch]}"')"
+assert_eq "basic : aucun glyphe zone privée" "0" "$(cd "${COOLBASH_TEST_ROOT}" && COOLBASH_PROMPT_ICONS=basic ps1_of | pua_count)"
+assert_eq "TERM=linux (console) : icônes désactivées" "0" "$(TERM=linux with_prompt 'echo "$COOLBASH_PROMPT_ICONS"')"
+assert_eq "…sauf réglage explicite" "nerd" "$(TERM=linux COOLBASH_PROMPT_ICONS=nerd with_prompt 'echo "$COOLBASH_PROMPT_ICONS"')"
+assert_eq "valeur inconnue : repli sur basic" "basic" "$(COOLBASH_PROMPT_ICONS=foo with_prompt 'echo "$COOLBASH_PROMPT_ICONS"')"
+
 t_done
