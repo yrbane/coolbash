@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.6.1-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -127,13 +127,13 @@ coolbash/
 ## 🖥️ Example Prompt
 
 ```bash
-🐧 [14:32:10]  seb at  laptop   main*+?↑1   .venv   1.23s  ✖ 130
+🐧  14:32:10  seb at   laptop   main*+?↑1   .venv   1.23s   130
  ~/projects/coolbash $
 ```
 
 🔹 Emoji aléatoire par session (aucun en mode `safe`)
-🔹 Icônes **Nerd Font** devant chaque segment (utilisateur, host, branche, venv, durée, dossier,
-   cadenas pour root) : il faut une [Nerd Font](https://www.nerdfonts.com/) dans le terminal.
+🔹 Icônes **Nerd Font** devant chaque segment (heure, utilisateur, host, branche, venv, durée,
+   code retour, dossier, cadenas pour root) : il faut une [Nerd Font](https://www.nerdfonts.com/) dans le terminal.
    `COOLBASH_PROMPT_ICONS=basic` bascule sur des symboles Unicode standard (`⎇ ⚗ ⧗ ⚠`),
    `COOLBASH_PROMPT_ICONS=0` les retire. Par défaut : `basic` en mode `safe`, `0` sur la console
    (`TERM=linux`), `nerd` sinon

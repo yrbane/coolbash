@@ -42,14 +42,18 @@ _coolbash_prompt_init_icons() {
   case "${COOLBASH_PROMPT_ICONS}" in
     nerd)
       # FR : nf-fa-user, nf-fa-desktop, nf-dev-git_branch, nf-dev-python,
-      #      nf-fa-hourglass_half, nf-fa-folder_open, nf-md-lock.
+      #      nf-fa-hourglass_half, nf-fa-folder_open, nf-md-lock, nf-fa-clock_o,
+      #      nf-fa-times_circle.
       s=([user]=$'\uf007' [host]=$'\uf108' [branch]=$'\ue725' [venv]=$'\ue73c'
-         [time]=$'\uf252' [path]=$'\uf07c' [root]=$'\U000f033e') ;;
+         [time]=$'\uf252' [path]=$'\uf07c' [root]=$'\U000f033e'
+         [clock]=$'\uf017' [err]=$'\uf057') ;;
     0)
-      s=([user]="" [host]="" [branch]="" [venv]="" [time]="" [path]="" [root]="") ;;
+      s=([user]="" [host]="" [branch]="" [venv]="" [time]="" [path]="" [root]=""
+         [clock]="" [err]="✖") ;;
     *)
       COOLBASH_PROMPT_ICONS=basic
-      s=([user]="" [host]="" [branch]="⎇" [venv]="⚗" [time]="⧗" [path]="" [root]="⚠") ;;
+      s=([user]="" [host]="" [branch]="⎇" [venv]="⚗" [time]="⧗" [path]="" [root]="⚠"
+         [clock]="⏱" [err]="✖") ;;
   esac
 }
 _coolbash_prompt_init_icons
@@ -187,7 +191,7 @@ _coolbash_prompt_status() {
   local ec="${1:-0}"
   [[ "$ec" =~ ^[0-9]+$ ]] || return 0
   (( ec == 0 )) && return 0
-  printf '✖ %d' "$ec"
+  printf '%s %d' "${COOLBASH_PROMPT_SYM[err]:-✖}" "$ec"
 }
 
 _coolbash_prompt_venv() { [[ -n "${VIRTUAL_ENV:-}" ]] && printf '%s' "${VIRTUAL_ENV##*/}"; return 0; }
@@ -197,16 +201,20 @@ _coolbash_prompt_build() {
   local ec=$?
   _coolbash_prompt_elapsed
   local -n c=COOLBASH_PROMPT_COLOR s=COOLBASH_PROMPT_SYM
-  local who host chevron git="" venv="" dur="" err="" seg
+  local who host chevron clock git="" venv="" dur="" err="" seg
   # FR : `${s[x]:+${s[x]} }` — icône suivie d'une espace, ou rien du tout
-  #      (mode 0) : jamais d'espace orpheline.
+  #      (mode 0) : jamais d'espace orpheline. L'écran (nf-fa-desktop) déborde
+  #      de sa cellule : deux espaces, sinon il touche le nom de la machine.
+  #      L'heure garde ses crochets seulement sans icône.
+  clock='[\t]'
+  [[ -n "${s[clock]}" ]] && clock="${s[clock]} \t"
   if [[ $EUID -eq 0 ]]; then
     who="${c[root]}${c[bold]}${s[root]:+${s[root]} }root${c[reset]}"
-    host="${c[root_accent]} ${s[host]:+${s[host]} }\h${c[reset]}"
+    host="${c[root_accent]} ${s[host]:+${s[host]}  }\h${c[reset]}"
     chevron="${c[root]}#${c[reset]}"
   else
     who="${c[user]}${c[bold]}${s[user]:+${s[user]} }\u${c[reset]}"
-    host="${c[user_accent]} ${s[host]:+${s[host]} }\h${c[reset]}"
+    host="${c[user_accent]} ${s[host]:+${s[host]}  }\h${c[reset]}"
     chevron="${c[user]}\$${c[reset]}"
   fi
   seg="$(_coolbash_prompt_git)";       [[ -n "$seg" ]] && git=" ${c[git]}${s[branch]:+${s[branch]} }${seg}${c[reset]}"
@@ -219,7 +227,7 @@ _coolbash_prompt_build() {
   if [[ "${COOLBASH_PS0_TITLE:-1}" != 0 && "${PROMPT_COMMAND[*]}" != *']0;'* ]] && _coolbash_prompt_term_has_title; then
     title='\[\e]0;\u@\h: \w\a\]'
   fi
-  PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}[\t]${c[reset]} ${who} at ${host}${git}${venv}${dur}${err}"$'\n'"${c[bold]}${c[path]}${s[path]:+${s[path]} }\w${c[reset]} ${chevron} "
+  PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}${clock}${c[reset]} ${who} at ${host}${git}${venv}${dur}${err}"$'\n'"${c[bold]}${c[path]}${s[path]:+${s[path]} }\w${c[reset]} ${chevron} "
 }
 
 # --- Enregistrement dans PROMPT_COMMAND (helper commun de 00-core) -----------

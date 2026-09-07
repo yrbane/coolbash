@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1 — 2026-09-07 · « Horloge, code retour, écran espacé »
+- Icône devant l'heure (`nf-fa-clock_o`, `⏱` en `basic`) ; les crochets autour de l'heure ne
+  restent que sans icône (`COOLBASH_PROMPT_ICONS=0`).
+- Icône devant le code retour (`nf-fa-times_circle`) ; `✖` reste le repli en `basic` et `0`.
+- Deux espaces entre l'icône écran et le nom de la machine : le glyphe `nf-fa-desktop` déborde
+  de sa cellule et touchait le nom.
+- Tests : clés `clock`/`err` définies, code retour avec et sans icône, heure avec ou sans crochets.
+
 ## 0.6.0 — 2026-09-07 · « Icônes dans le prompt »
 ### Ajouté
 - Icônes Nerd Font devant chaque segment du prompt : utilisateur, host, branche git, venv, durée,

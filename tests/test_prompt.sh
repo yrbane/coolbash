@@ -49,7 +49,8 @@ assert_eq "seuil réglable (COOLBASH_PROMPT_MIN_MS)" "0.50s" "$(with_prompt 'COO
 
 # --- 4. Code retour ----------------------------------------------------------
 assert_eq "code 0 : rien" "" "$(with_prompt '_coolbash_prompt_status 0')"
-assert_eq "code 3 : ✖ 3" "✖ 3" "$(with_prompt '_coolbash_prompt_status 3')"
+assert_eq "code 3, sans icône : ✖ 3" "✖ 3" "$(COOLBASH_PROMPT_ICONS=0 with_prompt '_coolbash_prompt_status 3')"
+assert_eq "code 3, icônes nerd : glyphe + 3" $'\uf057 3' "$(COOLBASH_PROMPT_ICONS=nerd with_prompt '_coolbash_prompt_status 3')"
 
 # --- 5. Segment git : un seul appel, sans verrou -----------------------------
 git_seg() { (cd "$1" && with_prompt '_coolbash_prompt_git'); }
@@ -95,9 +96,11 @@ ps1_of() { with_prompt '_coolbash_prompt_build; printf %s "$PS1"'; }
 pua_count() { LC_ALL=C.UTF-8 grep -cP '[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}]'; }
 assert_eq "mode résolu par défaut : nerd" "nerd" "$(TERM=xterm-256color with_prompt 'echo "$COOLBASH_PROMPT_ICONS"')"
 assert_empty "nerd : toutes les icônes sont définies" \
-  "$(with_prompt 'for k in user host branch venv time path root; do [[ -n "${COOLBASH_PROMPT_SYM[$k]}" ]] || echo "$k"; done')"
+  "$(with_prompt 'for k in user host branch venv time path root clock err; do [[ -n "${COOLBASH_PROMPT_SYM[$k]}" ]] || echo "$k"; done')"
 assert_contains "nerd : icône utilisateur devant \\u" "$(ps1_of)" $'\uf007 \\u'
-assert_contains "nerd : icône hôte devant \\h" "$(ps1_of)" $'\uf108 \\h'
+assert_contains "nerd : icône écran + deux espaces devant \\h (glyphe large)" "$(ps1_of)" $'\uf108  \\h'
+assert_contains "nerd : icône horloge devant l'heure, sans crochets" "$(ps1_of)" $'\uf017 \\t'
+assert_contains "sans icône : heure entre crochets" "$(COOLBASH_PROMPT_ICONS=0 ps1_of)" '[\t]'
 assert_contains "nerd : icône dossier devant \\w" "$(ps1_of)" $'\uf07c \\w'
 assert_contains "nerd : icône branche devant le segment git" "$(cd "${COOLBASH_TEST_ROOT}" && ps1_of)" $'\ue725 '
 assert_contains "nerd : icône venv devant le nom du venv" "$(VIRTUAL_ENV=/x/.venv ps1_of)" $'\ue73c .venv'
