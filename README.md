@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -61,6 +61,7 @@ coolbash <command>
 | `uninstall` | Supprime complètement CoolBash                |
 | `init`      | Charge tous les modules dans le shell courant |
 | `version`   | Affiche la version                            |
+| `doctor`    | Diagnostic : bash, `.bashrc`, modules, locale, outils optionnels |
 | `help`      | Affiche l’aide de la CLI                      |
 
 La fonction shell `coolbash` est disponible dès que `~/.bashrc` a chargé CoolBash.
@@ -182,6 +183,38 @@ coolbash uninstall
 ```
 
 ---
+
+## ⚙️ Configuration
+
+Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou dans l'environnement) :
+
+| Variable                        | Effet                                                                 |
+| ------------------------------- | --------------------------------------------------------------------- |
+| `COOLBASH_MODE=safe`            | Shell minimal : pas d'emoji, ni git dans le prompt, ni MOTD, ni completion différée. Défaut pour root. |
+| `COOLBASH_DISABLE="70-motd 33"` | Modules à ne pas charger (nom complet, numéro seul ou nom sans numéro) |
+| `COOLBASH_PROMPT_MIN_MS`        | Durée minimale affichée dans le prompt (défaut `1000` ms)             |
+| `COOLBASH_PROMPT_GIT=0`         | Désactive le segment git                                              |
+| `COOLBASH_PROMPT_GIT_UNTRACKED=0` | Ignore les fichiers non suivis (gros dépôts)                        |
+| `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
+| `COOLBASH_MOTD=0` / `MOTD_DISABLE=1` | Pas de MOTD                                                      |
+
+Fichiers utilisateur chargés s'ils existent : `~/.bash_aliases` (par `30-aliases`), `~/.dircolors`
+(par `20-path-and-colors`), `~/.fzf.bash` (au premier Tab, par `60-completion`), et
+`~/.coolbash/modules/90-local-overrides.bash`, jamais écrasé par `make install`.
+
+## 🧩 API publique
+
+Fonctions volontairement exposées dans le shell (tout le reste est préfixé `_coolbash_`) :
+
+| Fonction                       | Module                | Rôle                                        |
+| ------------------------------ | --------------------- | ------------------------------------------- |
+| `path_prepend`, `path_append`  | `00-core`             | Ajout idempotent au `PATH`                  |
+| `man`                          | `40-functions`        | `man` colorisé                              |
+| `mkcd`, `extract`, `up`, `timer` | `40-functions`      | Créer+entrer, extraire une archive, remonter de N répertoires, chronométrer |
+| `coolbash_log`, `coolbash_error` | `40-functions`      | Messages colorés (ex-`log`/`error`, renommés en 0.4.0) |
+| `mkvenv`, `workon`             | `34-python-venv`      | Créer/activer un venv Python                |
+
+Le test `tests/test_isolation_modules.sh` échoue si un module expose autre chose.
 
 ## 🧠 Philosophy
 

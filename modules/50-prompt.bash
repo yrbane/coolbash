@@ -47,7 +47,13 @@ _coolbash_prompt_pick_emoji() {
   else pool=(🐶 🐱 🐹 🐻 🦊 🐼 🐸 🦄 🐝 🦋 🐙 🐬 🐧 🦖 🐢 🐍 🌿 🌼 🌻 🌈 🚀); fi
   printf '%s' "${pool[RANDOM % ${#pool[@]}]}"
 }
-COOLBASH_PROMPT_EMOJI="${COOLBASH_PROMPT_EMOJI-$(_coolbash_prompt_pick_emoji)}"
+# FR: mode safe → pas d'emoji, pas de git (sauf réglage explicite).
+if _coolbash_safe; then
+  COOLBASH_PROMPT_EMOJI="${COOLBASH_PROMPT_EMOJI-}"
+  COOLBASH_PROMPT_GIT="${COOLBASH_PROMPT_GIT-0}"
+else
+  COOLBASH_PROMPT_EMOJI="${COOLBASH_PROMPT_EMOJI-$(_coolbash_prompt_pick_emoji)}"
+fi
 
 # --- Durée de la dernière commande (PS0, sans trap) --------------------------
 # FR : PS0 est développé dans le shell courant juste avant l'exécution d'une
@@ -141,16 +147,6 @@ _coolbash_prompt_build() {
   PS1=$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}[\t]${c[reset]} ${who} at ${host}${git}${venv}${dur}${err}"$'\n'"${c[bold]}${c[path]}\w${c[reset]} ${chevron} "
 }
 
-# --- Enregistrement dans PROMPT_COMMAND (idempotent, tableau ou chaîne) ------
-_coolbash_prompt_register() {
-  local fn="$1" item
-  if declare -p PROMPT_COMMAND 2>/dev/null | grep -q 'declare -a'; then
-    for item in "${PROMPT_COMMAND[@]}"; do [[ "$item" == "$fn" ]] && return 0; done
-    PROMPT_COMMAND=("$fn" "${PROMPT_COMMAND[@]}")
-  else
-    [[ ";${PROMPT_COMMAND:-};" == *";$fn;"* ]] && return 0
-    PROMPT_COMMAND="${fn}${PROMPT_COMMAND:+; ${PROMPT_COMMAND}}"
-  fi
-}
-_coolbash_prompt_register _coolbash_prompt_build
-unset -f _coolbash_prompt_register _coolbash_prompt_pick_emoji _coolbash_prompt_init_colors _coolbash_prompt_rgb _coolbash_prompt_bgrgb
+# --- Enregistrement dans PROMPT_COMMAND (helper commun de 00-core) -----------
+_coolbash_prompt_command_add _coolbash_prompt_build
+unset -f _coolbash_prompt_pick_emoji _coolbash_prompt_init_colors _coolbash_prompt_rgb _coolbash_prompt_bgrgb

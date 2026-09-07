@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.0 — 2026-09-07 · « Isolation, doctor, mode safe, modules désactivables »
+### Corrigé
+- **Historique partagé jamais branché** : `__history_sync` n'était pas dans `PROMPT_COMMAND`, les
+  commandes n'étaient écrites qu'à la fermeture du shell. Désormais `_coolbash_history_sync` est
+  appelée à chaque prompt (test : la commande est dans `HISTFILE` dès le prompt suivant).
+- **Completion jamais chargée** : `_load_completions_safely` n'était appelée nulle part. Remplacée
+  par un vrai chargement différé : `complete -D` charge bash-completion, git, composer, symfony,
+  fzf au premier `<Tab>` puis se retire (retour 124 = bash relance la completion).
+- `GPG_TTY` n'est exporté qu'avec un terminal.
+### Modifié
+- **Noms isolés dans tous les modules** : fonctions internes préfixées `_coolbash_`
+  (`_coolbash_history_sync`, `_coolbash_completion_load`, `_coolbash_motd`…). `log` et `error`,
+  qui masquaient des commandes génériques, deviennent `coolbash_log` / `coolbash_error`.
+  L'API publique est listée dans le README et verrouillée par `tests/test_isolation_modules.sh`.
+- `_coolbash_prompt_command_add` (00-core) : helper commun pour `PROMPT_COMMAND`.
+- **`COOLBASH_MODE=safe` réellement appliqué** (root par défaut, forçable) : pas d'emoji, pas de
+  git dans le prompt, pas de MOTD, pas de completion différée. `COOLBASH_MOTD_SHOWN` remplace
+  `BASHRC_MOTD_SHOWN` ; `COOLBASH_MOTD=0` s'ajoute à `MOTD_DISABLE`.
+### Ajouté
+- `coolbash doctor` : bash ≥ 4.4, ligne du `.bashrc`, CLI installée, modules, locale (requis, ✘ =
+  code 1) ; git, fortune, cowsay, lolcat, neofetch, fzf, dircolors, shellcheck (optionnels).
+- `COOLBASH_DISABLE="70-motd 33"` : modules à ne pas charger (nom complet, numéro ou nom).
+- README : sections Configuration et API publique.
+- Tests : `test_isolation_modules.sh`, `test_mode_safe.sh`, historique, completion, doctor.
+
 ## 0.3.1 — 2026-09-07 · « Lint des tests du prompt »
 - `SC2016` (info) désactivé au niveau fichier dans `tests/test_*.sh` : les scripts inline en simple
   quotes y sont voulus. Aucun changement fonctionnel. La 0.3.0 n'ayant pas été taguée, cette

@@ -39,4 +39,26 @@ out="$(env -u LANG -u LC_ALL MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" bash --n
   for m in "$1"/modules/*.bash; do source "$m"; done; ls / >/dev/null' _ "${COOLBASH_TEST_ROOT}" 2>&1)"
 assert_empty "sans LANG/LC_ALL, le chargement complet n'émet aucun avertissement setlocale" "${out}"
 
+# --- 10-history : synchro enregistrée ET fonctionnelle (bug : jamais branchée) --
+assert_contains "_coolbash_history_sync est dans PROMPT_COMMAND" \
+  "$(MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c 'source "$1"; source "$2"; echo "${PROMPT_COMMAND[*]}"' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/10-history.bash")" \
+  "_coolbash_history_sync"
+hist="${COOLBASH_TEST_TMP}/hist"
+seen="$(printf 'source "%s"; source "%s"\necho coolbash-marker\ncat "$HISTFILE"\n' "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/10-history.bash" \
+        | MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" HISTFILE="${hist}" bash --norc --noprofile -i 2>/dev/null | grep -c "echo coolbash-marker")"
+assert_eq "une commande est écrite dans HISTFILE dès le prompt suivant" "1" "${seen}"
+
+# --- 60-completion : chargement différé au premier Tab (bug : jamais appelé) --
+lazy="$(MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c '
+  source "$1"; source "$2"
+  complete -p -D 2>/dev/null | grep -q _coolbash_completion_lazy || { echo "pas de chargeur -D"; exit 0; }
+  _coolbash_completion_lazy; rc=$?
+  echo "rc=$rc"
+  complete -p -D 2>/dev/null | grep -q _coolbash_completion_lazy && echo "chargeur encore en place"
+  if [[ -r /usr/share/bash-completion/bash_completion ]]; then
+    declare -F _init_completion >/dev/null || declare -F _comp_initialize >/dev/null || echo "bash-completion non chargé"
+  fi
+' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/60-completion.bash" 2>&1)"
+assert_eq "le chargeur différé charge puis se retire (retour 124 = réessayer la completion)" "rc=124" "${lazy}"
+
 t_done

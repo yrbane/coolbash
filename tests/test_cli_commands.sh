@@ -59,4 +59,20 @@ make_fake_clone "${clone}"
 assert_success "coolbash verify via COOLBASH_REPO délègue au clone" \
   env COOLBASH_REPO="${clone}" COOLBASH_PREFIX="${COOLBASH_TEST_TMP}/fake" bash "${fake}/coolbash" verify
 
+# --- doctor ------------------------------------------------------------------
+home="${COOLBASH_TEST_TMP}/dhome"; mkdir -p "${home}"
+make_fake_clone "${home}/clone"
+make -s -C "${home}/clone" install PREFIX="${home}/.coolbash" BASHRC="${home}/.bashrc" >/dev/null
+doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1)"; rc=$?
+assert_eq "coolbash doctor renvoie 0 sur une installation saine" "0" "${rc}"
+assert_contains "doctor vérifie la version de bash" "${doc}" "bash"
+assert_contains "doctor vérifie la ligne du .bashrc" "${doc}" ".bashrc"
+assert_contains "doctor compte les modules" "${doc}" "modules"
+assert_contains "doctor liste les outils optionnels (fortune)" "${doc}" "fortune"
+assert_contains "doctor vérifie la locale" "${doc}" "locale"
+: > "${home}/.bashrc"
+doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1)"; rc=$?
+assert_eq "doctor échoue si le .bashrc ne charge pas CoolBash" "1" "${rc}"
+assert_contains "…et le dit" "${doc}" "✘"
+
 t_done

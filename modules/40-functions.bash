@@ -19,9 +19,10 @@ man() {
   man "$@"
 }
 
-# FR: Logs colorés simples.
-log()   { printf "\e[32m%s\e[0m\n" "$1"; }
-error() { printf "\e[31m%s\e[0m\n" "$1" >&2; }
+# FR: Logs colorés simples (API publique). `log`/`error` masquaient des commandes
+#     génériques ; renommés en 0.4.0.
+coolbash_log()   { printf '\e[32m%s\e[0m\n' "$*"; }
+coolbash_error() { printf '\e[31m%s\e[0m\n' "$*" >&2; }
 
 # FR: mkcd crée puis cd.
 mkcd () { mkdir -p -- "$1" && cd -- "$1"; }

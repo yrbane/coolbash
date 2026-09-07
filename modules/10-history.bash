@@ -14,7 +14,9 @@ export HISTCONTROL=ignoreboth:erasedups
 export HISTIGNORE='ls:ll:la:cd:pwd:exit:clear'
 
 # FR: Append + lecture incrémentale = évite 'history -c; -r' à chaque prompt.
-__history_sync() {
+_coolbash_history_sync() {
   builtin history -a   # FR: Ajoute les nouvelles lignes (session courante)
   builtin history -n   # FR: Lit les nouvelles lignes (autres sessions)
 }
+# FR: Branché à chaque prompt (avant 0.4.0 la fonction n'était jamais appelée).
+_coolbash_prompt_command_add _coolbash_history_sync

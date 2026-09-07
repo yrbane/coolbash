@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.3.1"
+COOLBASH_VERSION="0.4.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -46,12 +46,53 @@ _coolbash_cmd_test()      { _coolbash_make test; }
 _coolbash_cmd_uninstall() { _coolbash_make uninstall; }
 _coolbash_cmd_version()   { printf '%s\n' "${COOLBASH_VERSION}"; }
 
+# FR : diagnostic — requis (✘ = échec) et optionnels (– = absent, informatif).
+_coolbash_cmd_doctor() {
+  local ko=0 n bashrc="${COOLBASH_BASHRC:-${HOME}/.bashrc}" loc
+  _coolbash_req() { if "$@" >/dev/null 2>&1; then printf '  \e[32m✔\e[0m %s\n' "${COOLBASH_DOCTOR_LABEL}"; else printf '  \e[31m✘\e[0m %s\n' "${COOLBASH_DOCTOR_LABEL}"; ko=$((ko + 1)); fi; }
+  _coolbash_opt() { if command -v "$1" >/dev/null 2>&1; then printf '  \e[32m✔\e[0m %-10s %s\n' "$1" "$2"; else printf '  \e[33m–\e[0m %-10s %s (absent)\n' "$1" "$2"; fi; }
+  printf 'CoolBash %s — doctor\n\nRequis :\n' "${COOLBASH_VERSION}"
+  COOLBASH_DOCTOR_LABEL="bash ≥ 4.4 (${BASH_VERSION})"; _coolbash_req test "${BASH_VERSINFO[0]}${BASH_VERSINFO[1]}" -ge 44
+  COOLBASH_DOCTOR_LABEL="${bashrc} charge cli/coolbash";   _coolbash_req grep -qF 'cli/coolbash' "${bashrc}"
+  COOLBASH_DOCTOR_LABEL="CLI installée : ${COOLBASH_PREFIX}/cli/coolbash"; _coolbash_req test -x "${COOLBASH_PREFIX}/cli/coolbash"
+  n=0; for f in "${COOLBASH_MODULE_DIR}"/*.bash; do [[ -r "$f" ]] && n=$((n + 1)); done
+  COOLBASH_DOCTOR_LABEL="modules chargés : ${n} dans ${COOLBASH_MODULE_DIR}"; _coolbash_req test "$n" -gt 0
+  loc="${LC_ALL:-${LANG:-}}"
+  COOLBASH_DOCTOR_LABEL="locale ${loc:-non définie} présente sur la machine"
+  # shellcheck disable=SC2016
+  _coolbash_req bash -c 'locale -a 2>/dev/null | tr "[:upper:]" "[:lower:]" | tr -d "-" | grep -qx "$(echo "$1" | tr "[:upper:]" "[:lower:]" | tr -d "-")"' _ "${loc:-C}"
+  printf '\nOptionnels :\n'
+  _coolbash_opt git       "segment git du prompt"
+  _coolbash_opt fortune   "MOTD"
+  _coolbash_opt cowsay    "MOTD"
+  _coolbash_opt lolcat    "MOTD (couleurs)"
+  _coolbash_opt neofetch  "MOTD (infos système)"
+  _coolbash_opt fzf       "completion floue"
+  _coolbash_opt dircolors "couleurs ls"
+  _coolbash_opt shellcheck "make verify"
+  printf '\nMode : %s%s\n' "${COOLBASH_MODE:-$([[ $EUID -eq 0 ]] && echo safe || echo normal)}" "${COOLBASH_DISABLE:+ · désactivés : ${COOLBASH_DISABLE}}"
+  unset -f _coolbash_req _coolbash_opt; unset COOLBASH_DOCTOR_LABEL
+  (( ko == 0 ))
+}
+
+# FR : COOLBASH_DISABLE="70-motd 33" — modules à ne pas charger (nom complet,
+#      numéro seul ou nom sans numéro).
+_coolbash_disabled() {
+  local name="${1##*/}" word
+  name="${name%.bash}"
+  for word in ${COOLBASH_DISABLE:-}; do
+    [[ "$name" == "$word" || "${name%%-*}" == "$word" || "${name#*-}" == "$word" ]] && return 0
+  done
+  return 1
+}
+
 # FR : charge ~/.coolbash/modules/*.bash dans l'ordre lexical (00-… avant 90-…),
 #      le glob bash étant trié. Un module en échec n'empêche pas les suivants.
 _coolbash_cmd_init() {
   local f
   for f in "${COOLBASH_MODULE_DIR}"/*.bash; do
     [[ -r "$f" ]] || continue
+    _coolbash_disabled "$f" && continue
     # shellcheck disable=SC1090
     source "$f" || _coolbash_error "module en échec : $f"
   done
@@ -74,6 +115,7 @@ Commands:
   uninstall   Remove CoolBash
   init        Load all modules into current shell
   version     Print CoolBash version
+  doctor      Check installation, locale and optional tools
   help        Display this help message
 
 HELP
@@ -89,6 +131,7 @@ case "${1:-}" in
   uninstall)  _coolbash_cmd_uninstall ;;
   init)       _coolbash_cmd_init ;;
   version)    _coolbash_cmd_version ;;
+  doctor)     _coolbash_cmd_doctor ;;
   help|"")    _coolbash_cmd_help ;;
   *)          _coolbash_error "Unknown command: $1"; _coolbash_cmd_help >&2; false ;;
 esac

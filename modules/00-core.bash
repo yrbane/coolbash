@@ -7,12 +7,14 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # FR: Variables d'environnement cohérentes + sécurité douce.
 
-# Disable MOTD and fancy aliases for root (minimal shell)
-if [[ $EUID -eq 0 ]]; then
-  export COOLBASH_MODE="safe"
-else
-  export COOLBASH_MODE="normal"
+# FR: Mode « safe » (root par défaut, ou COOLBASH_MODE=safe) : shell minimal,
+#     sans emoji, ni git dans le prompt, ni MOTD, ni completion différée.
+#     Une valeur déjà définie est respectée.
+if [[ -z "${COOLBASH_MODE:-}" ]]; then
+  if [[ $EUID -eq 0 ]]; then COOLBASH_MODE="safe"; else COOLBASH_MODE="normal"; fi
 fi
+export COOLBASH_MODE
+_coolbash_safe() { [[ "${COOLBASH_MODE}" == "safe" ]]; }
 
 # FR: Locale fr_FR.UTF-8 par défaut si elle existe sur la machine ; sinon repli
 #     sur C.UTF-8 (serveurs minimalistes, CI) pour éviter « setlocale: cannot
@@ -45,6 +47,19 @@ shopt -s autocd cdspell dirspell checkjobs extglob globstar histappend cmdhist c
 # bind 'set show-all-if-ambiguous on'
 # bind '"\e[Z": menu-complete-backward'  # Shift-Tab = complétion arrière
 
-# FR: Helpers PATH sans doublons.
+# FR: Helpers PATH sans doublons (API publique).
 path_prepend() { case ":$PATH:" in *":$1:"*) ;; *) PATH="$1:$PATH";; esac; }
 path_append()  { case ":$PATH:" in *":$1:"*) ;; *) PATH="$PATH:$1";; esac; }
+
+# FR: Ajout idempotent d'une fonction en tête de PROMPT_COMMAND (tableau ou
+#     chaîne, selon la version de bash). Utilisé par 10-history et 50-prompt.
+_coolbash_prompt_command_add() {
+  local fn="$1" item
+  if declare -p PROMPT_COMMAND 2>/dev/null | grep -q 'declare -a'; then
+    for item in "${PROMPT_COMMAND[@]}"; do [[ "$item" == "$fn" ]] && return 0; done
+    PROMPT_COMMAND=("$fn" "${PROMPT_COMMAND[@]}")
+  else
+    [[ ";${PROMPT_COMMAND:-};" == *";$fn;"* ]] && return 0
+    PROMPT_COMMAND="${fn}${PROMPT_COMMAND:+; ${PROMPT_COMMAND}}"
+  fi
+}
