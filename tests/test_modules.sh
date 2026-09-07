@@ -25,13 +25,15 @@ assert_empty "tous les modules se chargent en séquence sans erreur" "${out}"
 
 # --- 00-core ne doit jamais imposer une locale absente de la machine ---------
 # FR : bug vu en CI (Ubuntu sans fr_FR) : « setlocale: LC_ALL: cannot change locale ».
+# shellcheck disable=SC2016  # FR : script inline volontairement en simple quotes
 chosen="$(env -u LANG -u LC_ALL bash --norc --noprofile -c 'source "$1" 2>&1; echo "${LC_ALL}"' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" | tail -1)"
-normalized="$(echo "${chosen}" | tr 'A-Z' 'a-z' | tr -d '-')"
-if locale -a 2>/dev/null | tr 'A-Z' 'a-z' | tr -d '-' | grep -qx "${normalized}"; then
+normalized="$(echo "${chosen}" | tr '[:upper:]' '[:lower:]' | tr -d '-')"
+if locale -a 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -d '-' | grep -qx "${normalized}"; then
   t_ok "00-core choisit une locale présente sur la machine (${chosen})"
 else
   t_fail "00-core impose une locale absente : ${chosen}"
 fi
+# shellcheck disable=SC2016
 out="$(env -u LANG -u LC_ALL MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c '
   for m in "$1"/modules/*.bash; do source "$m"; done; ls / >/dev/null' _ "${COOLBASH_TEST_ROOT}" 2>&1)"
 assert_empty "sans LANG/LC_ALL, le chargement complet n'émet aucun avertissement setlocale" "${out}"

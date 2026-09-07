@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.3 — 2026-09-07 · « Lint des tests (suite) »
+- shellcheck (info) sur `tests/test_modules.sh` : SC2016, SC2018, SC2019. Aucun changement fonctionnel.
+
 ## 0.2.2 — 2026-09-07 · « Portabilité : locale et vérification de syntaxe »
 - `00-core.bash` imposait `LC_ALL=fr_FR.UTF-8` même sans cette locale (serveurs, CI) :
   « setlocale: cannot change locale ». Repli sur `C.UTF-8` quand `fr_FR.UTF-8` est absente ;
