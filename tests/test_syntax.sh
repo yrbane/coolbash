@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016  # FR : scripts inline en simple quotes, voulu
 # =============================================================================
 #  Test : syntaxe bash de tous les scripts + shellcheck quand il est présent.
 # =============================================================================

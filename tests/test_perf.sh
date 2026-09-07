@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016  # FR : scripts inline en simple quotes, voulu
 # =============================================================================
 #  Test : budget de démarrage — `init` complet doit rester rapide.
 #  FR : « performant » se mesure. Seuil réglable : COOLBASH_TEST_INIT_BUDGET_MS.

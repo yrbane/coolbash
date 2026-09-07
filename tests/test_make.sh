@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016  # FR : scripts inline en simple quotes, voulu
 # =============================================================================
 #  Test : cycle make install / réinstall / uninstall dans un HOME jetable.
 #  FR : tout se joue sur une COPIE du dépôt (make_fake_clone) — jamais sur le

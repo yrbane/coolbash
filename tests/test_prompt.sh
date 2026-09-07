@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016  # FR : scripts inline en simple quotes, voulu
 # =============================================================================
 #  Test : module 50-prompt — durée sans trap DEBUG (PS0 + EPOCHREALTIME),
 #         segment git en un seul appel, code retour, isolation des noms.

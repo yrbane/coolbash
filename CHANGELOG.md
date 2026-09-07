@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 — 2026-09-07 · « Lint des tests du prompt »
+- `SC2016` (info) désactivé au niveau fichier dans `tests/test_*.sh` : les scripts inline en simple
+  quotes y sont voulus. Aucun changement fonctionnel. La 0.3.0 n'ayant pas été taguée, cette
+  release couvre aussi ses notes.
+
 ## 0.3.0 — 2026-09-07 · « Prompt sans trap, git en un appel, budget de démarrage »
 ### Modifié
 - **Durée des commandes sans `trap DEBUG`** : mesure par `PS0` + `EPOCHREALTIME` (bash ≥ 4.4),

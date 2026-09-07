@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016  # FR : scripts inline en simple quotes, voulu
 # =============================================================================
 #  Test : la CLI sourcée ne pollue pas le shell de l'utilisateur.
 #  FR : ~/.bashrc fait `source cli/coolbash init`. Tout ce que le script

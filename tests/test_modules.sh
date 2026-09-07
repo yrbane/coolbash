@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016  # FR : scripts inline en simple quotes, voulu
 # =============================================================================
 #  Test : chaque module se charge (après 00-core, la base commune dont les
 #         autres peuvent dépendre : path_append, have…), sans erreur ni bruit
