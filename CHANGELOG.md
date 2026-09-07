@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2 — 2026-09-07 · « Portabilité : locale et vérification de syntaxe »
+- `00-core.bash` imposait `LC_ALL=fr_FR.UTF-8` même sans cette locale (serveurs, CI) :
+  « setlocale: cannot change locale ». Repli sur `C.UTF-8` quand `fr_FR.UTF-8` est absente ;
+  une valeur déjà définie n'est jamais modifiée. Test ajouté.
+- `make verify` : `bash -n a b c` ne vérifie que `a` — la vérification passait par accident.
+  Chaque fichier est maintenant contrôlé individuellement (tests compris).
+- Tests : la copie jetable du clone contient `install.sh` et `tests/`, ce que `make verify` lit.
+
 ## 0.2.1 — 2026-09-07 · « CI verte : lint des tests »
 - shellcheck (niveau info) sur les fichiers de tests : source dynamique de `lib.sh` (SC1091),
   `ls | wc -l` remplacé par `find` (SC2012), `$HOME` littéral voulu documenté (SC2016).

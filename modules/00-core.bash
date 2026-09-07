@@ -14,8 +14,19 @@ else
   export COOLBASH_MODE="normal"
 fi
 
-export LANG="${LANG:-fr_FR.UTF-8}"
-export LC_ALL="${LC_ALL:-fr_FR.UTF-8}"
+# FR: Locale fr_FR.UTF-8 par défaut si elle existe sur la machine ; sinon repli
+#     sur C.UTF-8 (serveurs minimalistes, CI) pour éviter « setlocale: cannot
+#     change locale ». Une valeur déjà définie n'est jamais modifiée.
+if [[ -z "${LANG:-}" || -z "${LC_ALL:-}" ]]; then
+  if locale -a 2>/dev/null | grep -qiE '^fr_FR\.utf-?8$'; then
+    COOLBASH_LOCALE="fr_FR.UTF-8"
+  else
+    COOLBASH_LOCALE="C.UTF-8"
+  fi
+  export LANG="${LANG:-$COOLBASH_LOCALE}"
+  export LC_ALL="${LC_ALL:-$COOLBASH_LOCALE}"
+  unset COOLBASH_LOCALE
+fi
 export EDITOR="${EDITOR:-nano}"
 export VISUAL="${VISUAL:-nano}"
 export PAGER="${PAGER:-less}"

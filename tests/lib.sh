@@ -50,7 +50,8 @@ assert_no_path() { if [[ ! -e "$2" ]]; then t_ok "$1"; else t_fail "$1 — chemi
 make_fake_clone() {
   local dest="$1"
   mkdir -p "${dest}"
-  cp -r "${COOLBASH_TEST_ROOT}/Makefile" "${COOLBASH_TEST_ROOT}/cli" "${COOLBASH_TEST_ROOT}/modules" "${dest}/"
+  cp -r "${COOLBASH_TEST_ROOT}/Makefile" "${COOLBASH_TEST_ROOT}/install.sh" "${COOLBASH_TEST_ROOT}/cli" \
+     "${COOLBASH_TEST_ROOT}/modules" "${COOLBASH_TEST_ROOT}/tests" "${dest}/"
 }
 
 t_done() {

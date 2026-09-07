@@ -43,7 +43,8 @@ uninstall:
 
 verify:
 	@echo "[CoolBash] Verifying syntax..."
-	@bash -n cli/coolbash install.sh modules/*.bash
+	@# FR : `bash -n a b` ne vérifie que `a` (b devient $$1) — d'où la boucle.
+	@for f in cli/coolbash install.sh modules/*.bash tests/*.sh; do bash -n "$$f" || exit 1; done
 	@if command -v shellcheck >/dev/null 2>&1; then \
 	  shellcheck cli/coolbash install.sh tests/*.sh && shellcheck -S error modules/*.bash; \
 	else \
