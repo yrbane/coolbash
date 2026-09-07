@@ -2,6 +2,7 @@
 # =============================================================================
 #  Test : comportement des commandes de la CLI (help, version, init, erreurs).
 # =============================================================================
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 CLI="${COOLBASH_TEST_ROOT}/cli/coolbash"

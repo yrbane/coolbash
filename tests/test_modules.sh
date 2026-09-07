@@ -5,6 +5,7 @@
 #         sur stderr, et renvoie 0 (piège classique : `[[ -f x ]] && . x` en
 #         dernière ligne renvoie 1 quand le fichier manque).
 # =============================================================================
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 for m in "${COOLBASH_TEST_ROOT}"/modules/*.bash; do

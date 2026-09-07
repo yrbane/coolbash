@@ -7,6 +7,7 @@
 #       variable »). Ce test verrouille l'isolation : seules des variables
 #       COOLBASH_* et des fonctions coolbash*/_coolbash_* peuvent apparaître.
 # =============================================================================
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 CLI="${COOLBASH_TEST_ROOT}/cli/coolbash"

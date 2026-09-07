@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — 2026-09-07 · « CI verte : lint des tests »
+- shellcheck (niveau info) sur les fichiers de tests : source dynamique de `lib.sh` (SC1091),
+  `ls | wc -l` remplacé par `find` (SC2012), `$HOME` littéral voulu documenté (SC2016).
+- Aucun changement fonctionnel.
+
 ## 0.2.0 — 2026-09-07 · « Isolation de la CLI et suite de tests »
 
 ### Corrigé

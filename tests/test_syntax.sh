@@ -2,6 +2,7 @@
 # =============================================================================
 #  Test : syntaxe bash de tous les scripts + shellcheck quand il est présent.
 # =============================================================================
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 cd "${COOLBASH_TEST_ROOT}" || exit 1

@@ -4,6 +4,7 @@
 #  FR : tout se joue sur une COPIE du dépôt (make_fake_clone) — jamais sur le
 #       vrai clone, un `rm -rf` mal gardé a déjà coûté un dépôt entier.
 # =============================================================================
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 CLONE="${COOLBASH_TEST_TMP}/clone"
@@ -21,7 +22,7 @@ assert_file "la CLI est installée" "${PREFIX}/cli/coolbash"
 assert_success "la CLI installée est exécutable" test -x "${PREFIX}/cli/coolbash"
 assert_file "les modules sont installés" "${PREFIX}/modules/00-core.bash"
 assert_eq "autant de modules installés que dans le dépôt" \
-  "$(ls "${CLONE}"/modules/*.bash | wc -l)" "$(ls "${PREFIX}"/modules/*.bash | wc -l)"
+  "$(find "${CLONE}/modules" -name '*.bash' | wc -l)" "$(find "${PREFIX}/modules" -name '*.bash' | wc -l)"
 assert_eq "le chemin du clone est mémorisé pour coolbash update" "${CLONE}" "$(cat "${PREFIX}/.repo")"
 assert_eq "une seule ligne source ajoutée au bashrc" "1" "$(grep -c 'cli/coolbash' "${BASHRC}")"
 assert_contains "le contenu initial du bashrc est préservé" "$(cat "${BASHRC}")" "export FOO=1"
@@ -38,6 +39,7 @@ assert_eq "90-local-overrides.bash n'est jamais écrasé" 'alias perso="echo per
 
 # --- l'ancienne ligne `source $HOME/.coolbash/cli/coolbash init` est reconnue -
 old_rc="${COOLBASH_TEST_TMP}/old_bashrc"
+# shellcheck disable=SC2016  # FR : le $HOME littéral est voulu (ancienne forme)
 echo 'source $HOME/.coolbash/cli/coolbash init' > "${old_rc}"
 assert_success "make install avec un bashrc à l'ancienne forme" make -s -C "${CLONE}" install PREFIX="${PREFIX}" BASHRC="${old_rc}"
 assert_eq "…n'ajoute pas de doublon" "1" "$(grep -c 'cli/coolbash' "${old_rc}")"
