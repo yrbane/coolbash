@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.6.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.7.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -127,23 +127,32 @@ coolbash/
 ## 🖥️ Example Prompt
 
 ```bash
-🐧  14:32:10  seb at   laptop   main*+?↑1   .venv   1.23s   130
- ~/projects/coolbash $
+🐧  14:32:10  seb at   laptop   main*+?↑1≡1   .venv   8.5   22.1   1.23s   1   INT
+ …/projects/coolbash $
 ```
 
 🔹 Emoji aléatoire par session (aucun en mode `safe`)
-🔹 Icônes **Nerd Font** devant chaque segment (heure, utilisateur, host, branche, venv, durée,
-   code retour, dossier, cadenas pour root) : il faut une [Nerd Font](https://www.nerdfonts.com/) dans le terminal.
+🔹 Icônes **Nerd Font** devant chaque segment (heure, utilisateur, host, branche, venv, php/node,
+   durée, jobs, code retour, dossier, cadenas pour root ou dossier en lecture seule) : il faut une [Nerd Font](https://www.nerdfonts.com/) dans le terminal.
    `COOLBASH_PROMPT_ICONS=basic` bascule sur des symboles Unicode standard (`⎇ ⚗ ⧗ ⚠`),
    `COOLBASH_PROMPT_ICONS=0` les retire. Par défaut : `basic` en mode `safe`, `0` sur la console
    (`TERM=linux`), `nerd` sinon
 🔹 Couleurs dynamiques (TrueColor si supporté)
-🔹 Segments : utilisateur, host, git, venv, durée, code retour
+🔹 Segments : utilisateur, host, git, venv/conda, php/node, durée, jobs, code retour
+🔹 Hôte selon le contexte : écran en local, prise en SSH avec une **couleur dérivée du nom de la
+   machine** (stable d'une session à l'autre, chaque serveur a la sienne), cube dans un conteneur
 🔹 Git en **un seul appel** sans verrou : `*` indexé, `+` modifié, `?` non suivi, `!` conflit,
-   `↑N`/`↓N` avance/retard sur l'upstream, sha court si HEAD détachée
+   `↑N`/`↓N` avance/retard sur l'upstream, `≡N` stash, sha court si HEAD détachée
+🔹 Versions php et node (majeure.mineure) si `composer.json` / `package.json` est présent, un seul
+   lancement par binaire et par session
+🔹 Code retour en clair pour les signaux (`INT`, `KILL`, `TERM`…), chevron rouge après un échec,
+   `⚙ N` jobs en arrière-plan, cadenas devant un dossier non inscriptible
+🔹 `PROMPT_DIRTRIM=3` : le chemin ne garde que les trois derniers dossiers
 🔹 Durée mesurée par `PS0` + `EPOCHREALTIME` (sans `trap DEBUG`), affichée à partir de 1 s
 🔹 À l'Entrée, `PS0` affiche l'heure réelle de départ en gris (`  ⏱ 14:32:41`) et met la commande
    en cours dans le titre du terminal ; le prompt suivant remet `user@host: dossier`
+🔹 OSC 7 : le terminal connaît le dossier courant, un nouvel onglet (foot, kitty, wezterm, VTE)
+   s'ouvre au même endroit. Après une commande de plus de 30 s : sonnerie + notification OSC 777
 
 ---
 
@@ -172,7 +181,7 @@ make verify             # bash -n + shellcheck
 | `tests/test_modules.sh`       | Chaque module se charge sans erreur ni sortie parasite et renvoie 0 ; locale ; historique écrit dès le prompt suivant ; completion différée |
 | `tests/test_make.sh`          | `make install` / réinstall / `uninstall` / `update` dans un HOME jetable, sur une copie du clone |
 | `tests/test_syntax.sh`        | `bash -n` sur tout + shellcheck                                                    |
-| `tests/test_prompt.sh`        | Pas de trap DEBUG, durée réelle mesurée en shell interactif, formatage, segment git sur un dépôt jetable, isolation des noms du prompt, icônes (`nerd`/`basic`/`0`, résolution du mode) |
+| `tests/test_prompt.sh`        | Pas de trap DEBUG, durée réelle mesurée en shell interactif, formatage, segment git sur un dépôt jetable, isolation des noms du prompt, icônes (`nerd`/`basic`/`0`, résolution du mode), signaux, chevron, jobs, lecture seule, SSH/conteneur, OSC 7, notification, cache php/node, conda |
 | `tests/test_isolation_modules.sh` | Chaque module n'expose que `COOLBASH_*`, des variables MAJUSCULES, `_coolbash_*` ou l'API publique documentée ici |
 | `tests/test_mode_safe.sh`     | `COOLBASH_MODE=safe` (emoji, git, MOTD, completion) et `COOLBASH_DISABLE`          |
 | `tests/test_perf.sh`          | Budget de démarrage : `init` complet ≤ 200 ms (`COOLBASH_TEST_INIT_BUDGET_MS`)     |
@@ -211,6 +220,11 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_GIT_UNTRACKED=0` | Ignore les fichiers non suivis (gros dépôts)                        |
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
+| `COOLBASH_PROMPT_TOOLS=0`       | Pas de versions php/node dans le prompt (désactivé en mode `safe`)     |
+| `COOLBASH_PROMPT_BELL_MS`       | Sonnerie + notification après une commande de plus de N ms (défaut `30000`, `0` = jamais) |
+| `COOLBASH_PS1_OSC7=0`           | Ne pas annoncer le dossier courant au terminal (OSC 7)                 |
+| `COOLBASH_PROMPT_CONTAINER_MARKERS` | Fichiers révélant un conteneur (défaut `/.dockerenv /run/.containerenv`) |
+| `PROMPT_DIRTRIM`                | Dossiers gardés dans `\w` (défaut `3`, réglage bash natif)             |
 | `COOLBASH_PS0_STAMP=0`          | Pas d'heure de départ en gris sous la commande                        |
 | `COOLBASH_PS0_TITLE=0`          | Ne pas mettre la commande en cours dans le titre du terminal          |
 | `COOLBASH_PS0_EXTRA`            | Fragment ajouté à la fin de `PS0` (PS0 personnel)                     |

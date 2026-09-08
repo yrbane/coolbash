@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.7.0 — 2026-09-08 · « Prompt contextuel »
+### Ajouté
+- **Chemin tronqué** : `PROMPT_DIRTRIM=3` par défaut (respecté s'il est déjà défini).
+- **Chevron rouge** après une commande en échec, couleur utilisateur sinon.
+- **Signaux en clair** dans le code retour : `130` → `INT`, `137` → `KILL`, `143` → `TERM`, `129`
+  `HUP`, `131` `QUIT`, `134` `ABRT`, `139` `SEGV`, `141` `PIPE` ; les autres codes restent numériques.
+- **Jobs en arrière-plan** : segment `⚙ N` quand `jobs -p` n'est pas vide.
+- **Dossier non inscriptible** : cadenas devant le chemin.
+- **Stash git** : `≡N` via `--show-stash`, toujours un seul appel `git status`.
+- **Hôte contextuel** : icône prise en SSH (`SSH_CONNECTION`/`SSH_TTY`/`SSH_CLIENT`), cube dans un
+  conteneur (`/.dockerenv`, `/run/.containerenv`, surchargeable par
+  `COOLBASH_PROMPT_CONTAINER_MARKERS`). En SSH ou conteneur, couleur d'hôte dérivée du nom de la
+  machine (palette TrueColor de 8, sinon 6 couleurs de base), stable d'une session à l'autre.
+- **OSC 7** : le prompt annonce le dossier courant (`file://hôte/chemin`, encodé octet par octet)
+  aux terminaux qui savent ouvrir un onglet au même endroit. `COOLBASH_PS1_OSC7=0`.
+- **Notification de fin** : après une commande de plus de `COOLBASH_PROMPT_BELL_MS` (défaut
+  30 000 ms, `0` = jamais), sonnerie + OSC 777 (`notify`) avec la commande et sa durée.
+- **Versions php / node** : `composer.json` → `php 8.5`, `package.json` → `node 22.1`
+  (majeure.mineure, icônes Nerd Font). Un seul lancement par binaire et par session, clé = chemin
+  résolu (nvm est suivi). `COOLBASH_PROMPT_TOOLS=0` ; désactivé en mode `safe`.
+- **Conda** : `CONDA_DEFAULT_ENV` dans le segment venv.
+- Icônes `basic` correspondantes : `⚙ ⊘ ⇄ ▣`.
+### Modifié
+- Les fonctions qui gardent un état (`_coolbash_prompt_tools`) écrivent dans une variable passée en
+  argument plutôt que sur stdout : une substitution `$(…)` perdait le cache à chaque prompt.
+- Hachage du nom d'hôte sans sous-shell (`printf -v`). Chargement mesuré : ≈ 20 ms, construction
+  du prompt ≈ 10 ms.
+- Tests : 40 assertions de plus (sections 8 à 11) ; `with_prompt` neutralise `COLORTERM` pour des
+  couleurs prévisibles ; faux `php`/`node` dans un `PATH` jetable pour vérifier le cache.
+
 ## 0.6.1 — 2026-09-07 · « Horloge, code retour, écran espacé »
 - Icône devant l'heure (`nf-fa-clock_o`, `⏱` en `basic`) ; les crochets autour de l'heure ne
   restent que sans icône (`COOLBASH_PROMPT_ICONS=0`).
