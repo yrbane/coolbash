@@ -12,6 +12,13 @@ trap 'rm -rf "${COOLBASH_TEST_TMP}"' EXIT
 # FR : aucun test ne télécharge de police ; test_font.sh la réactive avec une
 #      archive locale.
 export COOLBASH_FONT=0
+# FR : sans locale UTF-8 (conteneur Debian nu, `su -c`), bash laisse les
+#      `$'\uXXXX'` des tests tels quels et toutes les assertions d'icônes
+#      échouent alors que le module est correct. Vu en CI Debian 13.
+case "${LC_ALL:-${LANG:-}}" in
+  *[Uu][Tt][Ff]*) ;;
+  *) export LANG=C.UTF-8 LC_ALL=C.UTF-8 ;;
+esac
 
 t_ok()   { printf '  \e[32m✔\e[0m %s\n' "$1"; }
 t_fail() { printf '  \e[31m✘\e[0m %s\n' "$1"; COOLBASH_TEST_FAILS=$((COOLBASH_TEST_FAILS + 1)); }

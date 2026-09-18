@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1 — 2026-09-18 · « Tests verts sans locale UTF-8 »
+- Le nouveau job CI Debian 13 a révélé que la suite échouait sans locale UTF-8 (conteneur nu,
+  `su -c`) : bash laissait les `$'\uXXXX'` des scripts de test tels quels, 16 assertions d'icônes
+  tombaient alors que le module produisait les bons glyphes. `tests/lib.sh` bascule sur `C.UTF-8`
+  quand la locale courante n'est pas UTF-8. Aucun changement dans les modules.
+- La 0.9.0 n'ayant pas été taguée (CI rouge sur ce job), cette release couvre aussi ses notes.
+
 ## 0.9.0 — 2026-09-18 · « Moins de surprises »
 ### Ajouté
 - **Repli automatique des icônes** : `make install` note dans `<prefix>/.nerdfont` si une Nerd Font
