@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.8.0"
+COOLBASH_VERSION="0.8.1"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -67,10 +67,13 @@ _coolbash_cmd_doctor() {
   _coolbash_opt fortune   "MOTD"
   _coolbash_opt cowsay    "MOTD"
   _coolbash_opt lolcat    "MOTD (couleurs)"
-  _coolbash_opt neofetch  "MOTD (infos système)"
+  _coolbash_opt fastfetch "MOTD (infos système ; neofetch en repli)"
   _coolbash_opt fzf       "completion floue"
   _coolbash_opt dircolors "couleurs ls"
   _coolbash_opt shellcheck "make verify"
+  if command -v delta >/dev/null 2>&1 && ! git config --global --get core.pager >/dev/null 2>&1; then
+    printf '               → delta est installé : git config --global core.pager delta\n'
+  fi
   # FR : icônes du prompt — 0 = Nerd Font présente, 1 = absente, 2 = fc-list absent.
   bash "${COOLBASH_ROOT}/cli/coolbash-font" status; n=$?
   case "$n" in

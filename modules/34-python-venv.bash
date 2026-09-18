@@ -15,5 +15,10 @@ mkvenv() {
 
 # FR: Active .venv dans le dossier courant si présent.
 workon() {
-  [[ -d ".venv" ]] && . ".venv/bin/activate" || echo "No .venv found in current directory."
+  if [[ -d ".venv" ]]; then
+    # shellcheck disable=SC1091
+    . ".venv/bin/activate"
+  else
+    echo "No .venv found in current directory."
+  fi
 }

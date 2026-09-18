@@ -11,7 +11,11 @@
 [[ -d "$HOME/bin"        ]] && path_prepend "$HOME/bin"
 path_append "/usr/games"
 path_append "/usr/local/games"
-path_append "$HOME/.local/share/gem/ruby/3.4.0/bin"
+# FR : gems Ruby utilisateur — quelle que soit la version, seulement si présent.
+for COOLBASH_GEM_BIN in "$HOME"/.local/share/gem/ruby/*/bin; do
+  [[ -d "$COOLBASH_GEM_BIN" ]] && path_append "$COOLBASH_GEM_BIN"
+done
+unset COOLBASH_GEM_BIN
 export PATH
 
 # FR: LS_COLORS (ne redéfinit pas les alias).

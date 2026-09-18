@@ -22,12 +22,6 @@ alias grhh='git reset --hard HEAD'
 alias gundo='git reset --soft HEAD~1'
 alias gpr='git pull --rebase --autostash'
 
-# FR: Pager Git configuré si non déjà défini.
-if command -v git >/dev/null 2>&1; then
-  if command -v delta >/dev/null 2>&1; then
-    git config --global --get core.pager >/dev/null 2>&1 || git config --global core.pager delta
-  elif command -v diff-so-fancy >/dev/null 2>&1; then
-    git config --global --get core.pager >/dev/null 2>&1 || \
-      git config --global core.pager "diff-so-fancy | less --tabs=4 -RFX"
-  fi
-fi
+# FR : ce module ne touche plus à ~/.gitconfig (il y écrivait core.pager à
+#      chaque ouverture de shell, au prix de deux processus git). `coolbash
+#      doctor` suggère la commande quand delta est là sans être configuré.

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.1 — 2026-09-18 · « Ménage dans les modules »
+### Corrigé
+- `please` : `alias please='sudo !!'` ne pouvait pas marcher (pas d'expansion d'historique dans un
+  alias). C'est une fonction qui relit la commande précédente dans l'historique (`fc`) et l'affiche avant
+  de la relancer avec `sudo`.
+- `PATH` : le dossier des gems Ruby était figé sur `3.4.0` et ajouté même absent ; il est détecté
+  par glob, quelle que soit la version, seulement s'il existe.
+- `31-git` n'écrit plus `core.pager` dans `~/.gitconfig` à chaque ouverture de shell (deux
+  processus git en moins au démarrage). `coolbash doctor` suggère la commande si `delta` est là.
+- MOTD : `fastfetch` d'abord, `neofetch` (abandonné, absent de Debian 13) en repli ; `doctor` suit.
+- `workon` : une activation en échec n'affiche plus « No .venv found ».
+- `up` : la variable de boucle `i` ne fuit plus dans le shell.
+- `timer` : mesure en millisecondes (`EPOCHREALTIME`) et renvoie le code retour de la commande.
+
 ## 0.8.0 — 2026-09-18 · « La police des icônes s'installe toute seule »
 ### Ajouté
 - `cli/coolbash-font` : détecte une Nerd Font (`fc-list`) et installe JetBrainsMono Nerd Font dans

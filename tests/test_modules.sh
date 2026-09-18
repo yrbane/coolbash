@@ -61,4 +61,35 @@ lazy="$(MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c '
 ' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/60-completion.bash" 2>&1)"
 assert_eq "le chargeur différé charge puis se retire (retour 124 = réessayer la completion)" "rc=124" "${lazy}"
 
+# --- 0.8.1 : correctifs des modules -----------------------------------------
+# shellcheck disable=SC2016
+mod() { MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c 'source "$1"; m="$2"; shift 2; source "$m"; eval "$*"' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/$1" "${@:2}" 2>&1; }
+
+# FR : `alias please='sudo !!'` ne marchait pas — pas d'expansion d'historique dans un alias.
+assert_eq "please est une fonction, plus un alias" "function" "$(mod 30-aliases.bash 'type -t please')"
+fakebin="${COOLBASH_TEST_TMP}/fakebin"; mkdir -p "${fakebin}"
+printf '#!/bin/sh\necho "SUDO:$*"\n' > "${fakebin}/sudo"; chmod +x "${fakebin}/sudo"
+got="$(printf 'source "%s"; source "%s"\necho bonjour le monde\nplease\n' "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/30-aliases.bash" \
+      | MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" PATH="${fakebin}:${PATH}" bash --norc --noprofile -i 2>/dev/null | grep '^SUDO:')"
+assert_contains "please relance la dernière commande avec sudo" "${got}" "echo bonjour le monde"
+
+# FR : le chemin des gems Ruby était figé (3.4.0) et ajouté même absent.
+assert_eq "PATH : aucun dossier de gems inexistant" "0" "$(PATH=/usr/bin:/bin mod 20-path-and-colors.bash 'echo "$PATH"' | tr ':' '\n' | grep -c 'gem/ruby')"
+mkdir -p "${COOLBASH_TEST_TMP}/.local/share/gem/ruby/9.9.0/bin"
+assert_contains "PATH : dossier de gems détecté quelle que soit la version" "$(mod 20-path-and-colors.bash 'echo "$PATH"')" "gem/ruby/9.9.0/bin"
+
+# FR : un module de shell ne modifie pas ~/.gitconfig.
+assert_eq "31-git n'écrit plus dans la config git globale" "0" "$(grep -cE '^[^#]*git config --global [a-z.]+ [^>-]' "${COOLBASH_TEST_ROOT}/modules/31-git.bash")"
+mod 31-git.bash true >/dev/null
+assert_no_path "…aucun ~/.gitconfig créé au chargement" "${COOLBASH_TEST_TMP}/.gitconfig"
+
+assert_contains "MOTD : fastfetch d'abord (neofetch est abandonné)" "$(cat "${COOLBASH_TEST_ROOT}/modules/70-motd.bash")" "fastfetch"
+assert_contains "doctor liste fastfetch" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" doctor 2>&1)" "fastfetch"
+
+assert_eq "up ne laisse pas fuiter sa variable de boucle" "" "$(cd "${COOLBASH_TEST_TMP}" && mod 40-functions.bash 'up 1; echo "${i-}"')"
+assert_eq "timer mesure en millisecondes" "1" "$(mod 40-functions.bash 'timer sleep 0.2' | grep -cE '0\.2[0-9]{2}s')"
+assert_contains "workon sans .venv : message clair" "$(cd "${COOLBASH_TEST_TMP}" && mod 34-python-venv.bash 'workon')" "No .venv"
+mkdir -p "${COOLBASH_TEST_TMP}/proj/.venv/bin"; echo 'return 3' > "${COOLBASH_TEST_TMP}/proj/.venv/bin/activate"
+assert_eq "workon : une activation en échec n'affiche pas « No .venv »" "0" "$(cd "${COOLBASH_TEST_TMP}/proj" && mod 34-python-venv.bash 'workon' | grep -c 'No .venv')"
+
 t_done

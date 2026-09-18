@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.1-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -121,7 +121,7 @@ coolbash/
 | `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`…) |
 | `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji, icônes)  |
 | `60-completion.bash`      | Completions Bash/Git/fzf                            |
-| `70-motd.bash`            | Fortune + neofetch (affichage une fois par session) |
+| `70-motd.bash`            | Fortune + fastfetch (affichage une fois par session) |
 | `90-local-overrides.bash` | Surcharges locales (vide par défaut)                |
 
 ---
@@ -251,6 +251,7 @@ Fonctions volontairement exposées dans le shell (tout le reste est préfixé `_
 | Fonction                       | Module                | Rôle                                        |
 | ------------------------------ | --------------------- | ------------------------------------------- |
 | `path_prepend`, `path_append`  | `00-core`             | Ajout idempotent au `PATH`                  |
+| `please`                       | `30-aliases`          | Relance la dernière commande avec `sudo`    |
 | `man`                          | `40-functions`        | `man` colorisé                              |
 | `mkcd`, `extract`, `up`, `timer` | `40-functions`      | Créer+entrer, extraire une archive, remonter de N répertoires, chronométrer |
 | `coolbash_log`, `coolbash_error` | `40-functions`      | Messages colorés (ex-`log`/`error`, renommés en 0.4.0) |

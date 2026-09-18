@@ -44,7 +44,17 @@ alias cp='cp -i'
 alias mv='mv -i'
 
 # FR: Sudo helpers (NB: espace final sur 'pls' pour chaîner d'autres alias).
-alias please='sudo !!'
+# FR : `alias please='sudo !!'` ne peut pas marcher — l'expansion d'historique
+#      n'a pas lieu dans un alias. `fc -l` écarte déjà la ligne en cours
+#      (« please ») : -1 désigne donc bien la commande précédente.
+please() {
+  local cmd
+  cmd="$(HISTTIMEFORMAT='' builtin fc -ln -1 -1 2>/dev/null)"
+  cmd="${cmd#"${cmd%%[![:space:]]*}"}"
+  if [[ -z "$cmd" || "$cmd" == please* ]]; then echo "please: aucune commande à relancer." >&2; return 1; fi
+  printf 'sudo %s\n' "$cmd"
+  eval "sudo $cmd"
+}
 alias pls='sudo '
 alias sano='sudo -E nano'
 

@@ -51,16 +51,18 @@ extract () {
 
 # FR: up remonte de N répertoires (1 par défaut).
 up () {
-  local d="" limit="${1:-1}"
+  local d="" limit="${1:-1}" i
   for ((i=1; i<=limit; i++)); do d+="../"; done
   cd "$d" || return
 }
 
 # FR: Chronomètre l'exécution d'une commande.
 timer () {
-  local start end
-  start=$(date +%s)
-  "$@"
-  end=$(date +%s)
-  echo "⏱  $(( end - start ))s"
+  local start end rc ms
+  start="${EPOCHREALTIME//[.,]/}"
+  "$@"; rc=$?
+  end="${EPOCHREALTIME//[.,]/}"
+  ms=$(( (end - start) / 1000 ))
+  printf '⏱  %d.%03ds\n' $(( ms / 1000 )) $(( ms % 1000 ))
+  return "$rc"
 }
