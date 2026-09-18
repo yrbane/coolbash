@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.5 — 2026-09-18 · « update ne scie plus la branche sur laquelle il est assis »
+- **Erreur de syntaxe à la fin d'un `coolbash update` réussi** (« près du symbole inattendu ;; ») :
+  `update` est exécuté par `~/.coolbash/cli/coolbash`, que `make install` réécrivait en place
+  pendant que bash le lisait ; bash reprenait au même décalage dans le nouveau contenu. Les
+  fichiers sont maintenant installés par copie puis `mv` (nouvel inode) : le script en cours
+  garde l'ancien jusqu'au bout. La mise à jour elle-même n'était pas compromise.
+- Test : une CLI installée qui se réinstalle pendant son exécution ne produit aucune erreur.
+
 ## 0.9.4 — 2026-09-18 · « source ~/.bashrc après une mise à jour »
 - **Erreur de syntaxe au rechargement** : après la mise à jour depuis une version où `please` était
   un alias, `source ~/.bashrc` dans le shell déjà ouvert développait cet alias à la lecture de

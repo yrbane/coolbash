@@ -18,10 +18,16 @@ install:
 	  dest="$(PREFIX)/modules/$$(basename "$$m")"; \
 	  [[ "$$m" -ef "$$dest" ]] && continue; \
 	  [[ "$$m" == */90-local-overrides.bash && -f "$$dest" ]] && continue; \
-	  cp "$$m" "$$dest"; \
+	  cp "$$m" "$$dest.new" && mv -f "$$dest.new" "$$dest"; \
 	done
-	@[[ cli/coolbash -ef "$(PREFIX)/cli/coolbash" ]] || cp cli/coolbash "$(PREFIX)/cli/coolbash"
-	@[[ cli/coolbash-font -ef "$(PREFIX)/cli/coolbash-font" ]] || cp cli/coolbash-font "$(PREFIX)/cli/coolbash-font"
+	@# FR : copie puis `mv` = nouvel inode. `coolbash update` est exécuté PAR le
+	@#      fichier qu'il remplace : réécrit en place, bash reprenait sa lecture au
+	@#      milieu du nouveau contenu (« erreur de syntaxe près de ;; »).
+	@for c in cli/coolbash cli/coolbash-font; do \
+	  dest="$(PREFIX)/$$c"; \
+	  [[ "$$c" -ef "$$dest" ]] && continue; \
+	  cp "$$c" "$$dest.new" && mv -f "$$dest.new" "$$dest"; \
+	done
 	@chmod +x "$(PREFIX)/cli/coolbash" "$(PREFIX)/cli/coolbash-font"
 	@[[ "$(ROOT)" -ef "$(PREFIX)" ]] || echo "$(ROOT)" >| "$(PREFIX)/.repo"
 	@touch "$(BASHRC)"

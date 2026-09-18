@@ -36,6 +36,22 @@ assert_contains "le contenu initial du bashrc est préservé" "$(cat "${BASHRC}"
 res="$(HOME="${COOLBASH_TEST_TMP}/home" MOTD_DISABLE=1 bash --norc --noprofile -c 'source "$1"; echo "prefix=${PREFIX-} fn=$(type -t coolbash)"' _ "${BASHRC}" 2>&1)"
 assert_eq "sourcer le bashrc charge CoolBash sans PREFIX ni erreur" "prefix= fn=function" "${res}"
 
+# --- la CLI est remplacée, jamais réécrite en place --------------------------
+# FR : `coolbash update` est exécuté PAR ~/.coolbash/cli/coolbash ; réécrire ce fichier
+#      pendant que bash le lit donnait « erreur de syntaxe près de ;; » en fin d'update.
+#      Le script ci-dessous se réinstalle lui-même en cours de route, comme update.
+ino_before="$(stat -c %i "${PREFIX}/cli/coolbash")"
+cat > "${COOLBASH_TEST_TMP}/selfupdate.sh" <<EOF
+cp "${PREFIX}/cli/coolbash" "${COOLBASH_TEST_TMP}/cli.bak"
+{ printf '# %0300d\n' 0; cat "${COOLBASH_TEST_TMP}/cli.bak"; } > "${CLONE}/cli/coolbash"
+EOF
+printf '\n_coolbash_selftest() { bash "%s"; make -s -C "%s" install PREFIX="%s" BASHRC="%s" >/dev/null; }\n[[ -n "${COOLBASH_SELFTEST:-}" ]] && _coolbash_selftest\n%s\n' \
+  "${COOLBASH_TEST_TMP}/selfupdate.sh" "${CLONE}" "${PREFIX}" "${BASHRC}" "$(printf 'true %.0s\n' $(seq 1 40))" >> "${PREFIX}/cli/coolbash"
+out="$(COOLBASH_SELFTEST=1 bash "${PREFIX}/cli/coolbash" version 2>&1 >/dev/null)"
+assert_empty "une CLI qui se réinstalle pendant son exécution ne produit aucune erreur" "${out}"
+assert_eq "…car le fichier installé est un nouvel inode (mv), pas une réécriture" "1" "$([[ "$(stat -c %i "${PREFIX}/cli/coolbash")" != "${ino_before}" ]] && echo 1)"
+cp "${COOLBASH_TEST_ROOT}/cli/coolbash" "${CLONE}/cli/coolbash"; mk install >/dev/null
+
 # --- réinstall : idempotence + overrides locaux préservés -------------------
 echo 'alias perso="echo perso"' > "${PREFIX}/modules/90-local-overrides.bash"
 assert_success "make install une seconde fois réussit" mk install
