@@ -84,4 +84,35 @@ rm -rf "${upd}/.coolbash"
 assert_failure "make update échoue si un test échoue" mkup
 assert_no_path "…et n'installe rien" "${upd}/.coolbash/cli/coolbash"
 
+# --- update annonce la version installée -------------------------------------
+rm -f "${upd}/clone/tests/test_ko.sh"
+sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.0.0"/' "${upd}/clone/cli/coolbash"
+git -C "${upd}/clone" add -A; git -C "${upd}/clone" commit -qm "v1.0.0"; git -C "${upd}/clone" push -q
+out="$(mkup 2>&1)"
+assert_contains "première installation : version annoncée" "${out}" "1.0.0"
+sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.1.0"/' "${upd}/clone/cli/coolbash"
+git -C "${upd}/clone" add -A; git -C "${upd}/clone" commit -qm "v1.1.0"; git -C "${upd}/clone" push -q
+assert_contains "update annonce l'ancienne et la nouvelle version" "$(mkup 2>&1)" "1.0.0 → 1.1.0"
+assert_contains "update sans changement : déjà à jour" "$(mkup 2>&1)" "déjà à jour (1.1.0)"
+printf '#!/usr/bin/env bash\nexit 1\n' > "${upd}/clone/tests/test_ko.sh"
+sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.2.0"/' "${upd}/clone/cli/coolbash"
+git -C "${upd}/clone" add -A; git -C "${upd}/clone" commit -qm "v1.2.0 cassée"; git -C "${upd}/clone" push -q
+out="$(mkup 2>&1)"
+assert_contains "tests en échec : message explicite, rien d'installé" "${out}" "rien n'a été installé"
+assert_contains "…avec la version restée en place" "${out}" "1.1.0"
+
+# --- install.sh : réinstallation par-dessus un clone existant ----------------
+src="${COOLBASH_TEST_TMP}/src.git"; ih="${COOLBASH_TEST_TMP}/ihome"; mkdir -p "${ih}"
+make_fake_clone "${COOLBASH_TEST_TMP}/srcwork"
+git -C "${COOLBASH_TEST_TMP}/srcwork" init -q -b main; git -C "${COOLBASH_TEST_TMP}/srcwork" config user.email t@t; git -C "${COOLBASH_TEST_TMP}/srcwork" config user.name t
+git -C "${COOLBASH_TEST_TMP}/srcwork" add -A; git -C "${COOLBASH_TEST_TMP}/srcwork" commit -qm init
+git clone -q --bare "${COOLBASH_TEST_TMP}/srcwork" "${src}"
+ins() { HOME="${ih}" COOLBASH_REPO_URL="${src}" bash "${COOLBASH_TEST_ROOT}/install.sh" >/dev/null 2>&1; }
+assert_success "install.sh : première installation" ins
+assert_file "…clone en place" "${ih}/.coolbash/cli/coolbash"
+assert_success "install.sh : relancé sur un clone existant, il met à jour au lieu d'échouer" ins
+mkdir -p "${COOLBASH_TEST_TMP}/ihome2/.coolbash"; : > "${COOLBASH_TEST_TMP}/ihome2/.coolbash/perso"
+assert_failure "install.sh : refuse un ~/.coolbash qui n'est pas un clone git" env HOME="${COOLBASH_TEST_TMP}/ihome2" COOLBASH_REPO_URL="${src}" bash "${COOLBASH_TEST_ROOT}/install.sh"
+assert_file "…sans y toucher" "${COOLBASH_TEST_TMP}/ihome2/.coolbash/perso"
+
 t_done

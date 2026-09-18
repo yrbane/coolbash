@@ -75,4 +75,17 @@ doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbas
 assert_eq "doctor échoue si le .bashrc ne charge pas CoolBash" "1" "${rc}"
 assert_contains "…et le dit" "${doc}" "✘"
 
+# --- config : réglages effectifs ---------------------------------------------
+cfg="$(COOLBASH_PROMPT_MIN_MS=250 bash "${COOLBASH_TEST_ROOT}/cli/coolbash" config 2>&1)"
+assert_contains "config liste les réglages" "${cfg}" "COOLBASH_PROMPT_ICONS"
+assert_contains "config montre une valeur définie" "${cfg}" "250"
+assert_contains "config montre la valeur par défaut des autres" "${cfg}" "30000"
+# shellcheck disable=SC2016
+inshell="$(HOME="${COOLBASH_TEST_TMP}" MOTD_DISABLE=1 COOLBASH_MODULE_DIR="${COOLBASH_TEST_ROOT}/modules" bash --norc --noprofile -c 'source "$1" init; COOLBASH_PS0_STAMP=0; coolbash config' _ "${COOLBASH_TEST_ROOT}/cli/coolbash" 2>&1)"
+assert_eq "coolbash config voit les variables non exportées du shell courant" "1" "$(printf '%s\n' "${inshell}" | grep -E 'COOLBASH_PS0_STAMP +0 ' | grep -c 'défini')"
+while read -r v; do
+  assert_contains "config connaît ${v} (documentée dans le README)" "${cfg}" "${v}"
+done < <(grep -oE '\| `COOLBASH_[A-Z0-9_]+' "${COOLBASH_TEST_ROOT}/README.md" | grep -oE 'COOLBASH_[A-Z0-9_]+' | sort -u)
+assert_contains "coolbash help mentionne config" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" help)" "config"
+
 t_done

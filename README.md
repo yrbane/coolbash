@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.8.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -55,13 +55,14 @@ coolbash <command>
 | Commande    | Description                                   |
 | ----------- | --------------------------------------------- |
 | `install`   | Installe CoolBash dans `~/.coolbash`, et la Nerd Font des icônes si aucune n'est présente |
-| `update`    | `git pull`, puis tests, puis install (clone git requis) |
+| `update`    | `git pull`, puis tests, puis install (clone git requis) ; annonce `0.8.1 → 0.9.0`, « déjà à jour », ou l'échec |
 | `font`      | Installe (ou réessaie d'installer) la Nerd Font des icônes du prompt |
 | `verify`    | Vérifie la syntaxe (+ shellcheck si présent)  |
 | `test`      | Lance la suite de tests                       |
-| `uninstall` | Supprime complètement CoolBash                |
+| `uninstall` | Supprime complètement CoolBash, y compris la police qu'il a installée |
 | `init`      | Charge tous les modules dans le shell courant |
 | `version`   | Affiche la version                            |
+| `config`    | Tous les réglages `COOLBASH_*` avec leur valeur effective (définie ou par défaut) |
 | `doctor`    | Diagnostic : bash, `.bashrc`, modules, locale, outils optionnels, Nerd Font |
 | `help`      | Affiche l’aide de la CLI                      |
 
@@ -111,9 +112,9 @@ coolbash/
 | Module                    | Rôle principal                                      |
 | ------------------------- | --------------------------------------------------- |
 | `00-core.bash`            | Variables d’environnement, sécurité de base         |
-| `10-history.bash`         | Historique horodaté partagé entre sessions          |
+| `10-history.bash`         | Historique horodaté partagé entre sessions, `Ctrl-R` fzf |
 | `20-path-and-colors.bash` | PATH propre, couleurs auto                          |
-| `30-aliases.bash`         | Alias utiles et sûrs                                |
+| `30-aliases.bash`         | Alias utiles et sûrs, paquets `apt` ou `pacman`     |
 | `31-git.bash`             | Raccourcis Git et pager configuré                   |
 | `32-network.bash`         | Commandes réseau et IP                              |
 | `33-devtools.bash`        | Symfony, PHP, yt-dlp                                |
@@ -142,7 +143,8 @@ coolbash/
 🔹 **Icônes illisibles (carrés, `?`) ?** Il manque la police. `coolbash install` installe
    JetBrainsMono Nerd Font dans `~/.local/share/fonts/coolbash-nerd` (≈ 20 Mo, sans `sudo`) quand
    aucune Nerd Font n'est détectée ; `coolbash font` relance l'installation, `coolbash doctor` dit
-   si elle manque. Reste une étape manuelle : **choisir la police dans le profil du terminal**.
+   si elle manque. Sans Nerd Font détectée à l'installation, le prompt passe tout seul aux icônes
+   `basic` (sauf en SSH, où la détection côté serveur ne veut rien dire). Reste une étape manuelle : **choisir la police dans le profil du terminal**.
    En SSH, c'est la machine qui affiche le terminal qui doit avoir la police, pas le serveur
 🔹 Couleurs dynamiques (TrueColor si supporté)
 🔹 Segments : utilisateur, host, git, venv/conda, php/node, durée, jobs, code retour
@@ -228,6 +230,8 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_GIT_UNTRACKED=0` | Ignore les fichiers non suivis (gros dépôts)                        |
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
+| `COOLBASH_FZF=0`                | Pas de raccourcis fzf (`Ctrl-R`, `Ctrl-T`, `Alt-C`), chargés sinon en shell interactif |
+| `COOLBASH_FZF_KEYBINDINGS`      | Fichier `key-bindings.bash` à utiliser (sinon emplacements Arch, Debian, Fedora, `~/.fzf`) |
 | `COOLBASH_FONT=0`               | `install` n'installe pas de police (serveurs, machines sans réseau)   |
 | `COOLBASH_FONT_URL`             | Archive `.tar.xz` de la police (miroir interne)                       |
 | `COOLBASH_PROMPT_TOOLS=0`       | Pas de versions php/node dans le prompt (désactivé en mode `safe`)     |
@@ -253,7 +257,7 @@ Fonctions volontairement exposées dans le shell (tout le reste est préfixé `_
 | `path_prepend`, `path_append`  | `00-core`             | Ajout idempotent au `PATH`                  |
 | `please`                       | `30-aliases`          | Relance la dernière commande avec `sudo`    |
 | `man`                          | `40-functions`        | `man` colorisé                              |
-| `mkcd`, `extract`, `up`, `timer` | `40-functions`      | Créer+entrer, extraire une archive, remonter de N répertoires, chronométrer |
+| `mkcd`, `extract`, `up`, `timer` | `40-functions`      | Créer+entrer, extraire une archive (`extract -d` : dans un dossier à son nom), remonter de N répertoires, chronométrer |
 | `coolbash_log`, `coolbash_error` | `40-functions`      | Messages colorés (ex-`log`/`error`, renommés en 0.4.0) |
 | `mkvenv`, `workon`             | `34-python-venv`      | Créer/activer un venv Python                |
 

@@ -18,7 +18,7 @@ elif command -v lsd >/dev/null 2>&1; then
   alias la='lsd -la --group-dirs=first'
 else
   # Vérifie si "ls" supporte --group-directories-first
-  if ls --group-directories-first >/dev/null 2>&1; then
+  if command ls --group-directories-first >/dev/null 2>&1; then
     alias ls='ls --color=auto --group-directories-first'
     alias ll='ls -alF --color=auto --group-directories-first'
     alias la='ls -A --color=auto --group-directories-first'
@@ -58,7 +58,7 @@ please() {
 alias pls='sudo '
 alias sano='sudo -E nano'
 
-# FR: APT (seulement si apt présent).
+# FR: Gestionnaire de paquets : APT, sinon pacman.
 if command -v apt >/dev/null 2>&1; then
   alias au='sudo apt update'
   alias aug='sudo apt update && sudo apt -y upgrade'
@@ -66,6 +66,15 @@ if command -v apt >/dev/null 2>&1; then
   alias ain='sudo apt -y install'
   alias arm='sudo apt -y remove'
   alias apc='sudo apt -y autoremove && sudo apt -y autoclean'
+# FR : mêmes raccourcis sur Arch. Pas de `pacman -Sy` seul (mise à jour
+#      partielle = système cassé) : au et aug font tous deux -Syu.
+elif command -v pacman >/dev/null 2>&1; then
+  alias au='sudo pacman -Syu'
+  alias aug='sudo pacman -Syu'
+  alias asr='pacman -Ss'
+  alias ain='sudo pacman -S'
+  alias arm='sudo pacman -Rs'
+  alias apc='pacman -Qdtq | sudo pacman -Rns - ; sudo pacman -Sc'
 fi
 
 # FR: Fichiers d'alias utilisateur (optionnel).

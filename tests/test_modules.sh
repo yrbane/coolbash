@@ -92,4 +92,30 @@ assert_contains "workon sans .venv : message clair" "$(cd "${COOLBASH_TEST_TMP}"
 mkdir -p "${COOLBASH_TEST_TMP}/proj/.venv/bin"; echo 'return 3' > "${COOLBASH_TEST_TMP}/proj/.venv/bin/activate"
 assert_eq "workon : une activation en échec n'affiche pas « No .venv »" "0" "$(cd "${COOLBASH_TEST_TMP}/proj" && mod 34-python-venv.bash 'workon' | grep -c 'No .venv')"
 
+# --- 0.9.0 : historique, fzf, pacman, extract --------------------------------
+assert_contains "HISTIGNORE écarte history/fg/bg/jobs" "$(mod 10-history.bash 'echo "$HISTIGNORE"')" "history*:fg:bg:jobs"
+kb="${COOLBASH_TEST_TMP}/kb.bash"; echo 'COOLBASH_TEST_KB=loaded' > "${kb}"
+printf '#!/bin/sh\nexit 0\n' > "${fakebin}/fzf"; chmod +x "${fakebin}/fzf"
+hist_i() { printf 'source "%s"; source "%s"\necho "kb=${COOLBASH_TEST_KB-none}"\n' "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/10-history.bash" | env "$@" MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" HISTFILE="${COOLBASH_TEST_TMP}/h2" PATH="${fakebin}:${PATH}" COOLBASH_FZF_KEYBINDINGS="${kb}" bash --norc --noprofile -i 2>/dev/null | grep -o 'kb=[a-z]*' | tail -1; }
+assert_eq "shell interactif + fzf : raccourcis fzf (Ctrl-R) chargés" "kb=loaded" "$(hist_i)"
+assert_eq "COOLBASH_FZF=0 : pas de raccourcis fzf" "kb=none" "$(hist_i COOLBASH_FZF=0)"
+assert_eq "mode safe : pas de raccourcis fzf" "kb=none" "$(hist_i COOLBASH_MODE=safe)"
+assert_eq "shell non interactif : rien n'est chargé" "none" "$(PATH="${fakebin}:${PATH}" COOLBASH_FZF_KEYBINDINGS="${kb}" mod 10-history.bash 'echo "${COOLBASH_TEST_KB-none}"')"
+
+pm="${COOLBASH_TEST_TMP}/pm"; mkdir -p "${pm}"; printf '#!/bin/sh\nexit 0\n' > "${pm}/pacman"; chmod +x "${pm}/pacman"
+for t in bash env ls grep dircolors; do p="$(command -v "$t")" && ln -sf "$p" "${pm}/$t"; done
+assert_contains "pacman détecté (sans apt) : mêmes alias, routés vers pacman" "$(PATH="${pm}" mod 30-aliases.bash 'alias ain; alias aug')" "pacman -S"
+
+ex="${COOLBASH_TEST_TMP}/ex"; mkdir -p "${ex}/src"; echo salut > "${ex}/src/a.txt"
+tar -czf "${ex}/pack.tar.gz" -C "${ex}/src" a.txt
+(cd "${ex}" && mod 40-functions.bash 'extract -d pack.tar.gz' >/dev/null)
+assert_file "extract -d : extrait dans un dossier au nom de l'archive" "${ex}/pack/a.txt"
+assert_no_path "…et pas dans le dossier courant" "${ex}/a.txt"
+(cd "${ex}" && mod 40-functions.bash 'extract pack.tar.gz' >/dev/null)
+assert_file "extract sans -d : dossier courant, comme avant" "${ex}/a.txt"
+: > "${ex}/x.rar"
+out="$(cd "${ex}" && PATH="${pm}" mod 40-functions.bash 'extract x.rar; echo "rc=$?"')"
+assert_contains "extract : outil manquant signalé par son nom" "${out}" "unrar"
+assert_contains "…avec un code d'erreur" "${out}" "rc=3"
+
 t_done

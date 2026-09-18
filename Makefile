@@ -28,14 +28,22 @@ install:
 	@grep -qF 'cli/coolbash' "$(BASHRC)" || echo '$(SOURCE_LINE)' >> "$(BASHRC)"
 	@# FR : la police des icônes est un confort — son échec (pas de réseau, pas
 	@#      de xz…) ne doit jamais faire échouer l'installation.
-	@bash cli/coolbash-font install || true
+	@COOLBASH_PREFIX="$(PREFIX)" bash cli/coolbash-font install || true
 	@echo "[CoolBash] Installation complete ✅"
 
 update:
 	@# FR : jamais d'installation sans suite de tests verte après le pull.
-	@git -C "$(ROOT)" pull --rebase
-	@$(MAKE) -C "$(ROOT)" test
-	@$(MAKE) -C "$(ROOT)" install
+	@#      La fin annonce ce qui a changé : « 0.7.0 → 0.8.0 », « déjà à jour »,
+	@#      ou un échec explicite — plus de faux « ça a marché ».
+	@ver() { sed -n 's/^COOLBASH_VERSION="\(.*\)"/\1/p' "$(PREFIX)/cli/coolbash" 2>/dev/null; }; \
+	old="$$(ver)"; \
+	git -C "$(ROOT)" pull --rebase || { echo "[CoolBash] ✘ git pull en échec : rien n'a été installé (version en place : $${old:-aucune})." >&2; exit 1; }; \
+	$(MAKE) -C "$(ROOT)" test || { echo "[CoolBash] ✘ Tests en échec : rien n'a été installé (version en place : $${old:-aucune})." >&2; exit 1; }; \
+	$(MAKE) -C "$(ROOT)" install || exit 1; \
+	new="$$(ver)"; \
+	if [[ -z "$$old" ]]; then echo "[CoolBash] Version installée : $$new"; \
+	elif [[ "$$old" == "$$new" ]]; then echo "[CoolBash] déjà à jour ($$new) — modules réinstallés."; \
+	else echo "[CoolBash] Mise à jour : $$old → $$new — recharge ton shell : source ~/.bashrc"; fi
 
 uninstall:
 	@# FR : garde-fou — ne jamais supprimer le clone git lui-même.
@@ -43,19 +51,20 @@ uninstall:
 	  echo "[CoolBash] Refusing to remove $(PREFIX): it is the git clone itself." >&2; exit 1; \
 	fi
 	@echo "[CoolBash] Removing CoolBash..."
+	@bash cli/coolbash-font remove || true
 	@rm -rf "$(PREFIX)"
 	@[[ -f "$(BASHRC)" ]] && sed -i '\#cli/coolbash"* init#d' "$(BASHRC)" || true
 	@echo "[CoolBash] Uninstalled successfully."
 
 font:
-	@bash cli/coolbash-font install
+	@COOLBASH_PREFIX="$(PREFIX)" bash cli/coolbash-font install
 
 verify:
 	@echo "[CoolBash] Verifying syntax..."
 	@# FR : `bash -n a b` ne vérifie que `a` (b devient $$1) — d'où la boucle.
 	@for f in cli/coolbash cli/coolbash-font install.sh modules/*.bash tests/*.sh; do bash -n "$$f" || exit 1; done
 	@if command -v shellcheck >/dev/null 2>&1; then \
-	  shellcheck cli/coolbash cli/coolbash-font install.sh tests/*.sh && shellcheck -S error modules/*.bash; \
+	  shellcheck cli/coolbash cli/coolbash-font install.sh tests/*.sh && shellcheck -S warning modules/*.bash; \
 	else \
 	  echo "  shellcheck absent : contrôle limité à 'bash -n'."; \
 	fi

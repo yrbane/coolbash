@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.8.1"
+COOLBASH_VERSION="0.9.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -46,6 +46,41 @@ _coolbash_cmd_test()      { _coolbash_make test; }
 _coolbash_cmd_uninstall() { _coolbash_make uninstall; }
 _coolbash_cmd_font()      { bash "${COOLBASH_ROOT}/cli/coolbash-font" install; }
 _coolbash_cmd_version()   { printf '%s\n' "${COOLBASH_VERSION}"; }
+
+# FR : réglages effectifs. Exécutée DANS le shell courant par la fonction
+#      `coolbash` (voir init) : la plupart des COOLBASH_* ne sont pas exportées,
+#      un sous-processus ne les verrait pas. Format : nom|défaut|rôle.
+_coolbash_cmd_config() {
+  local name def desc val state
+  printf 'CoolBash %s — réglages (à définir avant la ligne source du ~/.bashrc)\n\n' "${COOLBASH_VERSION}"
+  while IFS='|' read -r name def desc; do
+    [[ -n "$name" ]] || continue
+    if [[ -n "${!name+x}" ]]; then val="${!name}"; state="défini"; else val="$def"; state="défaut"; fi
+    printf '  %-34s %-12s %-7s %s\n' "$name" "${val:-(vide)}" "$state" "$desc"
+  done <<'COOLBASH_CONFIG'
+COOLBASH_MODE|normal|normal ou safe (défaut pour root) : shell minimal
+COOLBASH_DISABLE||modules à ne pas charger, ex. "70-motd 33"
+COOLBASH_PROMPT_ICONS|nerd|nerd, basic (Unicode standard) ou 0
+COOLBASH_PROMPT_EMOJI|(aléatoire)|emoji de session, vide = aucun
+COOLBASH_PROMPT_MIN_MS|1000|durée minimale affichée dans le prompt
+COOLBASH_PROMPT_BELL_MS|30000|sonnerie + notification après N ms, 0 = jamais
+COOLBASH_PROMPT_GIT|1|0 = pas de segment git
+COOLBASH_PROMPT_GIT_UNTRACKED|1|0 = ignorer les fichiers non suivis
+COOLBASH_PROMPT_TOOLS|1|0 = pas de versions php/node
+COOLBASH_PROMPT_CONTAINER_MARKERS|/.dockerenv /run/.containerenv|fichiers révélant un conteneur
+COOLBASH_PS0_STAMP|1|0 = pas d'heure de départ sous la commande
+COOLBASH_PS0_TITLE|1|0 = ne pas toucher au titre du terminal
+COOLBASH_PS0_EXTRA||fragment ajouté à la fin de PS0
+COOLBASH_PS1_OSC7|1|0 = ne pas annoncer le dossier courant (OSC 7)
+COOLBASH_FZF|1|0 = pas de raccourcis fzf (Ctrl-R)
+COOLBASH_FZF_KEYBINDINGS||fichier key-bindings.bash à utiliser
+COOLBASH_MOTD|1|0 = pas de MOTD (MOTD_DISABLE=1 aussi)
+COOLBASH_FONT|1|0 = install n'installe pas de police
+COOLBASH_FONT_URL||archive .tar.xz de la police (miroir)
+COOLBASH_PREFIX|~/.coolbash|dossier d'installation
+COOLBASH_REPO||clone git utilisé par install/update/test
+COOLBASH_CONFIG
+}
 
 # FR : diagnostic — requis (✘ = échec) et optionnels (– = absent, informatif).
 _coolbash_cmd_doctor() {
@@ -113,7 +148,10 @@ _coolbash_cmd_init() {
     source "$f" || _coolbash_error "module en échec : $f"
   done
   # FR : expose `coolbash <command>` dans le shell courant.
-  coolbash() { bash "${COOLBASH_ROOT}/cli/coolbash" "$@"; }
+  #      `config` tourne dans ce shell pour voir les variables non exportées.
+  coolbash() {
+    if [[ "${1:-}" == config ]]; then _coolbash_cmd_config; else bash "${COOLBASH_ROOT}/cli/coolbash" "$@"; fi
+  }
   return 0
 }
 
@@ -133,6 +171,7 @@ Commands:
   init        Load all modules into current shell
   version     Print CoolBash version
   doctor      Check installation, locale and optional tools
+  config      Show every COOLBASH_* setting with its current value
   help        Display this help message
 
 HELP
@@ -150,6 +189,7 @@ case "${1:-}" in
   init)       _coolbash_cmd_init ;;
   version)    _coolbash_cmd_version ;;
   doctor)     _coolbash_cmd_doctor ;;
+  config)     _coolbash_cmd_config ;;
   help|"")    _coolbash_cmd_help ;;
   *)          _coolbash_error "Unknown command: $1"; _coolbash_cmd_help >&2; false ;;
 esac

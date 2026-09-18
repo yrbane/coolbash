@@ -1,4 +1,5 @@
 # shellcheck shell=bash
+# shellcheck disable=SC2154,SC2178,SC2034  # FR : faux positifs des namerefs (local -n) et de PS0
 #  ██████  ██████   █████  ███    ███ ██████  ███████
 #  ██   ██ ██   ██ ██   ██ ████  ████ ██   ██    █
 #  ██████  ██████  ██   ██ ██ ████ ██ ██████     █
@@ -33,7 +34,10 @@ declare -gA COOLBASH_PROMPT_COLOR COOLBASH_PROMPT_SYM
 #                dans le terminal ;
 #      - basic : symboles Unicode standard, rendus par n'importe quelle police ;
 #      - 0     : aucune icône.
-#      Défaut : 0 sur la console (TERM=linux), basic en mode safe, nerd sinon.
+#      Défaut : 0 sur la console (TERM=linux), basic en mode safe, nerd sinon —
+#      sauf si `make install` n'a trouvé aucune Nerd Font (<prefix>/.nerdfont
+#      vaut 1) : basic. En SSH ce fichier est ignoré, la police qui compte est
+#      celle du poste qui affiche le terminal.
 #      Une valeur explicite de COOLBASH_PROMPT_ICONS est toujours respectée ;
 #      une valeur inconnue retombe sur basic.
 _coolbash_prompt_init_icons() {
@@ -41,7 +45,13 @@ _coolbash_prompt_init_icons() {
   if [[ -z "${COOLBASH_PROMPT_ICONS:-}" ]]; then
     if [[ "${TERM:-}" == linux ]]; then COOLBASH_PROMPT_ICONS=0
     elif _coolbash_safe; then COOLBASH_PROMPT_ICONS=basic
-    else COOLBASH_PROMPT_ICONS=nerd
+    else
+      local font=""
+      COOLBASH_PROMPT_ICONS=nerd
+      if [[ -z "${SSH_CONNECTION:-}${SSH_TTY:-}${SSH_CLIENT:-}" ]] \
+         && read -r font 2>/dev/null < "${COOLBASH_PREFIX:-$HOME/.coolbash}/.nerdfont" && [[ "$font" == 1 ]]; then
+        COOLBASH_PROMPT_ICONS=basic
+      fi
     fi
   fi
   case "${COOLBASH_PROMPT_ICONS}" in

@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.9.0 — 2026-09-18 · « Moins de surprises »
+### Ajouté
+- **Repli automatique des icônes** : `make install` note dans `<prefix>/.nerdfont` si une Nerd Font
+  est présente ; sans police, le prompt passe en `basic` au lieu d'afficher des carrés. Ignoré en
+  SSH (la police qui compte est celle du poste qui affiche) et dès que `COOLBASH_PROMPT_ICONS`
+  est défini.
+- **`coolbash config`** : tous les réglages `COOLBASH_*`, valeur effective, « défini » ou
+  « défaut », rôle. Exécutée dans le shell courant pour voir les variables non exportées. Un test
+  vérifie que chaque variable documentée dans le README y figure.
+- **`coolbash update` dit ce qu'il a fait** : `0.8.1 → 0.9.0`, « déjà à jour (x) », ou un échec
+  explicite (« Tests en échec : rien n'a été installé, version en place : x »).
+- **`coolbash uninstall`** retire aussi la police installée par CoolBash (`coolbash-font remove`).
+- **fzf** : `Ctrl-R`, `Ctrl-T`, `Alt-C` chargés en shell interactif quand fzf est là (Arch, Debian,
+  Fedora, `~/.fzf`). `COOLBASH_FZF=0`, `COOLBASH_FZF_KEYBINDINGS`. Jamais en mode `safe`.
+- **Alias pacman** : `au`, `aug`, `asr`, `ain`, `arm`, `apc` routés vers pacman quand apt est absent
+  (`au` fait `-Syu`, jamais `-Sy` seul).
+- **`extract -d`** : extrait dans un dossier au nom de l'archive. `extract` vérifie que l'outil
+  (`unrar`, `7z`, `unzip`…) existe et renvoie 3 avec son nom sinon.
+- `HISTIGNORE` écarte aussi `history*`, `fg`, `bg`, `jobs`.
+- **CI Debian 13** : second job dans un conteneur `debian:13`, sous un utilisateur non root.
+### Modifié
+- `install.sh` relancé sur un clone existant le met à jour (`git pull --rebase`) au lieu d'échouer ;
+  il refuse un `~/.coolbash` qui n'est pas un clone git, sans y toucher. `COOLBASH_REPO_URL`.
+- shellcheck passe de `-S error` à `-S warning` sur les modules : `command ls` dans le test de
+  `--group-directories-first`, `mkcd` gère l'échec de `cd`, `GPG_TTY` déclaré puis exporté ; les
+  faux positifs des namerefs sont désactivés par fichier, avec leur raison.
+
 ## 0.8.1 — 2026-09-18 · « Ménage dans les modules »
 ### Corrigé
 - `please` : `alias please='sudo !!'` ne pouvait pas marcher (pas d'expansion d'historique dans un

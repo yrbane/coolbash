@@ -17,3 +17,19 @@ jobs:
         run: make verify
       - name: Suite de tests
         run: make test
+
+  # FR : Debian 13 est une cible réelle. Le conteneur tourne en root, or root
+  #      passe CoolBash en mode safe : les tests tournent sous un utilisateur.
+  debian:
+    runs-on: ubuntu-latest
+    container: debian:13
+    steps:
+      - name: Installer les outils
+        run: apt-get update -qq && apt-get install -y -qq git make shellcheck xz-utils curl
+      - uses: actions/checkout@v4
+      - name: Vérification + tests sous un utilisateur normal
+        run: |
+          useradd -m tester
+          cp -r . /home/tester/coolbash
+          chown -R tester:tester /home/tester/coolbash
+          su tester -c 'cd ~/coolbash && make verify && make test'

@@ -79,4 +79,16 @@ assert_contains "doctor en SSH : la police se règle côté client" "$(doctor SS
 # --- CLI ---------------------------------------------------------------------
 assert_contains "coolbash help mentionne la commande font" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" help)" "font"
 
+# --- état de la police mémorisé pour le prompt, police retirée à l'uninstall --
+if command -v curl >/dev/null 2>&1; then
+  mk COOLBASH_FONT=0 >/dev/null 2>&1
+  assert_eq "make install note l'absence de police dans .nerdfont (même avec COOLBASH_FONT=0)" "1" "$(cat "${home}/.coolbash/.nerdfont")"
+  mk COOLBASH_FONT=1 COOLBASH_FONT_URL="${url}" >/dev/null 2>&1
+  assert_eq "…puis sa présence après installation" "0" "$(cat "${home}/.coolbash/.nerdfont")"
+  assert_file "police en place avant uninstall" "${home}/.local/share/fonts/coolbash-nerd/FakeNerdFont-Regular.ttf"
+  out="$(env HOME="${home}" PATH="${bin}:${PATH}" make -s -C "${CLONE}" uninstall PREFIX="${home}/.coolbash" BASHRC="${home}/.bashrc" 2>&1)"
+  assert_no_path "make uninstall retire la police installée par CoolBash" "${home}/.local/share/fonts/coolbash-nerd"
+  assert_contains "…et le dit" "${out}" "olice"
+fi
+
 t_done

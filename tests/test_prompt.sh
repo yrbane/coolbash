@@ -185,4 +185,20 @@ assert_eq "COOLBASH_PROMPT_TOOLS=0 désactive" "" "$(COOLBASH_PROMPT_TOOLS=0 too
 assert_eq "mode safe : désactivé" "" "$(COOLBASH_MODE=safe tools_seg)"
 assert_eq "conda : CONDA_DEFAULT_ENV dans le segment venv" "ml" "$(CONDA_DEFAULT_ENV=ml with_prompt '_coolbash_prompt_venv')"
 
+# --- 12. Repli automatique des icônes selon la police détectée à l'installation --
+# FR : `make install` note dans <prefix>/.nerdfont le statut de la police
+#      (0 présente, 1 absente, 2 indéterminé). Sans Nerd Font et hors SSH → basic.
+pfx="${COOLBASH_TEST_TMP}/pfx"; mkdir -p "${pfx}"
+icons() { env -u SSH_CONNECTION -u SSH_TTY -u SSH_CLIENT "$@" TERM=xterm COLORTERM='' HOME="${COOLBASH_TEST_TMP}" COOLBASH_PREFIX="${pfx}" bash --norc --noprofile -c 'source "$1"; source "$2"; echo "$COOLBASH_PROMPT_ICONS"' _ "${CORE}" "${PROMPT}" 2>&1; }
+echo 1 >| "${pfx}/.nerdfont"
+assert_eq "police absente, session locale : icônes basic" "basic" "$(icons)"
+assert_eq "…mais un réglage explicite reste prioritaire" "nerd" "$(icons COOLBASH_PROMPT_ICONS=nerd)"
+assert_eq "…et en SSH on garde nerd (la police est côté client)" "nerd" "$(icons SSH_CONNECTION=x)"
+echo 0 >| "${pfx}/.nerdfont"
+assert_eq "police présente : nerd" "nerd" "$(icons)"
+echo 2 >| "${pfx}/.nerdfont"
+assert_eq "statut indéterminé : nerd" "nerd" "$(icons)"
+rm -f "${pfx}/.nerdfont"
+assert_eq "pas de fichier d'état : nerd" "nerd" "$(icons)"
+
 t_done

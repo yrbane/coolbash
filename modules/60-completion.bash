@@ -41,5 +41,8 @@ if ! _coolbash_safe; then
 fi
 
 # FR: GPG_TTY pour pinentry (commits signés).
-command -v gpg >/dev/null 2>&1 && [[ -t 0 ]] && export GPG_TTY="$(tty)"
+if command -v gpg >/dev/null 2>&1 && [[ -t 0 ]]; then
+  GPG_TTY="$(tty)"
+  export GPG_TTY
+fi
 true

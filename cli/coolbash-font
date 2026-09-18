@@ -7,7 +7,10 @@
 #  Usage : coolbash-font status    0 = une Nerd Font est installée
 #                                  1 = aucune, 2 = indéterminé (pas de fc-list)
 #          coolbash-font install   installe JetBrainsMono Nerd Font pour
-#                                  l'utilisateur (~/.local/share/fonts)
+#                                  l'utilisateur (~/.local/share/fonts), puis
+#                                  note le statut dans <prefix>/.nerdfont : le
+#                                  prompt s'en sert pour choisir ses icônes
+#          coolbash-font remove    retire la police installée par CoolBash
 #
 #  Réglages : COOLBASH_FONT=0      ne rien installer
 #             COOLBASH_FONT_URL    archive .tar.xz à utiliser (miroir, tests)
@@ -85,8 +88,24 @@ font_install() {
   return 0
 }
 
+# FR : 0 présente, 1 absente, 2 indéterminé — lu par 50-prompt (repli basic).
+font_record() {
+  local prefix="${COOLBASH_PREFIX:-${HOME}/.coolbash}" st
+  [[ -d "${prefix}" ]] || return 0
+  font_status; st=$?
+  echo "${st}" >| "${prefix}/.nerdfont"
+}
+
+font_remove() {
+  [[ -d "${FONT_DIR}" ]] || return 0
+  rm -rf "${FONT_DIR}"
+  command -v fc-cache >/dev/null 2>&1 && fc-cache -f >/dev/null 2>&1
+  log "Police : ${FONT_DIR} retiré."
+}
+
 case "${1:-}" in
   status)  font_status ;;
-  install) font_install ;;
-  *)       echo "Usage: coolbash-font status|install" >&2; exit 64 ;;
+  install) font_install; rc=$?; font_record; exit "${rc}" ;;
+  remove)  font_remove ;;
+  *)       echo "Usage: coolbash-font status|install|remove" >&2; exit 64 ;;
 esac

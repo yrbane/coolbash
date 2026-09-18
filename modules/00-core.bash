@@ -1,4 +1,5 @@
 # shellcheck shell=bash
+# shellcheck disable=SC2178,SC2128  # FR : PROMPT_COMMAND est une chaîne OU un tableau selon bash
 #   █████    █████   ██████   ██████
 #  ██       ██   ██  ██   ██  ██
 #  ██       ██   ██  ██████   █████
