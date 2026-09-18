@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.3 — 2026-09-18 · « Les tests ne touchent plus au vrai HOME »
+### Corrigé
+- **La suite de tests supprimait la police de l'utilisateur.** Depuis la 0.9.0, `make uninstall`
+  retire `~/.local/share/fonts/coolbash-nerd` ; or `tests/test_make.sh` lançait `make uninstall`
+  avec le vrai `HOME`. Chaque `make test` — donc chaque `coolbash update` — effaçait la police
+  installée. `tests/lib.sh` impose désormais un `HOME` jetable à **tous** les tests (et retire
+  `XDG_*_HOME`) ; un garde-fou le vérifie dans `test_make`. Après mise à jour : `coolbash font`.
+- **`coolbash update` échouait depuis un vrai terminal** : bash pose `COLUMNS` et `LINES`
+  (`checkwinsize`) dès qu'un terminal est attaché, et les tests d'isolation les prenaient pour
+  des fuites de la CLI et du prompt. Ajoutées au bruit connu de bash.
+
 ## 0.9.2 — 2026-09-18 · « update fonctionne aussi en SSH »
 - **`coolbash update` refusait d'installer depuis une session SSH** : lancée en SSH (ou dans un
   conteneur), la suite voyait le prompt passer à l'icône prise/cube — comportement voulu — et

@@ -9,6 +9,13 @@ COOLBASH_TEST_FAILS=0
 COOLBASH_TEST_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_TEST_TMP="$(mktemp -d)"
 trap 'rm -rf "${COOLBASH_TEST_TMP}"' EXIT
+# FR : AUCUN test ne voit le vrai HOME. En 0.9.0-0.9.2, test_make lançait
+#      `make uninstall` avec le HOME de l'utilisateur : la police installée dans
+#      ~/.local/share/fonts/coolbash-nerd était supprimée à chaque `make test`,
+#      donc à chaque `coolbash update`.
+export HOME="${COOLBASH_TEST_TMP}/home"
+mkdir -p "${HOME}"
+unset XDG_DATA_HOME XDG_CONFIG_HOME XDG_CACHE_HOME
 # FR : aucun test ne télécharge de police ; test_font.sh la réactive avec une
 #      archive locale.
 export COOLBASH_FONT=0

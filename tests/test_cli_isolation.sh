@@ -16,7 +16,7 @@ EMPTY_MODULES="${COOLBASH_TEST_TMP}/no-modules"
 mkdir -p "${EMPTY_MODULES}"
 
 # FR : variables que bash lui-même fait apparaître après une commande.
-BASH_NOISE='^(_|PIPESTATUS|OLDPWD|BASH_REMATCH|FUNCNAME|BASH_ARGV|BASH_ARGC|BASH_LINENO|BASH_SOURCE|COMP_WORDBREAKS)$'
+BASH_NOISE='^(_|PIPESTATUS|OLDPWD|BASH_REMATCH|FUNCNAME|BASH_ARGV|BASH_ARGC|BASH_LINENO|BASH_SOURCE|COMP_WORDBREAKS|COLUMNS|LINES)$'
 
 # --- 1. CLI seule (répertoire de modules vide) : diff avant/après ------------
 leaked_vars="$(

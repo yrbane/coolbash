@@ -91,7 +91,7 @@ leaks="$(HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c '
   compgen -v | sort > "$3/pv"; compgen -A function | sort > "$3/pf"
   source "$2"
   compgen -v | sort > "$3/pv2"; compgen -A function | sort > "$3/pf2"
-  comm -13 "$3/pv" "$3/pv2" | grep -Ev "^(COOLBASH_|PS0$|PS1$|PROMPT_COMMAND$|PROMPT_DIRTRIM$|_$|PIPESTATUS$|BASH_REMATCH$)"
+  comm -13 "$3/pv" "$3/pv2" | grep -Ev "^(COOLBASH_|PS0$|PS1$|PROMPT_COMMAND$|PROMPT_DIRTRIM$|_$|PIPESTATUS$|BASH_REMATCH$|COLUMNS$|LINES$)"
   comm -13 "$3/pf" "$3/pf2" | grep -Ev "^_coolbash_"
 ' _ "${CORE}" "${PROMPT}" "${COOLBASH_TEST_TMP}")"
 assert_empty "50-prompt ne définit que COOLBASH_*, PS0/PS1/PROMPT_COMMAND et _coolbash_*" "${leaks}"

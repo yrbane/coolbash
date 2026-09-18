@@ -17,6 +17,10 @@ printf '# mon bashrc\nexport FOO=1\n# coolbash rocks (commentaire à préserver)
 
 mk() { make -s -C "${CLONE}" "$@" PREFIX="${PREFIX}" BASHRC="${BASHRC}"; }
 
+# --- garde-fou : la suite ne touche jamais au vrai HOME ----------------------
+assert_contains "HOME des tests = dossier jetable (make uninstall y supprime une police)" "${HOME}" "${COOLBASH_TEST_TMP}/"
+sentinel="${HOME}/.local/share/fonts/coolbash-nerd"; mkdir -p "${sentinel}"; : > "${sentinel}/x.ttf"
+
 # --- install -----------------------------------------------------------------
 assert_success "make install réussit" mk install
 assert_file "la CLI est installée" "${PREFIX}/cli/coolbash"
@@ -58,6 +62,7 @@ assert_file "…et le clone est intact" "${CLONE}/Makefile"
 # --- uninstall ---------------------------------------------------------------
 assert_success "make uninstall réussit" mk uninstall
 assert_no_path "le répertoire d'installation est supprimé" "${PREFIX}"
+assert_no_path "uninstall retire la police du HOME qu'il voit — d'où le HOME jetable" "${sentinel}"
 assert_eq "la ligne source est retirée du bashrc" "0" "$(grep -c 'cli/coolbash' "${BASHRC}")"
 assert_contains "les autres lignes mentionnant coolbash sont préservées" "$(cat "${BASHRC}")" "# coolbash rocks"
 assert_contains "le reste du bashrc est intact" "$(cat "${BASHRC}")" "export FOO=1"
