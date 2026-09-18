@@ -15,6 +15,12 @@ export COOLBASH_FONT=0
 # FR : sans locale UTF-8 (conteneur Debian nu, `su -c`), bash laisse les
 #      `$'\uXXXX'` des tests tels quels et toutes les assertions d'icônes
 #      échouent alors que le module est correct. Vu en CI Debian 13.
+# FR : les tests ne dépendent pas de l'endroit d'où on les lance. Depuis une
+#      session SSH ou un conteneur, le prompt change (à raison) d'icône d'hôte
+#      et deux assertions tombaient : `coolbash update` refusait alors
+#      d'installer. Chaque test qui veut SSH ou un conteneur le dit lui-même.
+unset SSH_CONNECTION SSH_TTY SSH_CLIENT
+export COOLBASH_PROMPT_CONTAINER_MARKERS=/nonexistent/coolbash-test
 case "${LC_ALL:-${LANG:-}}" in
   *[Uu][Tt][Ff]*) ;;
   *) export LANG=C.UTF-8 LC_ALL=C.UTF-8 ;;

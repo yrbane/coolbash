@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.2 — 2026-09-18 · « update fonctionne aussi en SSH »
+- **`coolbash update` refusait d'installer depuis une session SSH** : lancée en SSH (ou dans un
+  conteneur), la suite voyait le prompt passer à l'icône prise/cube — comportement voulu — et
+  deux assertions « en local » échouaient, donc rien n'était installé. `tests/lib.sh` neutralise
+  `SSH_*` et les marqueurs de conteneur ; les tests qui veulent ces contextes les posent eux-mêmes.
+  Trouvé grâce au job CI Debian 13 (conteneur Docker), reproduit avec `SSH_CONNECTION=x make test`.
+- Les 0.9.0 et 0.9.1 n'ayant pas été taguées (CI rouge sur ce job), cette release couvre leurs notes.
+
 ## 0.9.1 — 2026-09-18 · « Tests verts sans locale UTF-8 »
 - Le nouveau job CI Debian 13 a révélé que la suite échouait sans locale UTF-8 (conteneur nu,
   `su -c`) : bash laissait les `$'\uXXXX'` des scripts de test tels quels, 16 assertions d'icônes
