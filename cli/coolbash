@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.9.3"
+COOLBASH_VERSION="0.9.4"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -149,6 +149,7 @@ _coolbash_cmd_init() {
   done
   # FR : expose `coolbash <command>` dans le shell courant.
   #      `config` tourne dans ce shell pour voir les variables non exportées.
+  unalias coolbash 2>/dev/null
   coolbash() {
     if [[ "${1:-}" == config ]]; then _coolbash_cmd_config; else bash "${COOLBASH_ROOT}/cli/coolbash" "$@"; fi
   }

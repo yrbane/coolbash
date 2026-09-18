@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.4 — 2026-09-18 · « source ~/.bashrc après une mise à jour »
+- **Erreur de syntaxe au rechargement** : après la mise à jour depuis une version où `please` était
+  un alias, `source ~/.bashrc` dans le shell déjà ouvert développait cet alias à la lecture de
+  `please() {` (« erreur de syntaxe près du symbole inattendu ( ») et le module `30-aliases` ne se
+  chargeait pas. Chaque module retire maintenant (`unalias`) un éventuel alias homonyme avant de
+  définir ses fonctions publiques — vaut aussi pour un `~/.bash_aliases` qui en redéfinirait une.
+  Un nouveau terminal n'était pas touché.
+
 ## 0.9.3 — 2026-09-18 · « Les tests ne touchent plus au vrai HOME »
 ### Corrigé
 - **La suite de tests supprimait la police de l'utilisateur.** Depuis la 0.9.0, `make uninstall`

@@ -49,6 +49,9 @@ shopt -s autocd cdspell dirspell checkjobs extglob globstar histappend cmdhist c
 # bind '"\e[Z": menu-complete-backward'  # Shift-Tab = complétion arrière
 
 # FR: Helpers PATH sans doublons (API publique).
+# FR : un alias homonyme (ancienne version, ~/.bash_aliases) serait développé à la
+#      lecture de « nom() { » → erreur de syntaxe au rechargement du .bashrc.
+unalias path_prepend path_append 2>/dev/null
 path_prepend() { case ":$PATH:" in *":$1:"*) ;; *) PATH="$1:$PATH";; esac; }
 path_append()  { case ":$PATH:" in *":$1:"*) ;; *) PATH="$PATH:$1";; esac; }
 

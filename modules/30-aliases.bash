@@ -47,6 +47,9 @@ alias mv='mv -i'
 # FR : `alias please='sudo !!'` ne peut pas marcher — l'expansion d'historique
 #      n'a pas lieu dans un alias. `fc -l` écarte déjà la ligne en cours
 #      (« please ») : -1 désigne donc bien la commande précédente.
+# FR : un alias homonyme (ancienne version, ~/.bash_aliases) serait développé à la
+#      lecture de « nom() { » → erreur de syntaxe au rechargement du .bashrc.
+unalias please 2>/dev/null
 please() {
   local cmd
   cmd="$(HISTTIMEFORMAT='' builtin fc -ln -1 -1 2>/dev/null)"

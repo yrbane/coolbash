@@ -7,6 +7,9 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # FR: man pages colorisées (via variables LESS_TERMCAP)
+# FR : un alias homonyme (ancienne version, ~/.bash_aliases) serait développé à la
+#      lecture de « nom() { » → erreur de syntaxe au rechargement du .bashrc.
+unalias man mkcd extract up timer coolbash_log coolbash_error 2>/dev/null
 man() {
   env \
   LESS_TERMCAP_mb=$'\E[01;31m' \

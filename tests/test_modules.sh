@@ -63,7 +63,7 @@ assert_eq "le chargeur différé charge puis se retire (retour 124 = réessayer 
 
 # --- 0.8.1 : correctifs des modules -----------------------------------------
 # shellcheck disable=SC2016
-mod() { MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c 'source "$1"; m="$2"; shift 2; source "$m"; eval "$*"' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/$1" "${@:2}" 2>&1; }
+mod() { COOLBASH_T_ROOT="${COOLBASH_TEST_ROOT}" MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c 'source "$1"; m="$2"; shift 2; source "$m"; eval "$*"' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/$1" "${@:2}" 2>&1; }
 
 # FR : `alias please='sudo !!'` ne marchait pas — pas d'expansion d'historique dans un alias.
 assert_eq "please est une fonction, plus un alias" "function" "$(mod 30-aliases.bash 'type -t please')"
@@ -72,6 +72,12 @@ printf '#!/bin/sh\necho "SUDO:$*"\n' > "${fakebin}/sudo"; chmod +x "${fakebin}/s
 got="$(printf 'source "%s"; source "%s"\necho bonjour le monde\nplease\n' "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/30-aliases.bash" \
       | MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" PATH="${fakebin}:${PATH}" bash --norc --noprofile -i 2>/dev/null | grep '^SUDO:')"
 assert_contains "please relance la dernière commande avec sudo" "${got}" "echo bonjour le monde"
+
+# FR : vu en 0.9.3 — `source ~/.bashrc` dans un shell où `please` est encore l'alias d'une
+#      ancienne version : l'alias est développé à la lecture de `please() {` → erreur de syntaxe.
+out="$(mod 00-core.bash 'shopt -s expand_aliases; alias please="sudo !!"; alias mkcd="echo x"; alias up="echo y"
+  for m in "$COOLBASH_T_ROOT"/modules/*.bash; do source "$m" || echo "échec: $m"; done; type -t please mkcd up' 2>&1)"
+assert_eq "recharger par-dessus d'anciens alias homonymes : aucune erreur, fonctions en place" "function function function" "$(printf '%s' "${out}" | tr '\n' ' ')"
 
 # FR : le chemin des gems Ruby était figé (3.4.0) et ajouté même absent.
 assert_eq "PATH : aucun dossier de gems inexistant" "0" "$(PATH=/usr/bin:/bin mod 20-path-and-colors.bash 'echo "$PATH"' | tr ':' '\n' | grep -c 'gem/ruby')"
