@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.0 — 2026-09-18 · « La police des icônes s'installe toute seule »
+### Ajouté
+- `cli/coolbash-font` : détecte une Nerd Font (`fc-list`) et installe JetBrainsMono Nerd Font dans
+  `~/.local/share/fonts/coolbash-nerd`, sans `sudo` (curl ou wget, tar, xz). Seuls les styles
+  Regular/Bold/Italic/BoldItalic sont gardés : ≈ 20 Mo au lieu de 233 Mo pour l'archive complète.
+- `coolbash install` (`make install`) l'appelle quand aucune Nerd Font n'est présente. Un échec
+  (pas de réseau, pas de `xz`…) n'interrompt **jamais** l'installation : le message indique le
+  repli `COOLBASH_PROMPT_ICONS=basic`. Rien n'est installé pour root ni avec `COOLBASH_FONT=0`.
+- `coolbash font` : relance l'installation de la police seule.
+- `coolbash doctor` : ligne « police » — installée, absente (avec la commande qui répare et le
+  repli sans police) ou indéterminée sans `fc-list`. En session SSH, rappelle que la police doit
+  être sur la machine qui affiche le terminal.
+- `COOLBASH_FONT_URL` : archive `.tar.xz` alternative (miroir interne).
+### Modifié
+- `make verify` et `test_syntax` couvrent `cli/coolbash-font` ; `tests/lib.sh` exporte
+  `COOLBASH_FONT=0` : aucun test ne touche au réseau. `tests/test_font.sh` utilise une archive
+  locale et un faux `fc-list`.
+
 ## 0.7.0 — 2026-09-08 · « Prompt contextuel »
 ### Ajouté
 - **Chemin tronqué** : `PROMPT_DIRTRIM=3` par défaut (respecté s'il est déjà défini).

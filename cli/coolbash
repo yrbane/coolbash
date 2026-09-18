@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.7.0"
+COOLBASH_VERSION="0.8.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -44,6 +44,7 @@ _coolbash_cmd_update()    { _coolbash_make update; }
 _coolbash_cmd_verify()    { _coolbash_make verify; }
 _coolbash_cmd_test()      { _coolbash_make test; }
 _coolbash_cmd_uninstall() { _coolbash_make uninstall; }
+_coolbash_cmd_font()      { bash "${COOLBASH_ROOT}/cli/coolbash-font" install; }
 _coolbash_cmd_version()   { printf '%s\n' "${COOLBASH_VERSION}"; }
 
 # FR : diagnostic — requis (✘ = échec) et optionnels (– = absent, informatif).
@@ -70,6 +71,18 @@ _coolbash_cmd_doctor() {
   _coolbash_opt fzf       "completion floue"
   _coolbash_opt dircolors "couleurs ls"
   _coolbash_opt shellcheck "make verify"
+  # FR : icônes du prompt — 0 = Nerd Font présente, 1 = absente, 2 = fc-list absent.
+  bash "${COOLBASH_ROOT}/cli/coolbash-font" status; n=$?
+  case "$n" in
+    0) printf '  \e[32m✔\e[0m %-10s %s\n' "police" "Nerd Font installée (icônes du prompt) — à sélectionner dans le profil du terminal" ;;
+    1) printf '  \e[33m–\e[0m %-10s %s\n' "police" "Nerd Font absente : les icônes du prompt seront illisibles"
+       printf '               → lance « coolbash font », puis choisis la police dans ton terminal\n'
+       printf '               → ou sans police : export COOLBASH_PROMPT_ICONS=basic avant la ligne source du .bashrc\n' ;;
+    *) printf '  \e[33m–\e[0m %-10s %s\n' "police" "indéterminé (fc-list absent) — sans Nerd Font : COOLBASH_PROMPT_ICONS=basic" ;;
+  esac
+  if [[ -n "${SSH_CONNECTION:-}${SSH_TTY:-}${SSH_CLIENT:-}" ]]; then
+    printf '               ⚠ session SSH : la police doit être sur la machine qui affiche le terminal, pas ici\n'
+  fi
   printf '\nMode : %s%s\n' "${COOLBASH_MODE:-$([[ $EUID -eq 0 ]] && echo safe || echo normal)}" "${COOLBASH_DISABLE:+ · désactivés : ${COOLBASH_DISABLE}}"
   unset -f _coolbash_req _coolbash_opt; unset COOLBASH_DOCTOR_LABEL
   (( ko == 0 ))
@@ -110,6 +123,7 @@ Usage: coolbash <command>
 Commands:
   install     Install CoolBash into ~/.coolbash
   update      Update from GitHub (git clone required)
+  font        Install the Nerd Font used by the prompt icons
   verify      Check syntax of all modules
   test        Run the test suite
   uninstall   Remove CoolBash
@@ -126,6 +140,7 @@ HELP
 case "${1:-}" in
   install)    _coolbash_cmd_install ;;
   update)     _coolbash_cmd_update ;;
+  font)       _coolbash_cmd_font ;;
   verify)     _coolbash_cmd_verify ;;
   test)       _coolbash_cmd_test ;;
   uninstall)  _coolbash_cmd_uninstall ;;

@@ -9,6 +9,9 @@ COOLBASH_TEST_FAILS=0
 COOLBASH_TEST_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_TEST_TMP="$(mktemp -d)"
 trap 'rm -rf "${COOLBASH_TEST_TMP}"' EXIT
+# FR : aucun test ne télécharge de police ; test_font.sh la réactive avec une
+#      archive locale.
+export COOLBASH_FONT=0
 
 t_ok()   { printf '  \e[32m✔\e[0m %s\n' "$1"; }
 t_fail() { printf '  \e[31m✘\e[0m %s\n' "$1"; COOLBASH_TEST_FAILS=$((COOLBASH_TEST_FAILS + 1)); }

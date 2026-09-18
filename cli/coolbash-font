@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  CoolBash — Nerd Font pour les icônes du prompt
+#  FR : script EXÉCUTÉ (jamais sourcé), appelé par `make install`,
+#       `coolbash font` et `coolbash doctor`.
+#
+#  Usage : coolbash-font status    0 = une Nerd Font est installée
+#                                  1 = aucune, 2 = indéterminé (pas de fc-list)
+#          coolbash-font install   installe JetBrainsMono Nerd Font pour
+#                                  l'utilisateur (~/.local/share/fonts)
+#
+#  Réglages : COOLBASH_FONT=0      ne rien installer
+#             COOLBASH_FONT_URL    archive .tar.xz à utiliser (miroir, tests)
+# =============================================================================
+set -u
+
+FONT_NAME="JetBrainsMono Nerd Font"
+FONT_URL="${COOLBASH_FONT_URL:-https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz}"
+FONT_DIR="${XDG_DATA_HOME:-${HOME}/.local/share}/fonts/coolbash-nerd"
+
+log()  { printf '\e[32m[CoolBash]\e[0m %s\n' "$*"; }
+warn() { printf '\e[33m[CoolBash]\e[0m %s\n' "$*" >&2; }
+
+font_status() {
+  command -v fc-list >/dev/null 2>&1 || return 2
+  fc-list 2>/dev/null | grep -qi 'nerd font'
+}
+
+# FR : échec = on explique le repli, le prompt reste utilisable sans police.
+give_up() {
+  warn "$1"
+  warn "Installe une Nerd Font à la main (https://www.nerdfonts.com) ou passe aux icônes standard :"
+  warn "  export COOLBASH_PROMPT_ICONS=basic   # avant la ligne source du ~/.bashrc"
+  return 1
+}
+
+font_download() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL --max-time 180 -o "$2" "$1"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q -T 60 -O "$2" "$1"
+  else
+    return 127
+  fi
+}
+
+font_install() {
+  if [[ "${COOLBASH_FONT:-1}" == 0 ]]; then
+    log "Police : installation désactivée (COOLBASH_FONT=0)."; return 0
+  fi
+  if [[ $EUID -eq 0 ]]; then
+    log "Police : rien à installer pour root (mode safe, icônes standard)."; return 0
+  fi
+  if font_status; then
+    log "Police : une Nerd Font est déjà installée."; return 0
+  fi
+  if ! command -v tar >/dev/null 2>&1 || ! command -v xz >/dev/null 2>&1; then
+    give_up "Police : tar et xz sont requis (Debian : apt install xz-utils)."; return 1
+  fi
+
+  local tmp; tmp="$(mktemp -d)" || return 1
+  # shellcheck disable=SC2064
+  trap "rm -rf '${tmp}'" EXIT
+  log "Police : téléchargement de ${FONT_NAME}…"
+  if ! font_download "${FONT_URL}" "${tmp}/font.tar.xz"; then
+    give_up "Police : téléchargement impossible (${FONT_URL}) — curl ou wget requis, et un accès réseau."; return 1
+  fi
+  mkdir -p "${tmp}/out"
+  if ! tar -xJf "${tmp}/font.tar.xz" -C "${tmp}/out" 2>/dev/null; then
+    give_up "Police : archive illisible."; return 1
+  fi
+  # FR : on ne crée le dossier final qu'une fois l'extraction réussie.
+  mkdir -p "${FONT_DIR}"
+  # FR : l'archive complète pèse > 200 Mo (96 variantes) ; un terminal n'a
+  #      besoin que des quatre styles de la famille principale.
+  find "${tmp}/out" -type f \( -name '*NerdFont-Regular.ttf' -o -name '*NerdFont-Bold.ttf' \
+    -o -name '*NerdFont-Italic.ttf' -o -name '*NerdFont-BoldItalic.ttf' \) -exec cp {} "${FONT_DIR}/" \;
+  command -v fc-cache >/dev/null 2>&1 && fc-cache -f "${FONT_DIR}" >/dev/null 2>&1
+
+  log "Police : ${FONT_NAME} installée dans ${FONT_DIR} ✅"
+  log "Dernière étape, à la main : choisis « ${FONT_NAME} » dans le profil de ton terminal, puis rouvre-le."
+  if [[ -n "${SSH_CONNECTION:-}${SSH_TTY:-}${SSH_CLIENT:-}" ]]; then
+    warn "Session SSH : les icônes sont dessinées par la machine qui affiche le terminal — c'est là qu'il faut la police."
+  fi
+  return 0
+}
+
+case "${1:-}" in
+  status)  font_status ;;
+  install) font_install ;;
+  *)       echo "Usage: coolbash-font status|install" >&2; exit 64 ;;
+esac

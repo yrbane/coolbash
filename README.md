@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.7.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -54,14 +54,15 @@ coolbash <command>
 
 | Commande    | Description                                   |
 | ----------- | --------------------------------------------- |
-| `install`   | Installe CoolBash dans `~/.coolbash`          |
+| `install`   | Installe CoolBash dans `~/.coolbash`, et la Nerd Font des icônes si aucune n'est présente |
 | `update`    | `git pull`, puis tests, puis install (clone git requis) |
+| `font`      | Installe (ou réessaie d'installer) la Nerd Font des icônes du prompt |
 | `verify`    | Vérifie la syntaxe (+ shellcheck si présent)  |
 | `test`      | Lance la suite de tests                       |
 | `uninstall` | Supprime complètement CoolBash                |
 | `init`      | Charge tous les modules dans le shell courant |
 | `version`   | Affiche la version                            |
-| `doctor`    | Diagnostic : bash, `.bashrc`, modules, locale, outils optionnels |
+| `doctor`    | Diagnostic : bash, `.bashrc`, modules, locale, outils optionnels, Nerd Font |
 | `help`      | Affiche l’aide de la CLI                      |
 
 La fonction shell `coolbash` est disponible dès que `~/.bashrc` a chargé CoolBash.
@@ -75,7 +76,8 @@ retrouvé via `COOLBASH_REPO`, le fichier `~/.coolbash/.repo` écrit à l'instal
 ```
 coolbash/
 ├─ cli/
-│   └─ coolbash               # CLI principale
+│   ├─ coolbash               # CLI principale
+│   └─ coolbash-font          # détection / installation de la Nerd Font
 ├─ modules/
 │   ├─ 00-core.bash
 │   ├─ 10-history.bash
@@ -137,6 +139,11 @@ coolbash/
    `COOLBASH_PROMPT_ICONS=basic` bascule sur des symboles Unicode standard (`⎇ ⚗ ⧗ ⚠`),
    `COOLBASH_PROMPT_ICONS=0` les retire. Par défaut : `basic` en mode `safe`, `0` sur la console
    (`TERM=linux`), `nerd` sinon
+🔹 **Icônes illisibles (carrés, `?`) ?** Il manque la police. `coolbash install` installe
+   JetBrainsMono Nerd Font dans `~/.local/share/fonts/coolbash-nerd` (≈ 20 Mo, sans `sudo`) quand
+   aucune Nerd Font n'est détectée ; `coolbash font` relance l'installation, `coolbash doctor` dit
+   si elle manque. Reste une étape manuelle : **choisir la police dans le profil du terminal**.
+   En SSH, c'est la machine qui affiche le terminal qui doit avoir la police, pas le serveur
 🔹 Couleurs dynamiques (TrueColor si supporté)
 🔹 Segments : utilisateur, host, git, venv/conda, php/node, durée, jobs, code retour
 🔹 Hôte selon le contexte : écran en local, prise en SSH avec une **couleur dérivée du nom de la
@@ -182,6 +189,7 @@ make verify             # bash -n + shellcheck
 | `tests/test_make.sh`          | `make install` / réinstall / `uninstall` / `update` dans un HOME jetable, sur une copie du clone |
 | `tests/test_syntax.sh`        | `bash -n` sur tout + shellcheck                                                    |
 | `tests/test_prompt.sh`        | Pas de trap DEBUG, durée réelle mesurée en shell interactif, formatage, segment git sur un dépôt jetable, isolation des noms du prompt, icônes (`nerd`/`basic`/`0`, résolution du mode), signaux, chevron, jobs, lecture seule, SSH/conteneur, OSC 7, notification, cache php/node, conda |
+| `tests/test_font.sh`          | Détection de la Nerd Font, installation depuis une archive locale (zéro réseau), `make install` jamais bloqué par la police, `doctor` |
 | `tests/test_isolation_modules.sh` | Chaque module n'expose que `COOLBASH_*`, des variables MAJUSCULES, `_coolbash_*` ou l'API publique documentée ici |
 | `tests/test_mode_safe.sh`     | `COOLBASH_MODE=safe` (emoji, git, MOTD, completion) et `COOLBASH_DISABLE`          |
 | `tests/test_perf.sh`          | Budget de démarrage : `init` complet ≤ 200 ms (`COOLBASH_TEST_INIT_BUDGET_MS`)     |
@@ -220,6 +228,8 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_GIT_UNTRACKED=0` | Ignore les fichiers non suivis (gros dépôts)                        |
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
+| `COOLBASH_FONT=0`               | `install` n'installe pas de police (serveurs, machines sans réseau)   |
+| `COOLBASH_FONT_URL`             | Archive `.tar.xz` de la police (miroir interne)                       |
 | `COOLBASH_PROMPT_TOOLS=0`       | Pas de versions php/node dans le prompt (désactivé en mode `safe`)     |
 | `COOLBASH_PROMPT_BELL_MS`       | Sonnerie + notification après une commande de plus de N ms (défaut `30000`, `0` = jamais) |
 | `COOLBASH_PS1_OSC7=0`           | Ne pas annoncer le dossier courant au terminal (OSC 7)                 |

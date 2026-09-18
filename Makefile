@@ -6,7 +6,7 @@ ROOT   := $(abspath .)
 #      forme `source $HOME/.coolbash/cli/coolbash init`).
 SOURCE_LINE = source "$(PREFIX)/cli/coolbash" init
 
-.PHONY: install update uninstall verify test
+.PHONY: install update uninstall verify test font
 
 install:
 	@echo "[CoolBash] Installing to $(PREFIX)..."
@@ -21,10 +21,14 @@ install:
 	  cp "$$m" "$$dest"; \
 	done
 	@[[ cli/coolbash -ef "$(PREFIX)/cli/coolbash" ]] || cp cli/coolbash "$(PREFIX)/cli/coolbash"
-	@chmod +x "$(PREFIX)/cli/coolbash"
+	@[[ cli/coolbash-font -ef "$(PREFIX)/cli/coolbash-font" ]] || cp cli/coolbash-font "$(PREFIX)/cli/coolbash-font"
+	@chmod +x "$(PREFIX)/cli/coolbash" "$(PREFIX)/cli/coolbash-font"
 	@[[ "$(ROOT)" -ef "$(PREFIX)" ]] || echo "$(ROOT)" >| "$(PREFIX)/.repo"
 	@touch "$(BASHRC)"
 	@grep -qF 'cli/coolbash' "$(BASHRC)" || echo '$(SOURCE_LINE)' >> "$(BASHRC)"
+	@# FR : la police des icônes est un confort — son échec (pas de réseau, pas
+	@#      de xz…) ne doit jamais faire échouer l'installation.
+	@bash cli/coolbash-font install || true
 	@echo "[CoolBash] Installation complete ✅"
 
 update:
@@ -43,12 +47,15 @@ uninstall:
 	@[[ -f "$(BASHRC)" ]] && sed -i '\#cli/coolbash"* init#d' "$(BASHRC)" || true
 	@echo "[CoolBash] Uninstalled successfully."
 
+font:
+	@bash cli/coolbash-font install
+
 verify:
 	@echo "[CoolBash] Verifying syntax..."
 	@# FR : `bash -n a b` ne vérifie que `a` (b devient $$1) — d'où la boucle.
-	@for f in cli/coolbash install.sh modules/*.bash tests/*.sh; do bash -n "$$f" || exit 1; done
+	@for f in cli/coolbash cli/coolbash-font install.sh modules/*.bash tests/*.sh; do bash -n "$$f" || exit 1; done
 	@if command -v shellcheck >/dev/null 2>&1; then \
-	  shellcheck cli/coolbash install.sh tests/*.sh && shellcheck -S error modules/*.bash; \
+	  shellcheck cli/coolbash cli/coolbash-font install.sh tests/*.sh && shellcheck -S error modules/*.bash; \
 	else \
 	  echo "  shellcheck absent : contrôle limité à 'bash -n'."; \
 	fi
