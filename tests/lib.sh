@@ -16,6 +16,8 @@ trap 'rm -rf "${COOLBASH_TEST_TMP}"' EXIT
 export HOME="${COOLBASH_TEST_TMP}/home"
 mkdir -p "${HOME}"
 unset XDG_DATA_HOME XDG_CONFIG_HOME XDG_CACHE_HOME
+# FR : variables de SDK héritées du shell qui lance les tests (35-toolchains les respecte).
+unset NVM_DIR NVM_BIN NVM_INC PNPM_HOME ANDROID_HOME
 # FR : aucun test ne télécharge de police ; test_font.sh la réactive avec une
 #      archive locale.
 export COOLBASH_FONT=0

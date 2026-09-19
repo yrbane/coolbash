@@ -124,4 +124,33 @@ out="$(cd "${ex}" && PATH="${pm}" mod 40-functions.bash 'extract x.rar; echo "rc
 assert_contains "extract : outil manquant signalé par son nom" "${out}" "unrar"
 assert_contains "…avec un code d'erreur" "${out}" "rc=3"
 
+# --- 35-toolchains : SDK dans le PATH seulement s'ils existent, nvm paresseux --
+th="${COOLBASH_TEST_TMP}/th"; mkdir -p "${th}"
+tc() { MOTD_DISABLE=1 HOME="${th}" PATH=/usr/bin:/bin bash --norc --noprofile -c 'source "$1"; source "$2"; shift 2; eval "$*"' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/35-toolchains.bash" "$@" 2>&1; }
+assert_eq "aucun SDK installé : PATH inchangé, rien d'exporté" "/usr/bin:/bin||" "$(tc 'echo "$PATH|${PNPM_HOME-}|${ANDROID_HOME-}"')"
+mkdir -p "${th}/.cargo/bin" "${th}/.local/share/pnpm" "${th}/Android/Sdk/platform-tools" "${th}/Android/Sdk/emulator" "${th}/.foundry/bin"
+path="$(tc 'echo "$PATH"')"
+for d in .cargo/bin .local/share/pnpm Android/Sdk/platform-tools Android/Sdk/emulator .foundry/bin; do
+  assert_contains "PATH contient ${d} quand il existe" ":${path}:" ":${th}/${d}:"
+done
+assert_eq "PNPM_HOME et ANDROID_HOME exportés" "${th}/.local/share/pnpm ${th}/Android/Sdk" "$(tc 'bash -c "echo \$PNPM_HOME \$ANDROID_HOME"')"
+assert_eq "rechargé deux fois : pas de doublon dans le PATH" "1" "$(tc 'source "'"${COOLBASH_TEST_ROOT}"'/modules/35-toolchains.bash"; echo "$PATH"' | tr ':' '\n' | grep -c '/.cargo/bin$')"
+
+# FR : nvm.sh coûte ~700 ms par shell. On met le node par défaut dans le PATH en lisant
+#      ~/.nvm/alias/default (zéro processus) et `nvm` ne se charge qu'au premier appel.
+mkdir -p "${th}/.nvm/alias" "${th}/.nvm/versions/node/v20.1.0/bin" "${th}/.nvm/versions/node/v24.14.0/bin"
+printf 'echo x >> "%s/nvm.loaded"\nnvm() { echo "vrai nvm: $*"; }\n' "${th}" > "${th}/.nvm/nvm.sh"
+echo '24.14.0' > "${th}/.nvm/alias/default"
+assert_contains "node par défaut (alias exact) dans le PATH" ":$(tc 'echo "$PATH"'):" ":${th}/.nvm/versions/node/v24.14.0/bin:"
+echo '20' > "${th}/.nvm/alias/default"
+assert_contains "alias partiel (20) : version installée correspondante" ":$(tc 'echo "$PATH"'):" ":${th}/.nvm/versions/node/v20.1.0/bin:"
+echo 'lts/*' > "${th}/.nvm/alias/default"
+assert_contains "alias non résolu (lts/*) : la plus récente installée" ":$(tc 'echo "$PATH"'):" ":${th}/.nvm/versions/node/v24.14.0/bin:"
+rm -f "${th}/nvm.loaded"; tc 'true' >/dev/null
+assert_no_path "nvm.sh n'est PAS chargé au démarrage" "${th}/nvm.loaded"
+assert_eq "NVM_DIR exporté" "${th}/.nvm" "$(tc 'echo "$NVM_DIR"')"
+assert_eq "premier appel à nvm : charge nvm.sh puis relaie les arguments" "vrai nvm: use 20" "$(tc 'nvm use 20')"
+assert_eq "COOLBASH_NVM_LAZY=0 : chargement immédiat, comme avant" "1" "$(rm -f "${th}/nvm.loaded"; COOLBASH_NVM_LAZY=0 tc 'true' >/dev/null; wc -l < "${th}/nvm.loaded")"
+assert_eq "mode safe : ni nvm ni SDK" "/usr/bin:/bin" "$(COOLBASH_MODE=safe tc 'echo "$PATH"')"
+
 t_done

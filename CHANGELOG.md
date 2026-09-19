@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.0 — 2026-09-19 · « Un ~/.bashrc d'une ligne »
+### Ajouté
+- **Module `35-toolchains`** : remplace les blocs que les installeurs ajoutent au `~/.bashrc`.
+  `~/.cargo/bin`, pnpm (`PNPM_HOME`), Android SDK (`ANDROID_HOME`, `platform-tools`, `emulator`),
+  `~/.foundry/bin` — chacun seulement si le dossier existe, sans doublon, sans aucun processus.
+  Les variables déjà définies sont respectées. Rien en mode `safe`.
+- **nvm paresseux** : sourcer `nvm.sh` coûtait ≈ 700 ms à chaque shell (mesuré), contre ≈ 25 ms
+  pour tout CoolBash. Le node par défaut est mis dans le `PATH` en lisant `~/.nvm/alias/default`
+  (alias exact `24.14.0`, partiel `24`, ou symbolique `lts/*` → version installée la plus
+  récente) : `node`, `npm`, `npx`, les binaires globaux et le segment node du prompt marchent
+  tout de suite. La fonction `nvm` charge le vrai `nvm.sh` (et sa completion) à son premier
+  appel. `COOLBASH_NVM_LAZY=0` rétablit le chargement immédiat.
+- README : section « Vider son `~/.bashrc` ».
+### Modifié
+- `tests/lib.sh` neutralise `NVM_DIR`, `PNPM_HOME`, `ANDROID_HOME` hérités du shell appelant.
+
 ## 0.9.5 — 2026-09-18 · « update ne scie plus la branche sur laquelle il est assis »
 - **Erreur de syntaxe à la fin d'un `coolbash update` réussi** (« près du symbole inattendu ;; ») :
   `update` est exécuté par `~/.coolbash/cli/coolbash`, que `make install` réécrivait en place

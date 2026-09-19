@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.9.5"
+COOLBASH_VERSION="0.10.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -72,6 +72,7 @@ COOLBASH_PS0_STAMP|1|0 = pas d'heure de départ sous la commande
 COOLBASH_PS0_TITLE|1|0 = ne pas toucher au titre du terminal
 COOLBASH_PS0_EXTRA||fragment ajouté à la fin de PS0
 COOLBASH_PS1_OSC7|1|0 = ne pas annoncer le dossier courant (OSC 7)
+COOLBASH_NVM_LAZY|1|0 = charger nvm.sh au démarrage (lent)
 COOLBASH_FZF|1|0 = pas de raccourcis fzf (Ctrl-R)
 COOLBASH_FZF_KEYBINDINGS||fichier key-bindings.bash à utiliser
 COOLBASH_MOTD|1|0 = pas de MOTD (MOTD_DISABLE=1 aussi)
