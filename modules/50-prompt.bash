@@ -19,7 +19,9 @@
 #                COOLBASH_PS0_TITLE=0, COOLBASH_PS0_EXTRA="…",
 #                COOLBASH_PROMPT_ICONS=nerd|basic|0, COOLBASH_PS1_OSC7=0,
 #                COOLBASH_PROMPT_BELL_MS (défaut 30000, 0 = jamais),
-#                COOLBASH_PROMPT_TOOLS=0, PROMPT_DIRTRIM (défaut 3).
+#                COOLBASH_PROMPT_TOOLS=0, PROMPT_DIRTRIM (défaut 3),
+#                COOLBASH_PROMPT_PATH_FISH=0 (jamais d'abréviation ~/D/coolbash),
+#                COOLBASH_PROMPT_TRANSIENT=1 (prompt réduit après l'Entrée, expérimental).
 
 if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
   return 0
@@ -184,9 +186,54 @@ _coolbash_prompt_ps0_title() {
   printf '\e]0;%s\a' "${cmd:0:70}"
 }
 
+# FR : chemin courant avec ~, abrégé façon fish (~/D/coolbash/modules) quand il
+#      dépasse la moitié du terminal : chaque dossier réduit à sa première lettre
+#      (deux pour un dossier caché), le dernier entier. $1 = variable de sortie ;
+#      vide = chemin court, garder \w (et PROMPT_DIRTRIM).
+_coolbash_prompt_path_fish() {
+  local p="$PWD" last out="" part
+  local -a parts
+  [[ -n "${HOME:-}" && "$p" == "$HOME"* ]] && p="~${p#"$HOME"}"
+  if ((${#p} <= ${COLUMNS:-80} / 2)); then
+    printf -v "$1" ''
+    return 0
+  fi
+  last="${p##*/}"
+  IFS='/' read -ra parts <<<"${p%/*}"
+  for part in "${parts[@]}"; do
+    case "$part" in
+      "" | "~") out+="$part/" ;;
+      .*) out+="${part:0:2}/" ;;
+      *) out+="${part:0:1}/" ;;
+    esac
+  done
+  out+="$last"
+  # FR : PS1 est ré-expansé : pas d'antislash ni de $ nus dans un chemin.
+  out="${out//\\/\\\\}"
+  out="${out//\$/\\\$}"
+  printf -v "$1" '%s' "$out"
+}
+
+# FR : prompt transient (COOLBASH_PROMPT_TRANSIENT=1, expérimental) : à l'Entrée,
+#      les deux lignes du prompt sont effacées et remplacées par « chemin $ commande »
+#      sur une seule ligne — un écran d'historique compact. Le nombre de lignes à
+#      remonter est calculé (largeur du terminal), pas mesuré : approximatif avec
+#      des glyphes larges ou une commande sur plusieurs lignes.
+_coolbash_prompt_transient() {
+  local n cmd path lines cols="${COLUMNS:-80}"
+  read -r n cmd <<<"$(HISTTIMEFORMAT='' builtin history 1 2>/dev/null)"
+  COLUMNS=1 _coolbash_prompt_path_fish path
+  path="${path//\\\\/\\}"
+  path="${path//\\\$/\$}"
+  lines=$((2 + (${#path} + 3 + ${#cmd}) / cols))
+  printf '\e[%dA\r\e[J\e[1m%s\e[0m $ %s\n' "$lines" "$path" "${cmd:-}"
+}
+
 _coolbash_prompt_ps0_build() {
   # shellcheck disable=SC2016
   local ps0='${COOLBASH_PROMPT_PS0_SINK[$((COOLBASH_PROMPT_T0 = ${EPOCHREALTIME//[.,]/}))]:+}'
+  # shellcheck disable=SC2016
+  [[ "${COOLBASH_PROMPT_TRANSIENT:-0}" == 1 ]] && ps0+='$(_coolbash_prompt_transient)'
   if [[ "${COOLBASH_PS0_TITLE:-1}" != 0 ]] && _coolbash_prompt_term_has_title; then
     # shellcheck disable=SC2016
     ps0+='$(_coolbash_prompt_ps0_title)'
@@ -402,6 +449,11 @@ _coolbash_prompt_build() {
   fi
   host="${hcolor} ${hicon:+${hicon}  }\h${c[reset]}"
   [[ -w "$PWD" ]] || ro="${s[ro]:+${s[ro]} }"
+  local wpath='\w'
+  if [[ "${COOLBASH_PROMPT_PATH_FISH:-1}" != 0 ]]; then
+    _coolbash_prompt_path_fish seg
+    [[ -n "$seg" ]] && wpath="$seg"
+  fi
   seg="$(_coolbash_prompt_git)"
   [[ -n "$seg" ]] && git=" ${c[git]}${s[branch]:+${s[branch]} }${seg}${c[reset]}"
   seg="$(_coolbash_prompt_venv)"
@@ -420,11 +472,23 @@ _coolbash_prompt_build() {
   if _coolbash_prompt_term_has_title; then
     if [[ "${COOLBASH_PS0_TITLE:-1}" != 0 && "${PROMPT_COMMAND[*]}" != *']0;'* ]]; then
       title='\[\e]0;\u@\h: \w\a\]'
+      # FR : après une commande longue, le titre garde son nom, son sort et sa
+      #      durée jusqu'au prochain prompt : on voit de loin quel onglet a fini.
+      local min="${COOLBASH_PROMPT_BELL_MS:-30000}"
+      if ((min > 0 && COOLBASH_PROMPT_LAST_MS >= min)); then
+        local n cmd dur mark='✔'
+        ((ec != 0)) && mark='✘'
+        read -r n cmd <<<"$(HISTTIMEFORMAT='' builtin history 1 2>/dev/null)"
+        dur="$(COOLBASH_PROMPT_MIN_MS=0 _coolbash_prompt_duration)"
+        cmd="${cmd//\\/}"
+        cmd="${cmd//\$/\\\$}"
+        title='\[\e]0;'"${mark} ${cmd:0:60} · ${dur}"'\a\]'
+      fi
     fi
     [[ "${COOLBASH_PS1_OSC7:-1}" != 0 ]] && title+="$(_coolbash_prompt_osc7)"
     title+="$(_coolbash_prompt_notify)"
   fi
-  PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}${clock}${c[reset]} ${who} at ${host}${git}${venv}${tools}${dur}${jobs}${err}"$'\n'"${c[bold]}${c[path]}${ro}${s[path]:+${s[path]} }\w${c[reset]} ${chevron} "
+  PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}${clock}${c[reset]} ${who} at ${host}${git}${venv}${tools}${dur}${jobs}${err}"$'\n'"${c[bold]}${c[path]}${ro}${s[path]:+${s[path]} }${wpath}${c[reset]} ${chevron} "
 }
 
 # --- Enregistrement dans PROMPT_COMMAND (helper commun de 00-core) -----------

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.18.0 — 2026-09-29 · « Le prompt en dit plus, en moins de place »
+### Ajouté
+- **Titre du terminal après une commande longue** : au-delà de `COOLBASH_PROMPT_BELL_MS`
+  (30 s), le titre devient `✔ make test · 2m 03s` (ou `✘` en cas d'échec) jusqu'au prochain
+  prompt, à la place de `user@host: dossier`. On voit de loin quel onglet a fini.
+- **Chemin abrégé façon fish** : quand le chemin dépasse la moitié du terminal, chaque dossier
+  est réduit à sa première lettre (deux pour un dossier caché), le dernier reste entier :
+  `~/D/coolbash/modules`. Sinon `\w` et `PROMPT_DIRTRIM` comme avant. `COOLBASH_PROMPT_PATH_FISH=0`
+  pour ne jamais abréger.
+- **Prompt transient** (`COOLBASH_PROMPT_TRANSIENT=1`, expérimental, désactivé par défaut) : à
+  l'Entrée, les deux lignes du prompt sont effacées et remplacées par `chemin $ commande` sur une
+  ligne. Le nombre de lignes à remonter est calculé d'après la largeur du terminal.
+- Le retard sur la branche distante (`↓3`) était déjà affiché depuis la 0.7.0, sans coût
+  supplémentaire : il vient du `git status --branch` déjà exécuté.
+- Tests : titre ✔/✘, chemin abrégé (long, large, caché, désactivé), transient (PS0, redessin,
+  commande enroulée).
+
 ## 0.17.1 — 2026-09-29 · « Formaté »
 ### Corrigé
 - `make lint` refusait le dépôt (deux lignes de `cheat` hors format shfmt) : la CI de la 0.17.0 était

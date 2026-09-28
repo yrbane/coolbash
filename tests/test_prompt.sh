@@ -216,4 +216,28 @@ assert_eq "statut indéterminé : nerd" "nerd" "$(icons)"
 rm -f "${pfx}/.nerdfont"
 assert_eq "pas de fichier d'état : nerd" "nerd" "$(icons)"
 
+# --- 13. 0.18.0 : titre après une commande longue, chemin façon fish, transient --
+t="$(TERM=xterm COOLBASH_PROMPT_BELL_MS=1000 with_prompt 'set -o history; history -s "make test"; COOLBASH_PROMPT_T0=$(( ${EPOCHREALTIME//[.,]/} - 2000000 )); true; _coolbash_prompt_build; printf %s "$PS1"')"
+assert_contains "commande longue : le titre du terminal devient « ✔ commande · durée »" "${t}" ']0;✔ make test · '
+assert_eq "…à la place de user@host: dossier" "0" "$(printf '%s' "${t}" | grep -c ']0;\\u@\\h')"
+t="$(TERM=xterm COOLBASH_PROMPT_BELL_MS=1000 with_prompt 'set -o history; history -s "make test"; COOLBASH_PROMPT_T0=$(( ${EPOCHREALTIME//[.,]/} - 2000000 )); (exit 2); _coolbash_prompt_build; printf %s "$PS1"')"
+assert_contains "commande longue en échec : ✘ dans le titre" "${t}" ']0;✘ make test'
+assert_contains "commande courte : titre user@host: dossier" "$(TERM=xterm ps1_of)" ']0;\u@\h: \w'
+deep="${COOLBASH_TEST_TMP}/projets/coolbash/modules/prompt/segments"
+mkdir -p "${deep}"
+# shellcheck disable=SC2088  # FR : le tilde attendu est celui du prompt, pas une expansion
+assert_contains "chemin long (> moitié du terminal) : abrégé façon fish" "$(cd "${deep}" && COLUMNS=40 ps1_of)" '~/p/c/m/p/segments'
+assert_contains "chemin long sur un terminal large : \\w (PROMPT_DIRTRIM)" "$(cd "${deep}" && COLUMNS=200 ps1_of)" '\w'
+assert_contains "COOLBASH_PROMPT_PATH_FISH=0 : toujours \\w" "$(cd "${deep}" && COLUMNS=40 COOLBASH_PROMPT_PATH_FISH=0 ps1_of)" '\w'
+mkdir -p "${COOLBASH_TEST_TMP}/.config/very/long/hidden/path/here"
+# shellcheck disable=SC2088
+assert_contains "un dossier caché garde son point et sa première lettre" "$(cd "${COOLBASH_TEST_TMP}/.config/very/long/hidden/path/here" && COLUMNS=30 ps1_of)" '~/.c/v/l/h/p/here'
+assert_eq "prompt transient : désactivé par défaut" "0" "$(with_prompt 'printf %s "$PS0"' | grep -c transient)"
+assert_contains "COOLBASH_PROMPT_TRANSIENT=1 : PS0 appelle le redessin" "$(COOLBASH_PROMPT_TRANSIENT=1 with_prompt 'printf %s "$PS0"')" '_coolbash_prompt_transient'
+tr_out="$(cd "${deep}" && COOLBASH_PROMPT_TRANSIENT=1 COLUMNS=80 with_prompt 'set -o history; history -s "ls -la"; _coolbash_prompt_build; _coolbash_prompt_transient' | cat -v)"
+assert_contains "…le redessin remonte de deux lignes et efface la suite" "${tr_out}" '^[[2A^M^[[J'
+assert_contains "…puis réaffiche chemin, chevron et commande sur une ligne" "${tr_out}" 'segments^[[0m $ ls -la'
+tr_out="$(cd "${deep}" && COOLBASH_PROMPT_TRANSIENT=1 COLUMNS=20 with_prompt 'set -o history; history -s "echo une commande qui dépasse largement la largeur"; _coolbash_prompt_build; _coolbash_prompt_transient' | cat -v)"
+assert_eq "…une commande qui s'enroule sur plusieurs lignes remonte davantage" "1" "$(printf '%s' "${tr_out}" | grep -cE '\^\[\[[3-9]A')"
+
 t_done

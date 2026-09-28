@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.17.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.18.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -251,6 +251,8 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_FONT_URL`             | Archive `.tar.xz` de la police (miroir interne)                       |
 | `COOLBASH_PROMPT_TOOLS=0`       | Pas de versions php/node dans le prompt (désactivé en mode `safe`)     |
 | `COOLBASH_PROMPT_BELL_MS`       | Sonnerie + notification après une commande de plus de N ms (défaut `30000`, `0` = jamais) |
+| `COOLBASH_PROMPT_PATH_FISH=0`   | Jamais de chemin abrégé façon fish (`~/D/coolbash/modules`), même quand il dépasse la moitié du terminal |
+| `COOLBASH_PROMPT_TRANSIENT=1`   | Expérimental : après l'Entrée, le prompt de deux lignes est remplacé par `chemin $ commande` sur une ligne |
 | `COOLBASH_PS1_OSC7=0`           | Ne pas annoncer le dossier courant au terminal (OSC 7)                 |
 | `COOLBASH_PROMPT_CONTAINER_MARKERS` | Fichiers révélant un conteneur (défaut `/.dockerenv /run/.containerenv`) |
 | `PROMPT_DIRTRIM`                | Dossiers gardés dans `\w` (défaut `3`, réglage bash natif)             |
