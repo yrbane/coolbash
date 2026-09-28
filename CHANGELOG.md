@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.3 — 2026-09-29 · « chuck norris, en minuscules aussi »
+### Corrigé
+- Tests : certains facts écrivent « chuck norris » sans majuscules ; les tests du thème `chuck`
+  comparent désormais sans tenir compte de la casse (échec aléatoire de la CI Debian).
+  La 0.15.2 n'a pas été taguée.
+
 ## 0.15.2 — 2026-09-29 · « La racine, même en overlay »
 ### Corrigé
 - La ligne `Disk (/)` disparaissait quand `/` n'est pas un `/dev/…` (overlay d'un conteneur, CI

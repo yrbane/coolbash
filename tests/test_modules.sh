@@ -163,7 +163,7 @@ rm "${COOLBASH_TEST_TMP}/.coolbash/motd.txt"
 # FR : citations françaises embarquées (share/fortunes/<thème>.txt), tirées en pur bash.
 fort() { mod 70-motd.bash "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' PATH=/nonexistent; $1 _coolbash_fortune t && printf '%s' \"\$t\""; }
 assert_eq "fortune embarquée : une citation sans aucun processus" "1" "$(fort '' | grep -c .)"
-for _ in 1 2 3; do assert_contains "COOLBASH_FORTUNE=chuck ne tire que des facts Chuck Norris" "$(fort 'COOLBASH_FORTUNE=chuck')" "Chuck Norris"; done
+for _ in 1 2 3; do fc="$(fort 'COOLBASH_FORTUNE=chuck')"; assert_contains "COOLBASH_FORTUNE=chuck ne tire que des facts Chuck Norris" "${fc,,}" "chuck norris"; done
 assert_eq "un thème inconnu retombe sur tous les thèmes" "1" "$(fort 'COOLBASH_FORTUNE=inexistant' | grep -c .)"
 mkdir -p "${COOLBASH_TEST_TMP}/.coolbash/fortunes"; printf 'ma citation perso\n' >| "${COOLBASH_TEST_TMP}/.coolbash/fortunes/perso.txt"
 assert_eq "les fichiers de ~/.coolbash/fortunes/ sont des thèmes" "ma citation perso" "$(fort 'COOLBASH_FORTUNE=perso')"
