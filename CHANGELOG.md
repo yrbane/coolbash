@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.1 — 2026-09-29 · « La vache en dernier »
+### Modifié
+- MOTD : l'état de la machine s'affiche d'abord, la citation dans la bouche de cowsay en dernier,
+  juste au-dessus du prompt. Test de l'ordre sous un vrai tty (`script`), avec un faux cowsay.
+
 ## 0.19.0 — 2026-09-29 · « Thèmes, sync et alertes »
 ### Ajouté
 - **`coolbash theme`** : six palettes truecolor pour le prompt — `coolbash`, `nord`, `dracula`,

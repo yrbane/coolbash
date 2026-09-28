@@ -54,9 +54,12 @@ _coolbash_fortune() {
   return 1
 }
 
+# FR : l'état de la machine d'abord, la vache en dernier : c'est elle qu'on
+#      veut voir juste au-dessus du prompt.
 _coolbash_motd() {
   _coolbash_motd_enabled || return 0
   [[ -t 1 ]] || return 0
+  _coolbash_motd_sysinfo
   local text=""
   if ! _coolbash_fortune text && command -v fortune >/dev/null 2>&1; then text="$(fortune -a 2>/dev/null)"; fi
   if [[ -n "$text" ]]; then
@@ -70,7 +73,6 @@ _coolbash_motd() {
       printf '%s\n\n' "$text"
     fi
   fi
-  _coolbash_motd_sysinfo
   export COOLBASH_MOTD_SHOWN=1
 }
 

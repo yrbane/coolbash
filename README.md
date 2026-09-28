@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.19.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.19.1-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -128,7 +128,7 @@ coolbash/
 | `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`…) |
 | `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji, icônes)  |
 | `60-completion.bash`      | Completions Bash/Git/fzf                            |
-| `70-motd.bash`            | Citation française (12 thèmes, `share/fortunes/`) dans la bouche de cowsay + état de la machine (voir ci-dessous), une fois par session |
+| `70-motd.bash`            | État de la machine (voir ci-dessous), puis une citation française (12 thèmes, `share/fortunes/`) dans la bouche de cowsay, juste au-dessus du prompt ; une fois par session |
 | `90-local-overrides.bash` | Surcharges locales (vide par défaut)                |
 
 ---
@@ -267,7 +267,7 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 
 ### 🖥️ État de la machine dans le MOTD
 
-Sous la citation, un bloc à la neofetch, mais lu dans `/proc`, `/sys` et quelques fichiers :
+D'abord un bloc à la neofetch, mais lu dans `/proc`, `/sys` et quelques fichiers :
 aucun processus, sauf un `df -Phl` et un `systemctl --failed` (≈ 5 ms chacun). Une ligne
 n'apparaît que si elle a quelque chose à dire.
 

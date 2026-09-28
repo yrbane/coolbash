@@ -174,6 +174,23 @@ assert_contains "note : toutes les lignes" "${noted}" "Renouveler le certificat"
 assert_not_contains "note : COOLBASH_MOTD_HIDE=note la coupe" "$(mod 70-motd.bash 'PATH=/nonexistent COOLBASH_MOTD_HIDE=note; _coolbash_motd_sysinfo')" "dentiste"
 rm "${COOLBASH_TEST_TMP}/.coolbash/motd.txt"
 
+# FR : ordre du MOTD — l'état de la machine, puis la vache en dernier (au-dessus du prompt).
+if command -v script >/dev/null 2>&1; then
+  fbo="${COOLBASH_TEST_TMP}/fbo"
+  mkdir -p "${fbo}"
+  printf '#!/bin/bash\nprintf "COW:"; cat\n' >|"${fbo}/cowsay"
+  chmod +x "${fbo}/cowsay"
+  order="$(env -u COOLBASH_MOTD_SHOWN MOTD_DISABLE= HOME="${COOLBASH_TEST_TMP}" COOLBASH_ROOT="${COOLBASH_TEST_ROOT}" PATH="${fbo}:/usr/bin:/bin" \
+    script -qec "bash --norc --noprofile -c 'source ${COOLBASH_TEST_ROOT}/modules/00-core.bash; source ${COOLBASH_TEST_ROOT}/modules/70-motd.bash'" /dev/null 2>/dev/null \
+    | sed 's/\x1b\[[0-9;]*m//g' | grep -naE '^Kernel:|^COW:' | cut -d: -f1,2 | tr '\n' ' ')"
+  k="${order%%:Kernel*}"
+  c="${order%%:COW*}"
+  c="${c##* }"
+  if [[ "$k" =~ ^[0-9]+$ && "$c" =~ ^[0-9]+$ && "$k" -lt "$c" ]]; then t_ok "MOTD : l'état de la machine avant la vache (lignes ${k} < ${c})"; else t_fail "MOTD : ordre inattendu — ${order}"; fi
+else
+  t_skip "ordre du MOTD (script absent)"
+fi
+
 # FR : citations françaises embarquées (share/fortunes/<thème>.txt), tirées en pur bash.
 fort() { mod 70-motd.bash "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' PATH=/nonexistent; $1 _coolbash_fortune t && printf '%s' \"\$t\""; }
 assert_eq "fortune embarquée : une citation sans aucun processus" "1" "$(fort '' | grep -c .)"
