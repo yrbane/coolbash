@@ -10,7 +10,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # FR : API publique volontaire — toute nouvelle fonction ici doit être documentée dans le README.
-PUBLIC_FUNCS="path_prepend path_append please nvm man mkcd extract up timer mkvenv workon backup whoport serve cheat j bd h hstats command_not_found_handle"
+PUBLIC_FUNCS="path_prepend path_append please nvm man mkcd extract up timer mkvenv workon backup whoport serve cheat j bd h hstats command_not_found_handle gwip gunwip gfix gsw gopen git"
 FORBIDDEN_VARS='^(PREFIX|NPM_CONFIG_PREFIX|VERSION|MODULE_DIR|BASHRC|reset|bold|blue|yellow)$'
 BASH_NOISE='^(_|PIPESTATUS|OLDPWD|BASH_REMATCH|FUNCNAME|BASH_ARGV|BASH_ARGC|BASH_LINENO|BASH_SOURCE|COMP_WORDBREAKS|COMPREPLY)$'
 CORE="${COOLBASH_TEST_ROOT}/modules/00-core.bash"

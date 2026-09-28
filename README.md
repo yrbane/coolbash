@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.20.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.21.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -121,7 +121,7 @@ coolbash/
 | `10-history.bash`         | Historique horodaté partagé entre sessions, `Ctrl-R` fzf |
 | `20-path-and-colors.bash` | PATH propre, couleurs auto                          |
 | `30-aliases.bash`         | Alias utiles et sûrs, paquets `apt` ou `pacman`     |
-| `31-git.bash`             | Raccourcis Git et pager configuré                   |
+| `31-git.bash`             | Raccourcis Git, `gwip`/`gunwip`, `gfix`, `gsw`, `gopen`, garde-fou du `push --force` sur main |
 | `32-network.bash`         | Commandes réseau et IP                              |
 | `33-devtools.bash`        | Symfony, PHP, yt-dlp                                |
 | `34-python-venv.bash`     | Helpers pour venv Python                            |
@@ -245,6 +245,7 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
 | `COOLBASH_NVM_LAZY=0`           | Charger `nvm.sh` au démarrage (≈ 0,7 s par shell) au lieu du chargement paresseux |
+| `COOLBASH_GIT_GUARD=0`          | `git push --force` sur main/master sans confirmation                  |
 | `COOLBASH_J=0`                  | Ne pas noter les `cd` (désactive `j`)                                  |
 | `COOLBASH_CNF=0`                | Pas de suggestion de paquet pour une commande introuvable              |
 | `COOLBASH_SERVE_PORT`           | Premier port essayé par `serve` (défaut `8000`)                        |
@@ -340,6 +341,11 @@ Fonctions volontairement exposées dans le shell (tout le reste est préfixé `_
 | `backup`                       | `40-functions`        | `backup fichier dossier…` : copie horodatée à côté, `nom.AAAA-MM-JJ-HHMM.bak` (`cp -a`) |
 | `whoport`                      | `40-functions`        | `whoport 8080` : quel processus tient ce port (pid, nom, ligne de commande), via `ss` ou `lsof` |
 | `serve`                        | `40-functions`        | `serve [dossier] [port]` : serveur HTTP statique (python3, sinon php) sur le premier port libre dès `COOLBASH_SERVE_PORT` (8000), URL affichée |
+| `gwip`, `gunwip`               | `31-git`              | Commit « WIP » de tout l'état courant (hooks ignorés, `[skip ci]`), et son annulation (refusée si le dernier commit n'est pas un WIP) |
+| `gfix`                         | `31-git`              | `gfix <commit>` : fixup de ce qui est indexé, puis rebase autosquash sans éditeur |
+| `gsw`                          | `31-git`              | `gsw [motif]` : changer de branche — unique = direct (distante suivie), sinon fzf, sinon la liste |
+| `gopen`                        | `31-git`              | `gopen [-p] [fichier[:ligne]]` : le dépôt ou le fichier sur la branche courante dans le navigateur (`-p` affiche l'URL) |
+| `git`                          | `31-git`              | Garde-fou : `git push --force` sur main/master demande confirmation ; `--force-with-lease` (`gpf`) reste libre. `COOLBASH_GIT_GUARD=0` |
 | `j`                            | `41-navigation`       | `j coolb` : saute dans le dossier connu le plus fréquent/récent qui correspond (les `cd` sont notés à chaque prompt dans `~/.coolbash/dirs`) ; `j` seul liste ; complétion par Tab |
 | `bd`                           | `41-navigation`       | `bd Dev` : remonte jusqu'au dossier parent nommé (exact, sinon préfixe) |
 | `h`, `hstats`                  | `41-navigation`       | `h motif` cherche dans l'historique daté ; `hstats [N]` tes commandes les plus fréquentes avec leur part |

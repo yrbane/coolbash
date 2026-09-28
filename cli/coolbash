@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.20.0"
+COOLBASH_VERSION="0.21.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -91,6 +91,7 @@ COOLBASH_MOTD_HIDE||lignes du MOTD à taire : date disk mem load battery reboot 
 COOLBASH_UPDATE_CHECK|1|0 = ne jamais vérifier les mises à jour (git fetch quotidien en arrière-plan)
 COOLBASH_UPDATE_CHECK_S|86400|intervalle entre deux vérifications, en secondes
 COOLBASH_SERVE_PORT|8000|premier port essayé par serve
+COOLBASH_GIT_GUARD|1|0 = git push --force sur main/master sans confirmation
 COOLBASH_J|1|0 = ne pas noter les cd (j <motif> : saut de dossier par fréquence)
 COOLBASH_CNF|1|0 = pas de suggestion de paquet pour une commande introuvable
 COOLBASH_FONT|1|0 = install n'installe pas de police

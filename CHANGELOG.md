@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.21.0 — 2026-09-29 · « Git au quotidien »
+### Ajouté
+- **`gwip` / `gunwip`** : commit « WIP [skip ci]: date » de tout l'état courant, hooks ignorés ;
+  `gunwip` le défait et rend les changements non indexés, et refuse si le dernier commit n'est
+  pas un WIP.
+- **`gfix <commit>`** : commit fixup de ce qui est indexé, puis `rebase --autosquash` sans
+  éditeur, avec autostash. Un commit racine est géré (`--root`).
+- **`gsw [motif]`** : changer de branche. Motif unique : bascule directe, une branche distante est
+  suivie localement. Ambigu ou vide : fzf s'il y a un terminal, sinon la liste des candidates.
+- **`gopen [-p] [fichier[:ligne]]`** : le dépôt, ou le fichier sur la branche courante (avec
+  `#L…`), dans le navigateur ; `-p` affiche l'URL. URL ssh convertie en https.
+- **Garde-fou** : `git push --force` (ou `-f`) sur `main`/`master` demande confirmation ;
+  `--force-with-lease` (`gpf`) et les autres branches passent sans question. `COOLBASH_GIT_GUARD=0`.
+- Tests : `tests/test_git.sh` sur un dépôt jetable avec remote local (WIP, fixup sur commit
+  racine, bascule, URLs, garde-fou avec réponses o/n).
+
 ## 0.20.0 — 2026-09-29 · « Sauter, remonter, retrouver »
 ### Ajouté
 - **Module `41-navigation`.**
