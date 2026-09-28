@@ -240,4 +240,19 @@ assert_contains "…puis réaffiche chemin, chevron et commande sur une ligne" "
 tr_out="$(cd "${deep}" && COOLBASH_PROMPT_TRANSIENT=1 COLUMNS=20 with_prompt 'set -o history; history -s "echo une commande qui dépasse largement la largeur"; _coolbash_prompt_build; _coolbash_prompt_transient' | cat -v)"
 assert_eq "…une commande qui s'enroule sur plusieurs lignes remonte davantage" "1" "$(printf '%s' "${tr_out}" | grep -cE '\^\[\[[3-9]A')"
 
+# --- 14. 0.19.0 : thèmes du prompt --------------------------------------------
+# FR : with_prompt force COLORTERM='' — ici il faut le truecolor.
+tc() { env "$@" HOME="${COOLBASH_TEST_TMP}" COLORTERM=truecolor bash --norc --noprofile -c 'source "$1"; source "$2"; _coolbash_prompt_build; printf %s "$PS1"' _ "${CORE}" "${PROMPT}" 2>&1; }
+assert_contains "thème nord en truecolor : vert nord pour l'utilisateur" "$(tc COOLBASH_PROMPT_THEME=nord)" '38;2;163;190;140m'
+assert_contains "thème dracula : violet dracula pour l'hôte" "$(tc COOLBASH_PROMPT_THEME=dracula)" '38;2;189;147;249m'
+assert_contains "sans thème : la palette coolbash" "$(tc)" '38;2;110;210;65m'
+assert_eq "thème inconnu : repli sur coolbash" "coolbash" "$(COOLBASH_PROMPT_THEME=inconnu with_prompt 'echo "$COOLBASH_PROMPT_THEME_ACTIVE"')"
+assert_eq "thème mono : aucune séquence de couleur, seulement gras et inverse" "0" "$(tc COOLBASH_PROMPT_THEME=mono | grep -cE '\[[0-9;]*3[0-9]m|38;2')"
+mkdir -p "${COOLBASH_TEST_TMP}/.coolbash"
+printf 'gruvbox\n' >|"${COOLBASH_TEST_TMP}/.coolbash/theme"
+assert_contains "le fichier ~/.coolbash/theme est lu quand la variable est absente" "$(tc COOLBASH_PREFIX="${COOLBASH_TEST_TMP}/.coolbash")" '38;2;184;187;38m'
+assert_contains "…mais COOLBASH_PROMPT_THEME a la priorité" "$(tc COOLBASH_PREFIX="${COOLBASH_TEST_TMP}/.coolbash" COOLBASH_PROMPT_THEME=nord)" '38;2;163;190;140m'
+rm -f "${COOLBASH_TEST_TMP}/.coolbash/theme"
+assert_eq "aucun sous-shell pour les couleurs (printf -v)" "0" "$(grep -cE 'c\[[a-z_]+\]="\$\(_coolbash_prompt_(bg)?rgb' "${PROMPT}")"
+
 t_done

@@ -106,6 +106,7 @@ _coolbash_motd_sysinfo() {
   _coolbash_motd_hidden battery || _coolbash_motd_battery
   _coolbash_motd_hidden reboot || _coolbash_motd_reboot
   _coolbash_motd_hidden failed || _coolbash_motd_failed
+  _coolbash_motd_hidden update || _coolbash_motd_update
   _coolbash_motd_hidden note || _coolbash_motd_note
 }
 
@@ -212,6 +213,15 @@ _coolbash_motd_failed() {
   done < <(systemctl --failed --no-legend --plain 2>/dev/null)
   ((n > 0)) && printf '\e[31mFailed units: %d\e[0m (%s)\n' "$n" "$names"
   return 0
+}
+
+# FR : mise à jour disponible — fichier .update-available écrit en arrière-plan
+#      par la CLI (git fetch quotidien), lu ici sans processus.
+_coolbash_motd_update() {
+  local v
+  read -r v 2>/dev/null <"${COOLBASH_PREFIX:-$HOME/.coolbash}/.update-available" || return 0
+  [[ -n "$v" && "$v" != "${COOLBASH_VERSION:-}" ]] || return 0
+  printf '\e[33m⇡ CoolBash %s disponible\e[0m (installée : %s) → coolbash update\n' "$v" "${COOLBASH_VERSION:-?}"
 }
 
 # FR : pense-bête personnel — ~/.coolbash/motd.txt, affiché tel quel.

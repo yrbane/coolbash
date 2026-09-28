@@ -29,6 +29,7 @@ install:
 	  cp "$$c" "$$dest.new" && mv -f "$$dest.new" "$$dest"; \
 	done
 	@chmod +x "$(PREFIX)/cli/coolbash" "$(PREFIX)/cli/coolbash-font"
+	@rm -f "$(PREFIX)/.update-available"
 	@# FR : citations du MOTD (un fichier par thème). Les thèmes personnels vivent
 	@#      dans $(PREFIX)/fortunes/ et ne sont pas touchés.
 	@for f in share/fortunes/*.txt; do \

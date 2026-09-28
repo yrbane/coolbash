@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.18.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.19.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -64,8 +64,10 @@ coolbash <command>
 | `version`   | Affiche la version                            |
 | `config`    | Tous les réglages `COOLBASH_*` avec leur valeur effective (définie ou par défaut) |
 | `fortune`   | Une citation du MOTD, au hasard ou d'un thème donné : `coolbash fortune chuck` ; `fortune --add "texte" [thème]` en ajoute une à `~/.coolbash/fortunes/` |
+| `theme`     | `theme` liste les palettes du prompt avec un aperçu ; `theme nord` l'enregistre (`~/.coolbash/theme`) et l'applique au shell courant |
+| `sync`      | `sync [--update] [--overrides] user@host…` : pousse `fortunes/`, `motd.txt` et `theme` vers `~/.coolbash` d'autres machines par rsync sur SSH ; `--overrides` ajoute `90-local-overrides`, `--update` y lance `coolbash update` |
 | `bench`     | `bench [N]` : N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module |
-| `doctor`    | Diagnostic : bash, `.bashrc`, modules, citations, locale, outils optionnels, Nerd Font |
+| `doctor`    | Diagnostic : bash, `.bashrc`, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton `~/.bashrc` refait à la main (nvm, cargo, PATH, alias…) alors qu'un module s'en charge |
 | `help`      | Affiche l’aide de la CLI                      |
 
 La fonction shell `coolbash` est disponible dès que `~/.bashrc` a chargé CoolBash.
@@ -242,7 +244,7 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
 | `COOLBASH_NVM_LAZY=0`           | Charger `nvm.sh` au démarrage (≈ 0,7 s par shell) au lieu du chargement paresseux |
 | `COOLBASH_SERVE_PORT`           | Premier port essayé par `serve` (défaut `8000`)                        |
-| `COOLBASH_MOTD_HIDE`            | Lignes du MOTD à taire, ex. `"battery load"` (mots : `date disk mem load battery reboot failed note`) |
+| `COOLBASH_MOTD_HIDE`            | Lignes du MOTD à taire, ex. `"battery load"` (mots : `date disk mem load battery reboot failed update note`) |
 | `COOLBASH_FORTUNE`              | Thèmes de citations du MOTD, ex. `"dev chuck"` (défaut : tous, un thème répété pèse plus lourd) |
 | `COOLBASH_STARTUP_TIME`         | Temps de démarrage affiché à l'ouverture : `1` (défaut), `0` = muet, `verbose` = temps de chaque module. Le total est l'âge du processus (tout le `~/.bashrc` compris), la part CoolBash à côté |
 | `COOLBASH_FZF=0`                | Pas de raccourcis fzf (`Ctrl-R`, `Ctrl-T`, `Alt-C`), chargés sinon en shell interactif |
@@ -251,6 +253,8 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_FONT_URL`             | Archive `.tar.xz` de la police (miroir interne)                       |
 | `COOLBASH_PROMPT_TOOLS=0`       | Pas de versions php/node dans le prompt (désactivé en mode `safe`)     |
 | `COOLBASH_PROMPT_BELL_MS`       | Sonnerie + notification après une commande de plus de N ms (défaut `30000`, `0` = jamais) |
+| `COOLBASH_PROMPT_THEME`         | Palette du prompt : `coolbash` (défaut), `nord`, `dracula`, `solarized`, `gruvbox`, `mono` ; sinon le fichier `~/.coolbash/theme` écrit par `coolbash theme` |
+| `COOLBASH_UPDATE_CHECK=0`       | Ne jamais vérifier les mises à jour (sinon un `git fetch` par jour, en arrière-plan, et le MOTD annonce `⇡ CoolBash x.y.z disponible`) |
 | `COOLBASH_PROMPT_PATH_FISH=0`   | Jamais de chemin abrégé façon fish (`~/D/coolbash/modules`), même quand il dépasse la moitié du terminal |
 | `COOLBASH_PROMPT_TRANSIENT=1`   | Expérimental : après l'Entrée, le prompt de deux lignes est remplacé par `chemin $ commande` sur une ligne |
 | `COOLBASH_PS1_OSC7=0`           | Ne pas annoncer le dossier courant au terminal (OSC 7)                 |
@@ -277,6 +281,7 @@ n'apparaît que si elle a quelque chose à dire.
 | `Battery:`       | `/sys/class/power_supply/BAT*`           | en décharge : jaune < 40 %, rouge < 20 % |
 | `Reboot required` | modules du noyau courant disparus (Arch) ou `/var/run/reboot-required` (Debian) | rouge |
 | `Failed units:`  | `systemctl --failed`, seulement si > 0   | rouge                                |
+| `⇡ CoolBash x.y.z disponible` | `.update-available`, écrit par la vérification quotidienne | jaune          |
 | note             | `~/.coolbash/motd.txt`, ton pense-bête   | cyan                                 |
 
 `COOLBASH_MOTD_HIDE="battery load"` tait les lignes citées.

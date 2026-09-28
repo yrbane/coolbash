@@ -158,6 +158,13 @@ assert_contains "disk : une autre partition à 95 % est affichée" "${disks}" "D
 assert_not_contains "disk : une partition à 50 % ne l'est pas" "${disks}" "/mnt/photos"
 assert_not_contains "disk : les loop (snap) sont ignorés" "${disks}" "snap"
 assert_not_contains "disk : tmpfs ignoré" "${disks}" "/run"
+# mise à jour disponible : lue dans .update-available, affichée si plus récente
+mkdir -p "${COOLBASH_TEST_TMP}/.coolbash"
+printf '9.9.9\n' >|"${COOLBASH_TEST_TMP}/.coolbash/.update-available"
+assert_contains "update : .update-available → ⇡ CoolBash 9.9.9 disponible" "$(mod 70-motd.bash 'COOLBASH_VERSION=0.1.0 COOLBASH_PREFIX="$HOME/.coolbash"; _coolbash_motd_update' | strip_colors)" "CoolBash 9.9.9 disponible"
+assert_empty "update : même version → rien" "$(mod 70-motd.bash 'COOLBASH_VERSION=9.9.9 COOLBASH_PREFIX="$HOME/.coolbash"; _coolbash_motd_update')"
+rm -f "${COOLBASH_TEST_TMP}/.coolbash/.update-available"
+assert_empty "update : sans fichier → rien" "$(mod 70-motd.bash 'COOLBASH_PREFIX="$HOME/.coolbash"; _coolbash_motd_update')"
 # note personnelle
 mkdir -p "${COOLBASH_TEST_TMP}/.coolbash"
 printf 'Penser au dentiste\nRenouveler le certificat\n' >|"${COOLBASH_TEST_TMP}/.coolbash/motd.txt"

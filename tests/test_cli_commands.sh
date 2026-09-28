@@ -92,6 +92,87 @@ assert_contains "coolbash bench annonce la moyenne" "${bn}" "moyenne"
 assert_eq "coolbash bench affiche des ms" "1" "$(printf '%s\n' "${bn}" | grep -cE 'moyenne[^0-9]*[0-9]+ ms')"
 assert_contains "coolbash bench détaille les modules" "${bn}" "50-prompt"
 assert_contains "coolbash help mentionne bench" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" help)" "bench"
+cli_home() { HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" "$@" 2>&1; }
+# theme
+th="$(cli_home theme)"
+for t in coolbash nord dracula solarized gruvbox mono; do assert_contains "coolbash theme liste ${t}" "${th}" "${t}"; done
+assert_contains "coolbash theme montre un aperçu (utilisateur seb at machine)" "${th}" "seb"
+assert_eq "coolbash theme <inconnu> → erreur, code 1" "1" "$(
+  cli_home theme fuchsia >/dev/null 2>&1
+  echo $?
+)"
+cli_home theme nord >/dev/null
+assert_eq "coolbash theme nord écrit ~/.coolbash/theme" "nord" "$(cat "${home}/.coolbash/theme")"
+assert_contains "…et la liste marque le thème actuel" "$(cli_home theme)" "nord       ●"
+rm -f "${home}/.coolbash/theme"
+# sync : rsync et ssh factices
+fbs="${COOLBASH_TEST_TMP}/fbsync"
+mkdir -p "${fbs}"
+printf '#!/bin/bash\necho "rsync $*"\n' >|"${fbs}/rsync"
+printf '#!/bin/bash\necho "ssh $*"\n' >|"${fbs}/ssh"
+chmod +x "${fbs}/rsync" "${fbs}/ssh"
+printf 'note\n' >|"${home}/.coolbash/motd.txt"
+mkdir -p "${home}/.coolbash/fortunes"
+printf 'nord\n' >|"${home}/.coolbash/theme"
+sy="$(PATH="${fbs}:${PATH}" cli_home sync arthur@debian)"
+assert_contains "sync : rsync des fortunes, motd.txt et theme vers hôte:.coolbash/" "${sy}" "rsync -az ${home}/.coolbash/fortunes ${home}/.coolbash/motd.txt ${home}/.coolbash/theme arthur@debian:.coolbash/"
+assert_not_contains "sync : pas de 90-local-overrides sans --overrides" "${sy}" "90-local-overrides"
+assert_not_contains "sync : pas de coolbash update sans --update" "${sy}" "ssh"
+sy="$(PATH="${fbs}:${PATH}" cli_home sync --update --overrides arthur@debian seb@nas)"
+assert_contains "sync --overrides : 90-local-overrides vers modules/" "${sy}" "90-local-overrides.bash arthur@debian:.coolbash/modules/"
+assert_contains "sync --update : coolbash update lancé par ssh" "${sy}" "ssh arthur@debian bash ~/.coolbash/cli/coolbash update"
+assert_contains "sync : plusieurs hôtes" "${sy}" "seb@nas:.coolbash/"
+assert_eq "sync sans hôte → usage, code 1" "1" "$(
+  cli_home sync >/dev/null 2>&1
+  echo $?
+)"
+rm -f "${home}/.coolbash/motd.txt" "${home}/.coolbash/theme"
+# vérification de mise à jour : due / pas due, puis détection sur un dépôt local
+rm -f "${home}/.coolbash/.update-check"
+assert_eq "update_due : sans horodatage → due" "0" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_UPDATE_CHECK=1 bash -c 'source "$1" version >/dev/null; _coolbash_update_due; echo $?' _ "${home}/.coolbash/cli/coolbash")"
+printf '%s\n' "$EPOCHSECONDS" >|"${home}/.coolbash/.update-check"
+assert_eq "update_due : horodatage frais → pas due" "1" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_UPDATE_CHECK=1 bash -c 'source "$1" version >/dev/null; _coolbash_update_due; echo $?' _ "${home}/.coolbash/cli/coolbash")"
+assert_eq "update_due : COOLBASH_UPDATE_CHECK=0 → jamais" "1" "$(
+  rm -f "${home}/.coolbash/.update-check"
+  HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_UPDATE_CHECK=0 bash -c 'source "$1" version >/dev/null; _coolbash_update_due; echo $?' _ "${home}/.coolbash/cli/coolbash"
+)"
+# FR : un dépôt « distant » local dont origin/main annonce 99.0.0
+up="${COOLBASH_TEST_TMP}/upd"
+mkdir -p "${up}"
+git -C "${home}/clone" init -q 2>/dev/null
+git -C "${home}/clone" add -A >/dev/null 2>&1
+git -C "${home}/clone" -c user.email=t@t -c user.name=t commit -qm init >/dev/null 2>&1
+git clone -q "${home}/clone" "${up}/remote" 2>/dev/null
+sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="99.0.0"/' "${up}/remote/cli/coolbash"
+git -C "${up}/remote" -c user.email=t@t -c user.name=t commit -qam "99.0.0" >/dev/null 2>&1
+git -C "${up}/remote" branch -M main >/dev/null 2>&1
+git clone -q "${up}/remote" "${up}/local" 2>/dev/null
+git -C "${up}/local" checkout -q HEAD~1 2>/dev/null
+git -C "${up}/local" branch -f main >/dev/null 2>&1
+HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_REPO="${up}/local" bash -c 'source "$1" version >/dev/null; _coolbash_update_check' _ "${home}/.coolbash/cli/coolbash"
+assert_eq "update_check : origin/main plus récent → .update-available = 99.0.0" "99.0.0" "$(cat "${home}/.coolbash/.update-available" 2>/dev/null)"
+sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="0.0.1"/' "${up}/remote/cli/coolbash"
+git -C "${up}/remote" -c user.email=t@t -c user.name=t commit -qam "0.0.1" >/dev/null 2>&1
+HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_REPO="${up}/local" bash -c 'source "$1" version >/dev/null; _coolbash_update_check' _ "${home}/.coolbash/cli/coolbash"
+assert_no_path "update_check : version distante plus ancienne → pas d'alerte" "${home}/.coolbash/.update-available"
+# doctor : analyse du ~/.bashrc
+cat >|"${home}/.bashrc" <<'BRC'
+# commentaire
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+. "$HOME/.cargo/env"
+alias ll='ls -la'
+export PATH="/opt/bin:$PATH"
+source "$HOME/.coolbash/cli/coolbash" init
+BRC
+doc="$(cli_home doctor)"
+assert_contains "doctor : repère nvm dans le .bashrc → 35-toolchains" "${doc}" "35-toolchains le charge paresseusement"
+assert_contains "doctor : repère cargo" "${doc}" "cargo : 35-toolchains"
+assert_contains "doctor : repère un alias → 90-local-overrides" "${doc}" "90-local-overrides"
+assert_contains "doctor : repère export PATH → path_prepend" "${doc}" "path_prepend"
+assert_eq "doctor : la ligne source de CoolBash et les commentaires ne sont pas signalés (5 lignes sur 7)" "5" "$(printf '%s\n' "${doc}" | sed 's/\x1b\[[0-9;]*m//g' | grep -c '– ligne')"
+printf 'source "$HOME/.coolbash/cli/coolbash" init\n' >|"${home}/.bashrc"
+assert_contains "doctor : .bashrc propre → rien à déplacer" "$(cli_home doctor)" "rien à déplacer"
 assert_contains "doctor vérifie la locale" "${doc}" "locale"
 : >"${home}/.bashrc"
 doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1)"

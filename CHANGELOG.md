@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.19.0 — 2026-09-29 · « Thèmes, sync et alertes »
+### Ajouté
+- **`coolbash theme`** : six palettes truecolor pour le prompt — `coolbash`, `nord`, `dracula`,
+  `solarized`, `gruvbox`, `mono` (gras et vidéo inverse, aucune couleur). Sans argument, la liste
+  avec un aperçu du vrai prompt dans chaque palette ; `coolbash theme nord` l'enregistre dans
+  `~/.coolbash/theme` et l'applique au shell courant. `COOLBASH_PROMPT_THEME` a priorité.
+- **`coolbash sync [--update] [--overrides] user@host…`** : pousse `fortunes/`, `motd.txt` et
+  `theme` vers `~/.coolbash` d'autres machines par rsync sur SSH. `--overrides` ajoute
+  `90-local-overrides.bash` (souvent propre à une machine, donc pas par défaut), `--update` lance
+  `coolbash update` là-bas.
+- **Alerte de mise à jour** : une fois par jour, un `git fetch` du clone en arrière-plan (double
+  fork, aucun job, aucun bruit) compare la version d'`origin/main` à la version installée ; le
+  MOTD affiche alors `⇡ CoolBash x.y.z disponible → coolbash update`. `COOLBASH_UPDATE_CHECK=0`
+  désactive, `COOLBASH_UPDATE_CHECK_S` règle l'intervalle. `make install` efface l'alerte.
+- **`coolbash doctor` lit ton `~/.bashrc`** et signale ce qu'un module fait déjà : nvm, cargo,
+  pnpm, Android, foundry (35-toolchains), historique (10-history), prompt (50-prompt), `export
+  PATH` (path_prepend), alias et fonctions (90-local-overrides). Ligne, extrait et destination.
+### Modifié
+- Couleurs du prompt calculées sans aucun sous-shell (`printf -v`), soit sept forks de moins au
+  démarrage.
+- Tests : palettes, fichier `theme`, repli sur un thème inconnu ; `sync` avec de faux rsync et
+  ssh ; vérification de mise à jour sur un dépôt local dont `origin/main` annonce 99.0.0 puis
+  0.0.1 ; analyse d'un `.bashrc` chargé, puis propre. Les tests n'exécutent jamais la
+  vérification en arrière-plan (`COOLBASH_UPDATE_CHECK=0` dans `lib.sh`).
+
 ## 0.18.0 — 2026-09-29 · « Le prompt en dit plus, en moins de place »
 ### Ajouté
 - **Titre du terminal après une commande longue** : au-delà de `COOLBASH_PROMPT_BELL_MS`

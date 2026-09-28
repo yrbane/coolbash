@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.18.0"
+COOLBASH_VERSION="0.19.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -78,6 +78,7 @@ COOLBASH_PS0_STAMP|1|0 = pas d'heure de départ sous la commande
 COOLBASH_PS0_TITLE|1|0 = ne pas toucher au titre du terminal
 COOLBASH_PS0_EXTRA||fragment ajouté à la fin de PS0
 COOLBASH_PS1_OSC7|1|0 = ne pas annoncer le dossier courant (OSC 7)
+COOLBASH_PROMPT_THEME|coolbash|palette du prompt : coolbash nord dracula solarized gruvbox mono (coolbash theme)
 COOLBASH_PROMPT_PATH_FISH|1|0 = jamais de chemin abrégé façon fish (~/D/coolbash)
 COOLBASH_PROMPT_TRANSIENT|0|1 = prompt réduit à une ligne après l'Entrée (expérimental)
 COOLBASH_NVM_LAZY|1|0 = charger nvm.sh au démarrage (lent)
@@ -86,7 +87,9 @@ COOLBASH_FZF|1|0 = pas de raccourcis fzf (Ctrl-R)
 COOLBASH_FZF_KEYBINDINGS||fichier key-bindings.bash à utiliser
 COOLBASH_MOTD|1|0 = pas de MOTD (MOTD_DISABLE=1 aussi)
 COOLBASH_FORTUNE|(tous)|thèmes de citations du MOTD, ex. "dev chuck"
-COOLBASH_MOTD_HIDE||lignes du MOTD à taire : date disk mem load battery reboot failed note
+COOLBASH_MOTD_HIDE||lignes du MOTD à taire : date disk mem load battery reboot failed update note
+COOLBASH_UPDATE_CHECK|1|0 = ne jamais vérifier les mises à jour (git fetch quotidien en arrière-plan)
+COOLBASH_UPDATE_CHECK_S|86400|intervalle entre deux vérifications, en secondes
 COOLBASH_SERVE_PORT|8000|premier port essayé par serve
 COOLBASH_FONT|1|0 = install n'installe pas de police
 COOLBASH_FONT_URL||archive .tar.xz de la police (miroir)
@@ -148,6 +151,7 @@ _coolbash_cmd_doctor() {
   if [[ -n "${SSH_CONNECTION:-}${SSH_TTY:-}${SSH_CLIENT:-}" ]]; then
     printf '               ⚠ session SSH : la police doit être sur la machine qui affiche le terminal, pas ici\n'
   fi
+  _coolbash_doctor_bashrc "$bashrc"
   printf '\nMode : %s%s\n' "${COOLBASH_MODE:-$([[ $EUID -eq 0 ]] && echo safe || echo normal)}" "${COOLBASH_DISABLE:+ · désactivés : ${COOLBASH_DISABLE}}"
   unset -f _coolbash_req _coolbash_opt
   unset COOLBASH_DOCTOR_LABEL
@@ -212,6 +216,140 @@ _coolbash_cmd_bench() {
   printf '  moyenne : %d ms   (min %d ms, max %d ms)\n\nPar module, du plus lourd au plus léger :\n' $((total / n)) "$min" "$max"
   env -u COOLBASH_MOTD_SHOWN COOLBASH_STARTUP_TIME=verbose "${run[@]}" 2>/dev/null \
     | sed 's/\x1b\[[0-9;]*m//g' | grep -aE '^ +[0-9]{2}-[a-z-]+ +[0-9]+ ms' | sort -k2 -n -r
+}
+
+# FR : coolbash theme [nom] — sans argument : la liste avec un aperçu de chaque
+#      palette ; avec : écrit ~/.coolbash/theme, lu par 50-prompt au chargement.
+COOLBASH_THEMES="coolbash nord dracula solarized gruvbox mono"
+_coolbash_cmd_theme() {
+  local file="${COOLBASH_PREFIX}/theme" cur="" t ps1
+  read -r cur 2>/dev/null <"$file"
+  cur="${COOLBASH_PROMPT_THEME:-${cur:-coolbash}}"
+  if [[ -z "${1:-}" ]]; then
+    printf 'Thèmes du prompt (actuel : %s) — coolbash theme <nom>\n\n' "$cur"
+    for t in $COOLBASH_THEMES; do
+      # FR : aperçu = le vrai PS1 du thème, sans les \[ \] ni les séquences de titre.
+      ps1="$(MOTD_DISABLE=1 COOLBASH_PROMPT_THEME="$t" COLORTERM=truecolor TERM=dumb HOME="${HOME}" \
+        bash --norc --noprofile -c 'source "$1"; source "$2"; _coolbash_prompt_build; printf %s "$PS1"' _ \
+        "${COOLBASH_MODULE_DIR}/00-core.bash" "${COOLBASH_MODULE_DIR}/50-prompt.bash" 2>/dev/null)"
+      ps1="${ps1//\\[/}"
+      ps1="${ps1//\\]/}"
+      ps1="${ps1//\\u/seb}"
+      ps1="${ps1//\\h/machine}"
+      ps1="${ps1//\\t/12:34:56}"
+      ps1="${ps1//\\w/~\/Dev\/coolbash}"
+      ps1="${ps1//\\\$/\$}"
+      ps1="${ps1#$'\n'}"
+      printf '  %-10s ' "$t"
+      [[ "$t" == "$cur" ]] && printf '● ' || printf '  '
+      printf '%b\n' "${ps1//$'\n'/  }"
+    done
+    return 0
+  fi
+  [[ " $COOLBASH_THEMES " == *" $1 "* ]] || {
+    _coolbash_error "thème inconnu : $1 (disponibles : $COOLBASH_THEMES)"
+    return 1
+  }
+  mkdir -p "${COOLBASH_PREFIX}" && printf '%s\n' "$1" >|"$file" || return 1
+  _coolbash_log "thème « $1 » enregistré dans ${file} — ouvre un terminal, ou : source ~/.bashrc"
+}
+
+# FR : coolbash sync [--update] [--overrides] <hôte…> — pousse tes fichiers
+#      personnels (fortunes/, motd.txt, theme ; 90-local-overrides avec
+#      --overrides, car il est souvent propre à une machine) vers ~/.coolbash
+#      d'autres machines, par rsync sur SSH. --update y lance coolbash update.
+_coolbash_cmd_sync() {
+  local a update=0 overrides=0 rc=0 h
+  local -a hosts=() src=()
+  for a in "$@"; do
+    case "$a" in
+      --update) update=1 ;;
+      --overrides) overrides=1 ;;
+      -*)
+        _coolbash_error "option inconnue : $a"
+        return 1
+        ;;
+      *) hosts+=("$a") ;;
+    esac
+  done
+  ((${#hosts[@]})) || {
+    _coolbash_error "usage : coolbash sync [--update] [--overrides] <utilisateur@hôte…>"
+    return 1
+  }
+  command -v rsync >/dev/null 2>&1 || {
+    _coolbash_error "rsync est requis"
+    return 1
+  }
+  [[ -d "${COOLBASH_PREFIX}/fortunes" ]] && src+=("${COOLBASH_PREFIX}/fortunes")
+  [[ -f "${COOLBASH_PREFIX}/motd.txt" ]] && src+=("${COOLBASH_PREFIX}/motd.txt")
+  [[ -f "${COOLBASH_PREFIX}/theme" ]] && src+=("${COOLBASH_PREFIX}/theme")
+  for h in "${hosts[@]}"; do
+    _coolbash_log "→ ${h}"
+    if ((${#src[@]})); then rsync -az "${src[@]}" "${h}:.coolbash/" || rc=1; fi
+    if ((overrides)) && [[ -f "${COOLBASH_MODULE_DIR}/90-local-overrides.bash" ]]; then
+      rsync -az "${COOLBASH_MODULE_DIR}/90-local-overrides.bash" "${h}:.coolbash/modules/" || rc=1
+    fi
+    if ((update)); then ssh "$h" 'bash ~/.coolbash/cli/coolbash update' || rc=1; fi
+  done
+  ((${#src[@]} == 0 && overrides == 0)) && _coolbash_log "rien à synchroniser (pas de fortunes/, motd.txt ni theme dans ${COOLBASH_PREFIX})"
+  return "$rc"
+}
+
+# FR : mise à jour disponible ? Une fois par jour (COOLBASH_UPDATE_CHECK_S), en
+#      arrière-plan et sans bruit : git fetch du clone, version distante lue dans
+#      origin/main:cli/coolbash, écrite dans .update-available si elle est plus
+#      récente. Le MOTD lit ce fichier. COOLBASH_UPDATE_CHECK=0 désactive.
+_coolbash_update_due() {
+  local stamp=0
+  [[ "${COOLBASH_UPDATE_CHECK:-1}" == 0 ]] && return 1
+  read -r stamp 2>/dev/null <"${COOLBASH_PREFIX}/.update-check"
+  [[ "$stamp" =~ ^[0-9]+$ ]] || stamp=0
+  ((EPOCHSECONDS - stamp >= ${COOLBASH_UPDATE_CHECK_S:-86400}))
+}
+_coolbash_update_check() {
+  local repo remote_ver newest
+  repo="${COOLBASH_REPO:-$(cat "${COOLBASH_PREFIX}/.repo" 2>/dev/null)}"
+  repo="${repo:-${COOLBASH_ROOT}}"
+  [[ -d "${repo}/.git" ]] || return 0
+  git -C "$repo" fetch -q origin 2>/dev/null || return 0
+  remote_ver="$(git -C "$repo" show origin/main:cli/coolbash 2>/dev/null | sed -n 's/^COOLBASH_VERSION="\(.*\)"/\1/p')"
+  newest="$(printf '%s\n%s\n' "$COOLBASH_VERSION" "$remote_ver" | sort -V | tail -1)"
+  if [[ -n "$remote_ver" && "$remote_ver" != "$COOLBASH_VERSION" && "$newest" == "$remote_ver" ]]; then
+    printf '%s\n' "$remote_ver" >|"${COOLBASH_PREFIX}/.update-available"
+  else
+    rm -f "${COOLBASH_PREFIX}/.update-available"
+  fi
+}
+
+# FR : ce que le ~/.bashrc refait à la main alors qu'un module s'en charge :
+#      nvm, cargo, pnpm, Android, foundry (35-toolchains), historique (10-history),
+#      prompt (50-prompt) ; alias et fonctions → 90-local-overrides.
+_coolbash_doctor_bashrc() {
+  local file="$1" line ln=0 hits=0 why
+  [[ -r "$file" ]] || return 0
+  printf '\nTon %s :\n' "$file"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    ln=$((ln + 1))
+    [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
+    [[ "$line" == *cli/coolbash* ]] && continue
+    why=""
+    case "$line" in
+      *nvm.sh* | *NVM_DIR* | *bash_completion\"*nvm*) why="nvm : 35-toolchains le charge paresseusement (≈ 700 ms gagnés)" ;;
+      *cargo/env* | *cargo/bin*) why="cargo : 35-toolchains ajoute ~/.cargo/bin s'il existe" ;;
+      *PNPM_HOME*) why="pnpm : 35-toolchains" ;;
+      *ANDROID_HOME* | *platform-tools*) why="Android SDK : 35-toolchains" ;;
+      *foundry/bin*) why="foundry : 35-toolchains" ;;
+      *HISTSIZE* | *HISTFILESIZE* | *HISTCONTROL* | *histappend*) why="historique : 10-history" ;;
+      PS1=* | *PROMPT_COMMAND*) why="prompt : 50-prompt (COOLBASH_PS0_EXTRA pour un fragment personnel)" ;;
+      alias\ * | function\ * | *"() {"*) why="alias/fonction : à ranger dans ~/.coolbash/modules/90-local-overrides.bash" ;;
+      *export\ PATH=*) why="PATH : path_prepend/path_append dans 90-local-overrides (sans doublon)" ;;
+    esac
+    [[ -n "$why" ]] || continue
+    hits=$((hits + 1))
+    printf '  \e[33m–\e[0m ligne %-4s %s\n               → %s\n' "$ln" "${line:0:60}" "$why"
+  done <"$file"
+  ((hits == 0)) && printf '  \e[32m✔\e[0m rien à déplacer : tout passe par CoolBash\n'
+  return 0
 }
 
 # FR : COOLBASH_DISABLE="70-motd 33" — modules à ne pas charger (nom complet,
@@ -287,8 +425,25 @@ _coolbash_cmd_init() {
   #      `config` tourne dans ce shell pour voir les variables non exportées.
   unalias coolbash 2>/dev/null
   coolbash() {
-    if [[ "${1:-}" == config ]]; then _coolbash_cmd_config; else bash "${COOLBASH_ROOT}/cli/coolbash" "$@"; fi
+    case "${1:-}" in
+      config) _coolbash_cmd_config ;;
+      theme)
+        bash "${COOLBASH_ROOT}/cli/coolbash" "$@" || return 1
+        # FR : applique le thème au shell courant sans attendre un nouveau terminal.
+        if [[ -n "${2:-}" ]]; then
+          COOLBASH_PROMPT_THEME="$2"
+          # shellcheck disable=SC1090,SC1091
+          source "${COOLBASH_MODULE_DIR}/50-prompt.bash"
+        fi
+        ;;
+      *) bash "${COOLBASH_ROOT}/cli/coolbash" "$@" ;;
+    esac
   }
+  # FR : vérification de mise à jour, détachée (double fork : pas de job affiché).
+  if [[ $- == *i* ]] && _coolbash_update_due; then
+    printf '%s\n' "$EPOCHSECONDS" >|"${COOLBASH_PREFIX}/.update-check" 2>/dev/null
+    (_coolbash_update_check &) >/dev/null 2>&1
+  fi
   return 0
 }
 
@@ -312,6 +467,9 @@ Commands:
   fortune     Print one MOTD quote (optional themes: dev chuck …)
               fortune --add "text" [theme]  Add a quote to ~/.coolbash/fortunes/
   bench       Time N interactive shell startups, then the cost per module
+  theme       List prompt themes with a preview, or pick one: theme nord
+  sync        Push fortunes/, motd.txt and theme to other machines (rsync over SSH)
+              sync [--update] [--overrides] user@host…
   help        Display this help message
 
 HELP
@@ -337,6 +495,14 @@ case "${1:-}" in
   bench)
     shift
     _coolbash_cmd_bench "$@"
+    ;;
+  theme)
+    shift
+    _coolbash_cmd_theme "$@"
+    ;;
+  sync)
+    shift
+    _coolbash_cmd_sync "$@"
     ;;
   help | "") _coolbash_cmd_help ;;
   *)

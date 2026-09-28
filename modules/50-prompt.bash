@@ -111,29 +111,66 @@ _coolbash_prompt_init_host() {
   if [[ "${COLORTERM:-}" =~ (24bit|truecolor) ]]; then
     local -a pal=("255 120 120" "255 180 80" "220 220 90" "120 220 120" "90 200 220" "150 150 255" "230 130 230" "255 150 190")
     # shellcheck disable=SC2086
-    c[host_hash]="$(_coolbash_prompt_rgb ${pal[h % 8]})"
+    _coolbash_prompt_rgb 'c[host_hash]' ${pal[h % 8]}
   else
     c[host_hash]="\[\e[$((31 + h % 6))m\]"
   fi
 }
 
-_coolbash_prompt_rgb() { printf '\[\e[38;2;%s;%s;%sm\]' "$1" "$2" "$3"; }
-_coolbash_prompt_bgrgb() { printf '\[\e[48;2;%s;%s;%sm\]' "$1" "$2" "$3"; }
+# FR : $1 = variable (ou élément de tableau) de sortie — pas de sous-shell,
+#      chaque $(…) coûtait ≈ 1 ms au démarrage.
+_coolbash_prompt_rgb() { printf -v "$1" '\[\e[38;2;%s;%s;%sm\]' "$2" "$3" "$4"; }
+_coolbash_prompt_bgrgb() { printf -v "$1" '\[\e[48;2;%s;%s;%sm\]' "$2" "$3" "$4"; }
+
+# FR : palettes truecolor — user|accent|git|info|fond erreur|root|accent root|chemin|heure.
+#      COOLBASH_PROMPT_THEME, sinon le fichier ~/.coolbash/theme (écrit par
+#      `coolbash theme <nom>`), sinon coolbash. `mono` : gras et vidéo inverse,
+#      aucune couleur. Sur un terminal sans truecolor, seuls coolbash et mono changent.
+_coolbash_prompt_theme_palette() {
+  case "$1" in
+    nord) printf '%s' "163 190 140|180 142 173|235 203 139|136 192 208|191 97 106|191 97 106|208 135 112|129 161 193|143 188 187" ;;
+    dracula) printf '%s' "80 250 123|189 147 249|241 250 140|139 233 253|255 85 85|255 85 85|255 184 108|255 121 198|98 114 164" ;;
+    solarized) printf '%s' "133 153 0|108 113 196|181 137 0|42 161 152|220 50 47|220 50 47|203 75 22|38 139 210|147 161 161" ;;
+    gruvbox) printf '%s' "184 187 38|211 134 155|250 189 47|131 165 152|204 36 29|251 73 52|254 128 25|131 165 152|168 153 132" ;;
+    coolbash) printf '%s' "110 210 65|200 120 255|255 210 110|160 170 255|60 0 20|255 110 110|255 170 80|80 150 255|90 200 200" ;;
+    *) return 1 ;;
+  esac
+}
 
 _coolbash_prompt_init_colors() {
   local -n c=COOLBASH_PROMPT_COLOR
+  local theme="${COOLBASH_PROMPT_THEME:-}" pal
+  [[ -z "$theme" ]] && read -r theme 2>/dev/null <"${COOLBASH_PREFIX:-$HOME/.coolbash}/theme"
+  theme="${theme:-coolbash}"
+  [[ "$theme" == mono ]] || _coolbash_prompt_theme_palette "$theme" >/dev/null || theme=coolbash
+  COOLBASH_PROMPT_THEME_ACTIVE="$theme"
   c[reset]='\[\e[0m\]'
   c[bold]='\[\e[1m\]'
   c[path]='\[\e[1;34m\]'
   c[time]='\[\e[0;36m\]'
+  if [[ "$theme" == mono ]]; then
+    c[user]='' c[user_accent]='' c[git]='' c[info]='' c[root]='\[\e[1m\]' c[root_accent]='\[\e[1m\]'
+    c[path]='\[\e[1m\]' c[time]='' c[err]='\[\e[7m\]'
+    return 0
+  fi
   if [[ "${COLORTERM:-}" =~ (24bit|truecolor) ]]; then
-    c[user]="$(_coolbash_prompt_rgb 110 210 65)"
-    c[user_accent]="$(_coolbash_prompt_rgb 200 120 255)"
-    c[git]="$(_coolbash_prompt_rgb 255 210 110)"
-    c[info]="$(_coolbash_prompt_rgb 160 170 255)"
-    c[err]="$(_coolbash_prompt_bgrgb 60 0 20)\[\e[97m\]"
-    c[root]="$(_coolbash_prompt_rgb 255 110 110)"
-    c[root_accent]="$(_coolbash_prompt_rgb 255 170 80)"
+    pal="$(_coolbash_prompt_theme_palette "$theme")"
+    local -a t
+    IFS='|' read -ra t <<<"$pal"
+    # shellcheck disable=SC2086
+    {
+      _coolbash_prompt_rgb 'c[user]' ${t[0]}
+      _coolbash_prompt_rgb 'c[user_accent]' ${t[1]}
+      _coolbash_prompt_rgb 'c[git]' ${t[2]}
+      _coolbash_prompt_rgb 'c[info]' ${t[3]}
+      _coolbash_prompt_bgrgb 'c[err]' ${t[4]}
+      _coolbash_prompt_rgb 'c[root]' ${t[5]}
+      _coolbash_prompt_rgb 'c[root_accent]' ${t[6]}
+      _coolbash_prompt_rgb 'c[path]' ${t[7]}
+      _coolbash_prompt_rgb 'c[time]' ${t[8]}
+    }
+    c[err]+='\[\e[97m\]'
+    c[path]="${c[bold]}${c[path]}"
   else
     c[user]='\[\e[36m\]'
     c[user_accent]='\[\e[35m\]'
@@ -493,4 +530,4 @@ _coolbash_prompt_build() {
 
 # --- Enregistrement dans PROMPT_COMMAND (helper commun de 00-core) -----------
 _coolbash_prompt_command_add _coolbash_prompt_build
-unset -f _coolbash_prompt_pick_emoji _coolbash_prompt_init_colors _coolbash_prompt_init_icons _coolbash_prompt_init_host _coolbash_prompt_rgb _coolbash_prompt_bgrgb _coolbash_prompt_ps0_build
+unset -f _coolbash_prompt_pick_emoji _coolbash_prompt_init_colors _coolbash_prompt_init_icons _coolbash_prompt_init_host _coolbash_prompt_rgb _coolbash_prompt_bgrgb _coolbash_prompt_ps0_build _coolbash_prompt_theme_palette
