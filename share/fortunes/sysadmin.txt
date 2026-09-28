@@ -1,0 +1,34 @@
+Le vendredi, on ne déploie pas.
+Une sauvegarde qu'on n'a jamais restaurée n'est pas une sauvegarde. C'est un espoir.
+Le RAID n'est pas une sauvegarde. La réplication n'est pas une sauvegarde. Le collègue non plus.
+Ça marchait hier. Personne n'a touché à rien. Quelqu'un a touché à quelque chose.
+Le problème est toujours le DNS. Quand ce n'est pas le DNS, c'est un certificat.
+Le certificat a expiré. Il avait pourtant un an, il y a un an.
+La prod, c'est l'environnement de test des clients.
+Un serveur qui n'a jamais redémarré est un serveur dont on ne sait pas s'il redémarrera.
+Le monitoring a détecté la panne. En même temps que les utilisateurs, mais avec un graphique.
+Il n'y a pas d'incident, il y a des fonctionnalités non planifiées.
+Le disque était plein. Il l'était déjà hier, mais hier ça allait.
+Le mot de passe est dans le wiki. Le wiki est derrière le mot de passe.
+Un ticket sans logs est une devinette. Un ticket avec logs est une enquête.
+On a une haute disponibilité : c'est disponible de temps en temps, mais de haut.
+Le plan de reprise d'activité est un document. Il est sur le serveur qui est tombé.
+Le cloud, c'est l'ordinateur de quelqu'un d'autre, avec une facture.
+Redémarrer règle le problème. Comprendre pourquoi règle le suivant.
+Le firewall bloque tout. Sauf ce qu'il fallait bloquer.
+Quand tout le monde a les droits admin, personne n'est responsable.
+La documentation est à jour. Elle décrit exactement l'infrastructure de 2019.
+Un cron qui tourne à minuit tourne aussi à minuit le jour du changement d'heure. Deux fois, ou jamais.
+Le pic de charge arrive toujours pendant la maintenance planifiée.
+La règle du 3-2-1 : trois copies, deux supports, une hors site. Zéro faite.
+Personne ne lit les alertes après la centième de la journée.
+Un script en prod depuis dix ans n'est pas obsolète. Il est fondamental.
+On a migré. Rien n'a changé, sauf tout ce qui a cassé.
+Le SLA est respecté. Le client ne l'a pas remarqué, c'est le principe.
+Le serveur s'appelait Zeus. Il était donc en colère.
+Le port 22 ouvert sur internet est une invitation avec RSVP automatique.
+Le premier réflexe est de regarder les logs. Le deuxième est de les activer.
+Une bonne infrastructure est ennuyeuse. Personne ne parle des serveurs qui marchent.
+Ce n'est pas la panne qui coûte cher, c'est la surprise.
+Toute infrastructure critique repose sur un script écrit par un stagiaire parti en 2016.
+Tout ce qui a été fait à la main sera refait à la main. Par toi, un dimanche.

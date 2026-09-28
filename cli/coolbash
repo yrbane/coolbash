@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.12.1"
+COOLBASH_VERSION="0.13.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -77,6 +77,7 @@ COOLBASH_STARTUP_TIME|1|temps de démarrage affiché : 0 = non, verbose = par mo
 COOLBASH_FZF|1|0 = pas de raccourcis fzf (Ctrl-R)
 COOLBASH_FZF_KEYBINDINGS||fichier key-bindings.bash à utiliser
 COOLBASH_MOTD|1|0 = pas de MOTD (MOTD_DISABLE=1 aussi)
+COOLBASH_FORTUNE|(tous)|thèmes de citations du MOTD, ex. "dev chuck"
 COOLBASH_FONT|1|0 = install n'installe pas de police
 COOLBASH_FONT_URL||archive .tar.xz de la police (miroir)
 COOLBASH_PREFIX|~/.coolbash|dossier d'installation
@@ -95,13 +96,14 @@ _coolbash_cmd_doctor() {
   COOLBASH_DOCTOR_LABEL="CLI installée : ${COOLBASH_PREFIX}/cli/coolbash"; _coolbash_req test -x "${COOLBASH_PREFIX}/cli/coolbash"
   n=0; for f in "${COOLBASH_MODULE_DIR}"/*.bash; do [[ -r "$f" ]] && n=$((n + 1)); done
   COOLBASH_DOCTOR_LABEL="modules chargés : ${n} dans ${COOLBASH_MODULE_DIR}"; _coolbash_req test "$n" -gt 0
+  n=0; for f in "${COOLBASH_ROOT}"/share/fortunes/*.txt "${COOLBASH_PREFIX}"/fortunes/*.txt; do [[ -s "$f" ]] && n=$((n + 1)); done
+  COOLBASH_DOCTOR_LABEL="citations : ${n} thème(s) dans ${COOLBASH_ROOT}/share/fortunes (+ ${COOLBASH_PREFIX}/fortunes)"; _coolbash_req test "$n" -gt 0
   loc="${LC_ALL:-${LANG:-}}"
   COOLBASH_DOCTOR_LABEL="locale ${loc:-non définie} présente sur la machine"
   # shellcheck disable=SC2016
   _coolbash_req bash -c 'locale -a 2>/dev/null | tr "[:upper:]" "[:lower:]" | tr -d "-" | grep -qx "$(echo "$1" | tr "[:upper:]" "[:lower:]" | tr -d "-")"' _ "${loc:-C}"
   printf '\nOptionnels :\n'
   _coolbash_opt git       "segment git du prompt"
-  _coolbash_opt fortune   "MOTD"
   _coolbash_opt cowsay    "MOTD"
   _coolbash_opt lolcat    "MOTD (couleurs)"
   _coolbash_opt fzf       "completion floue"
@@ -125,6 +127,19 @@ _coolbash_cmd_doctor() {
   printf '\nMode : %s%s\n' "${COOLBASH_MODE:-$([[ $EUID -eq 0 ]] && echo safe || echo normal)}" "${COOLBASH_DISABLE:+ · désactivés : ${COOLBASH_DISABLE}}"
   unset -f _coolbash_req _coolbash_opt; unset COOLBASH_DOCTOR_LABEL
   (( ko == 0 ))
+}
+
+# FR : `coolbash fortune [thème…]` — une citation, hors MOTD (test des thèmes).
+_coolbash_cmd_fortune() {
+  local text motd="${COOLBASH_MODULE_DIR}/70-motd.bash"
+  [[ -r "$motd" ]] || motd="${COOLBASH_ROOT}/modules/70-motd.bash"
+  # shellcheck disable=SC2034  # FR : lus par le module sourcé
+  MOTD_DISABLE=1
+  # shellcheck disable=SC1090
+  source "$motd" || return 1
+  # shellcheck disable=SC2034
+  [[ $# -gt 0 ]] && COOLBASH_FORTUNE="$*"
+  if _coolbash_fortune text; then printf '%s\n' "$text"; else _coolbash_error "aucune citation (thèmes : ${*:-tous})"; return 1; fi
 }
 
 # FR : COOLBASH_DISABLE="70-motd 33" — modules à ne pas charger (nom complet,
@@ -219,6 +234,7 @@ Commands:
   version     Print CoolBash version
   doctor      Check installation, locale and optional tools
   config      Show every COOLBASH_* setting with its current value
+  fortune     Print one MOTD quote (optional themes: dev chuck …)
   help        Display this help message
 
 HELP
@@ -237,6 +253,7 @@ case "${1:-}" in
   version)    _coolbash_cmd_version ;;
   doctor)     _coolbash_cmd_doctor ;;
   config)     _coolbash_cmd_config ;;
+  fortune)    shift; _coolbash_cmd_fortune "$@" ;;
   help|"")    _coolbash_cmd_help ;;
   *)          _coolbash_error "Unknown command: $1"; _coolbash_cmd_help >&2; false ;;
 esac

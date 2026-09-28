@@ -1,0 +1,32 @@
+Un bon script est un script qu'on n'a pas eu à écrire.
+Fais une seule chose, et fais-la bien.
+Tout est fichier. Même ce qui ne l'est pas.
+rm -rf ne demande pas si tu es sûr. Il suppose que tu l'es.
+L'homme qui a lu le man est roi au pays de ceux qui ont lu Stack Overflow.
+Le pipe est la plus belle invention depuis la roue. Et il tourne mieux.
+Le silence est d'or : une commande qui réussit n'a rien à dire.
+Il y a toujours une option dans le man que tu cherches depuis dix ans.
+sudo n'est pas une baguette magique. C'est une clé sans étiquette.
+Un dotfile n'est jamais fini. Il est juste sourcé.
+grep trouve tout, sauf ce que tu as mal orthographié.
+Le shell pardonne beaucoup. Sauf les espaces dans les noms de fichiers.
+Une variable non citée est une bombe qui attend un espace.
+On ne quitte pas vim. On y retourne.
+La solution est dans le man. Le problème est de savoir lequel.
+awk est un langage. sed est un état d'esprit.
+Tout ce qui peut être fait en une ligne le sera. Et personne ne la relira.
+Chaque alias est une promesse faite à soi-même de ne plus jamais taper ça.
+cd - est le plus court des retours en arrière.
+Le fichier existe. C'est juste que ce n'est pas celui que tu regardes.
+Un cron sans MAILTO est une prière sans témoin.
+kill -9 est la réponse quand on n'a plus de questions.
+La complétion par tabulation a sauvé plus de doigts que n'importe quel ergonome.
+Le PATH est comme la mémoire : on y met des choses et on oublie dans quel ordre.
+Ce n'est pas un bug, c'est un comportement documenté dans une note de bas de page du man de 1987.
+Il y a deux types de gens : ceux qui font des sauvegardes et ceux qui ne l'ont pas encore regretté.
+chmod 777 règle le problème. Puis il en crée un autre, plus grand.
+Le terminal ne juge pas. Il exécute.
+Les logs disent tout. Encore faut-il les lire avant de les faire tourner.
+tail -f est le feu de camp du sysadmin.
+Ne fais jamais confiance à un fichier qui commence par un point sans le lire.
+Quand tout le reste échoue, lis les instructions. Elles sont dans /usr/share/doc.

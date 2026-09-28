@@ -98,6 +98,19 @@ assert_contains "MOTD : noyau depuis /proc" "${sysinfo}" "Kernel: $(uname -r)"
 assert_eq "MOTD : uptime formaté (days/hours/mins)" "1" "$(printf '%s\n' "${sysinfo}" | grep -cE '^Uptime: ([0-9]+ days?, )?([0-9]+ hours?, )?[0-9]+ mins?$')"
 assert_eq "MOTD : le module ne lance ni neofetch ni fastfetch" "0" "$(grep -cE '^[^#]*(neofetch|fastfetch)' "${COOLBASH_TEST_ROOT}/modules/70-motd.bash")"
 assert_eq "MOTD : cowsay reçoit -e @@ -T U (Neo-cowsay perd la langue avec -p)" "0" "$(grep -cE '^[^#]*cowsay[^|]* -p' "${COOLBASH_TEST_ROOT}/modules/70-motd.bash")"
+# FR : citations françaises embarquées (share/fortunes/<thème>.txt), tirées en pur bash.
+fort() { mod 70-motd.bash "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' PATH=/nonexistent; $1 _coolbash_fortune t && printf '%s' \"\$t\""; }
+assert_eq "fortune embarquée : une citation sans aucun processus" "1" "$(fort '' | grep -c .)"
+for _ in 1 2 3; do assert_contains "COOLBASH_FORTUNE=chuck ne tire que des facts Chuck Norris" "$(fort 'COOLBASH_FORTUNE=chuck')" "Chuck Norris"; done
+assert_eq "un thème inconnu retombe sur tous les thèmes" "1" "$(fort 'COOLBASH_FORTUNE=inexistant' | grep -c .)"
+mkdir -p "${COOLBASH_TEST_TMP}/.coolbash/fortunes"; printf 'ma citation perso\n' >| "${COOLBASH_TEST_TMP}/.coolbash/fortunes/perso.txt"
+assert_eq "les fichiers de ~/.coolbash/fortunes/ sont des thèmes" "ma citation perso" "$(fort 'COOLBASH_FORTUNE=perso')"
+for f in "${COOLBASH_TEST_ROOT}"/share/fortunes/*.txt; do
+  n="$(grep -c . "$f")"; th="$(basename "$f" .txt)"
+  if (( n >= 25 )); then t_ok "thème ${th} : ${n} citations"; else t_fail "thème ${th} : ${n} citations (minimum 25)"; fi
+  assert_eq "thème ${th} : pas d'espace en fin de ligne ni de ligne vide" "0" "$(grep -cE ' $|^$' "$f")"
+done
+if (( $(grep -c . "${COOLBASH_TEST_ROOT}/share/fortunes/chuck.txt") >= 5000 )); then t_ok "chuck.txt : plus de 5000 facts"; else t_fail "chuck.txt : moins de 5000 facts"; fi
 assert_not_contains "doctor ne réclame plus fastfetch" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" doctor 2>&1)" "fastfetch"
 
 assert_eq "up ne laisse pas fuiter sa variable de boucle" "" "$(cd "${COOLBASH_TEST_TMP}" && mod 40-functions.bash 'up 1; echo "${i-}"')"

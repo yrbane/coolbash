@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.13.0 — 2026-09-29 · « Une fortune en français »
+### Ajouté
+- **Citations françaises embarquées** dans `share/fortunes/<thème>.txt`, une par ligne, douze
+  thèmes : `dev`, `unix`, `sysadmin`, `lois`, `corporate`, `absurde`, `humour-noir`, `moralistes`
+  (auteurs du domaine public), `proverbes`, `sciences`, `cinema` et `chuck` (plus de 10 000
+  Chuck Norris facts en français, collectés sur chucknorrisfacts.fr, dédoublonnés).
+- **Tirage en pur bash** (`mapfile` + `RANDOM`) : zéro processus, là où le programme `fortune`
+  coûtait 28 ms à chaque shell. Le programme `fortune` reste un repli quand aucun fichier n'existe.
+- **`COOLBASH_FORTUNE="dev chuck"`** : thèmes retenus, chacun de même poids (un thème répété pèse
+  plus lourd). Un thème inconnu est ignoré ; aucun thème valide = tous. Listée par `coolbash config`.
+- **Thèmes personnels** : `~/.coolbash/fortunes/<thème>.txt`, jamais écrasés par `make install`.
+- **`coolbash fortune [thème…]`** affiche une citation hors MOTD.
+- `coolbash doctor` compte les thèmes de citations (requis) et ne liste plus `fortune`.
+- Sans `cowsay`, la citation s'affiche quand même, sans vache.
+- `make install` copie `share/fortunes/` ; les tests vérifient chaque thème (≥ 25 citations, pas
+  de ligne vide ni d'espace final), le tirage sans aucun processus (`PATH=/nonexistent`), le
+  filtre par thème, les thèmes personnels et la commande.
+
 ## 0.12.1 — 2026-09-28 · « La vache retrouve sa langue »
 ### Corrigé
 - **MOTD** : `cowsay -e @@ -T U` au lieu de `-T U -p`. Même vache paranoïaque sous le cowsay

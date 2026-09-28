@@ -10,7 +10,7 @@ SOURCE_LINE = source "$(PREFIX)/cli/coolbash" init
 
 install:
 	@echo "[CoolBash] Installing to $(PREFIX)..."
-	@mkdir -p "$(PREFIX)/modules" "$(PREFIX)/cli"
+	@mkdir -p "$(PREFIX)/modules" "$(PREFIX)/cli" "$(PREFIX)/share/fortunes"
 	@# FR : `-ef` évite de copier un fichier sur lui-même quand PREFIX est le clone
 	@#      (cas install.sh) ; 90-local-overrides appartient à l'utilisateur et
 	@#      n'est jamais écrasé.
@@ -29,6 +29,13 @@ install:
 	  cp "$$c" "$$dest.new" && mv -f "$$dest.new" "$$dest"; \
 	done
 	@chmod +x "$(PREFIX)/cli/coolbash" "$(PREFIX)/cli/coolbash-font"
+	@# FR : citations du MOTD (un fichier par thème). Les thèmes personnels vivent
+	@#      dans $(PREFIX)/fortunes/ et ne sont pas touchés.
+	@for f in share/fortunes/*.txt; do \
+	  dest="$(PREFIX)/$$f"; \
+	  [[ "$$f" -ef "$$dest" ]] && continue; \
+	  cp "$$f" "$$dest.new" && mv -f "$$dest.new" "$$dest"; \
+	done
 	@[[ "$(ROOT)" -ef "$(PREFIX)" ]] || echo "$(ROOT)" >| "$(PREFIX)/.repo"
 	@touch "$(BASHRC)"
 	@grep -qF 'cli/coolbash' "$(BASHRC)" || echo '$(SOURCE_LINE)' >> "$(BASHRC)"

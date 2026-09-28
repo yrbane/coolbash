@@ -81,7 +81,7 @@ make_fake_clone() {
   local dest="$1"
   mkdir -p "${dest}"
   cp -r "${COOLBASH_TEST_ROOT}/Makefile" "${COOLBASH_TEST_ROOT}/install.sh" "${COOLBASH_TEST_ROOT}/cli" \
-     "${COOLBASH_TEST_ROOT}/modules" "${COOLBASH_TEST_ROOT}/tests" "${dest}/"
+     "${COOLBASH_TEST_ROOT}/modules" "${COOLBASH_TEST_ROOT}/tests" "${COOLBASH_TEST_ROOT}/share" "${dest}/"
 }
 
 t_done() {

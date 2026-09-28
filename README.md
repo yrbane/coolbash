@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.12.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.13.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -63,7 +63,8 @@ coolbash <command>
 | `init`      | Charge tous les modules dans le shell courant |
 | `version`   | Affiche la version                            |
 | `config`    | Tous les réglages `COOLBASH_*` avec leur valeur effective (définie ou par défaut) |
-| `doctor`    | Diagnostic : bash, `.bashrc`, modules, locale, outils optionnels, Nerd Font |
+| `fortune`   | Une citation du MOTD, au hasard ou d'un thème donné : `coolbash fortune chuck` |
+| `doctor`    | Diagnostic : bash, `.bashrc`, modules, citations, locale, outils optionnels, Nerd Font |
 | `help`      | Affiche l’aide de la CLI                      |
 
 La fonction shell `coolbash` est disponible dès que `~/.bashrc` a chargé CoolBash.
@@ -124,7 +125,7 @@ coolbash/
 | `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`…) |
 | `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji, icônes)  |
 | `60-completion.bash`      | Completions Bash/Git/fzf                            |
-| `70-motd.bash`            | Fortune + infos système lues dans `/proc` (une fois par session, zéro processus) |
+| `70-motd.bash`            | Citation française (12 thèmes, `share/fortunes/`) dans la bouche de cowsay + infos système lues dans `/proc` (une fois par session) |
 | `90-local-overrides.bash` | Surcharges locales (vide par défaut)                |
 
 ---
@@ -233,6 +234,7 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
 | `COOLBASH_NVM_LAZY=0`           | Charger `nvm.sh` au démarrage (≈ 0,7 s par shell) au lieu du chargement paresseux |
+| `COOLBASH_FORTUNE`              | Thèmes de citations du MOTD, ex. `"dev chuck"` (défaut : tous, un thème répété pèse plus lourd) |
 | `COOLBASH_STARTUP_TIME`         | Temps de démarrage affiché à l'ouverture : `1` (défaut), `0` = muet, `verbose` = temps de chaque module. Le total est l'âge du processus (tout le `~/.bashrc` compris), la part CoolBash à côté |
 | `COOLBASH_FZF=0`                | Pas de raccourcis fzf (`Ctrl-R`, `Ctrl-T`, `Alt-C`), chargés sinon en shell interactif |
 | `COOLBASH_FZF_KEYBINDINGS`      | Fichier `key-bindings.bash` à utiliser (sinon emplacements Arch, Debian, Fedora, `~/.fzf`) |
@@ -247,6 +249,31 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PS0_TITLE=0`          | Ne pas mettre la commande en cours dans le titre du terminal          |
 | `COOLBASH_PS0_EXTRA`            | Fragment ajouté à la fin de `PS0` (PS0 personnel)                     |
 | `COOLBASH_MOTD=0` / `MOTD_DISABLE=1` | Pas de MOTD                                                      |
+
+### 💬 Citations du MOTD
+
+Le MOTD tire une citation **en français** dans `share/fortunes/<thème>.txt` (une par ligne), en pur
+bash : zéro processus, là où le programme `fortune` coûtait 28 ms. Douze thèmes sont embarqués :
+
+| Thème         | Contenu                                                    |
+| ------------- | ---------------------------------------------------------- |
+| `dev`         | Le métier : estimations, TODO, « ça marche sur ma machine » |
+| `unix`        | Shell, pipes, `rm -rf`, l'homme qui a lu le man             |
+| `sysadmin`    | Prod, sauvegardes, DNS, « le vendredi on ne déploie pas »   |
+| `lois`        | Parkinson, Peter, Hofstadter, Brandolini, Conway…           |
+| `corporate`   | Réunions qui auraient pu être un mail                       |
+| `absurde`     | Logique qui mène à tout, à condition d'en sortir            |
+| `humour-noir` | Cynisme et post-mortem                                      |
+| `moralistes`  | La Rochefoucauld, La Bruyère, Chamfort, Montaigne, Pascal, Voltaire, Jules Renard |
+| `proverbes`   | Français, chinois, africains, arabes, japonais              |
+| `sciences`    | Poincaré, Pasteur, Feynman, Einstein, chat de Schrödinger   |
+| `cinema`      | Répliques cultes en VF                                      |
+| `chuck`       | Plus de 10 000 Chuck Norris facts en français               |
+
+- `COOLBASH_FORTUNE="dev chuck"` limite le tirage à ces thèmes. Chaque fichier retenu a le même poids :
+  `"chuck chuck dev"` favorise Chuck.
+- Tes propres thèmes : un fichier `~/.coolbash/fortunes/<thème>.txt`, jamais touché par `make install`.
+- `coolbash fortune [thème…]` en affiche une, hors MOTD. Sans aucun fichier, le programme `fortune` est utilisé s'il existe.
 
 ### 🧹 Vider son `~/.bashrc`
 

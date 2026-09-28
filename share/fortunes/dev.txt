@@ -1,0 +1,36 @@
+Ça marche sur ma machine.
+Il n'y a que deux choses difficiles en informatique : invalider les caches, nommer les choses, et les erreurs de décalage de un.
+Un commentaire qui dit « ne pas toucher » a toujours une bonne raison. Personne ne se souvient laquelle.
+Le code temporaire est le plus durable de tous.
+Une estimation est un chiffre qu'on donne pour qu'on arrête de nous poser la question.
+Le bug n'est jamais là où tu regardes. Sinon tu l'aurais déjà trouvé.
+Tout code non testé est cassé. Il ne le sait juste pas encore.
+Le meilleur code est celui que tu n'as pas eu à écrire.
+Si ça a été dur à écrire, ça doit être dur à lire. C'est la seule justice qui existe dans ce métier.
+On ne finit jamais un logiciel. On arrête juste d'y toucher.
+« Ça devrait marcher » est le début de toutes les grandes soirées.
+Le TODO est le seul endroit du code qui dit la vérité.
+Il y a 10 sortes de gens : ceux qui comprennent le binaire et les autres.
+Le premier jour d'un projet, tout est possible. Le deuxième, on installe les dépendances.
+Corriger un bug en produit deux nouveaux. C'est la conservation de la masse.
+Un programme qui fait ce qu'on lui a demandé est rarement un programme qui fait ce qu'on voulait.
+Le junior écrit du code. Le senior en supprime.
+Ne jamais déployer un vendredi. Ni un jeudi qui ressemble à un vendredi.
+Le refactoring, c'est nettoyer sa chambre en promettant que tout est encore à sa place.
+Toute documentation est un mensonge. Elle était vraie il y a deux versions.
+Les compilateurs se plaignent. Les interpréteurs attendent la prod pour le faire.
+Le seul code sans bug est le code qu'on a supprimé.
+Le nom d'une variable dit ce que le développeur pensait faire. Le code dit ce qu'il a fait.
+« Optimisation prématurée » : expression qu'on utilise pour justifier qu'on n'a rien optimisé.
+La dette technique ne se rembourse pas. Elle se refinance.
+Un développeur heureux est un développeur dont les tests sont verts et dont la réunion a été annulée.
+On écrit un framework quand on n'a pas compris le problème et qu'on veut le résoudre en général.
+Le copier-coller est la forme la plus sincère d'héritage.
+Le legacy, c'est tout code qui tourne en production. Le tien aussi.
+Quand tout marche du premier coup, c'est que tu n'as pas tout lancé.
+Le mode debug n'est jamais activé au moment où le bug arrive.
+Un algorithme quadratique est un algorithme linéaire qui a réussi.
+La ligne de code la plus chère est celle qu'on écrit en pensant qu'on la réécrira plus tard.
+Le logiciel est comme le fromage : il vieillit, mais ça ne l'améliore pas toujours.
+Rien ne vieillit plus vite qu'un commentaire.
+Il y a toujours un test qui échoue seulement sur la CI.

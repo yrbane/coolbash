@@ -1,0 +1,36 @@
+Loi de Parkinson : une tâche prend tout le temps qu'on lui accorde.
+Loi de Murphy : tout ce qui peut mal tourner tournera mal, et au pire moment.
+Principe de Peter : dans une hiérarchie, chacun monte jusqu'à son niveau d'incompétence.
+Loi de Hofstadter : ça prend toujours plus de temps que prévu, même en tenant compte de la loi de Hofstadter.
+Loi de Brandolini : réfuter une connerie demande dix fois plus d'énergie que la produire.
+Loi de Brooks : ajouter des gens à un projet en retard le retarde encore.
+Loi de Conway : un système ressemble à l'organisation qui l'a conçu, avec les mêmes disputes.
+Loi de Gall : un système complexe qui fonctionne a toujours évolué d'un système simple qui fonctionnait.
+Loi de Goodhart : quand une mesure devient un objectif, elle cesse d'être une bonne mesure.
+Loi de Hanlon : ne jamais attribuer à la malveillance ce que la bêtise suffit à expliquer.
+Loi de Sturgeon : quatre-vingt-dix pour cent de tout est de la camelote.
+Loi de Segal : un homme qui a une montre sait l'heure qu'il est. Un homme qui en a deux n'est jamais sûr.
+Loi de Wirth : les logiciels ralentissent plus vite que le matériel n'accélère.
+Loi de Linus : avec assez d'yeux, tous les bugs sont superficiels. Il manque toujours les yeux.
+Loi de Kernighan : déboguer est deux fois plus dur qu'écrire le code. Écris donc le plus bêtement possible.
+Loi de Postel : sois tolérant dans ce que tu acceptes, strict dans ce que tu produis.
+Loi de Cunningham : le meilleur moyen d'obtenir la bonne réponse sur internet est de poster la mauvaise.
+Loi de Godwin : toute discussion en ligne assez longue finit par une comparaison avec Hitler.
+Loi de Poe : sans smiley, une parodie est indiscernable de l'opinion sincère.
+Loi de Betteridge : tout titre qui pose une question a pour réponse « non ».
+Loi de Zawinski : tout programme grossit jusqu'à pouvoir lire du courrier. Ceux qui n'y arrivent pas sont remplacés.
+Loi de Hyrum : avec assez d'utilisateurs, tout comportement observable de ton API devient un contrat.
+Loi de Lehman : un logiciel qu'on n'entretient pas devient de moins en moins utile.
+Loi de Atwood : toute application qui peut être écrite en JavaScript finira par l'être.
+Loi d'Eagleson : ton propre code, six mois plus tard, aurait pu être écrit par quelqu'un d'autre.
+Loi de Dilbert : les incompétents sont promus là où ils font le moins de dégâts : la direction.
+Rasoir d'Occam : entre deux explications, la plus simple est la meilleure. Sauf en production.
+Rasoir de Hitchens : ce qui est affirmé sans preuve peut être rejeté sans preuve.
+Effet Dunning-Kruger : moins on sait, plus on est sûr. Et plus on parle en réunion.
+Loi de la trivialité : le temps passé sur un sujet est inversement proportionnel à son importance.
+Loi de Sayre : l'intensité d'un conflit est inversement proportionnelle à l'enjeu.
+Loi de Finagle : la donnée dont tu as besoin est la seule qui manque.
+Loi de Cheops : rien n'est jamais construit dans les délais ni dans le budget.
+Loi du bikeshedding : on discute deux heures de la couleur d'un bouton et deux minutes du modèle de données.
+Loi de Amara : on surestime l'effet d'une technologie à court terme et on le sous-estime à long terme.
+Loi de Tesler : toute application a une complexité irréductible. La question est de savoir qui la porte.

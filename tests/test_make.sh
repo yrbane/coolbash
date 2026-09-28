@@ -26,6 +26,9 @@ assert_success "make install réussit" mk install
 assert_file "la CLI est installée" "${PREFIX}/cli/coolbash"
 assert_success "la CLI installée est exécutable" test -x "${PREFIX}/cli/coolbash"
 assert_file "les modules sont installés" "${PREFIX}/modules/00-core.bash"
+assert_file "les citations sont installées" "${PREFIX}/share/fortunes/dev.txt"
+set -- "${COOLBASH_TEST_ROOT}"/share/fortunes/*.txt; n_src=$#; set -- "${PREFIX}"/share/fortunes/*.txt
+assert_eq "autant de thèmes installés que dans le dépôt" "${n_src}" "$#"
 assert_eq "autant de modules installés que dans le dépôt" \
   "$(find "${CLONE}/modules" -name '*.bash' | wc -l)" "$(find "${PREFIX}/modules" -name '*.bash' | wc -l)"
 assert_eq "le chemin du clone est mémorisé pour coolbash update" "${CLONE}" "$(cat "${PREFIX}/.repo")"

@@ -5,8 +5,9 @@
 #   ██  ██  ██ ██    ██    ██    ██   ██ 
 #   ██      ██  ██████     ██    ██████  MODULE: MOTD
 # ─────────────────────────────────────────────────────────────────────────────
-# FR: Affiche un message fun (fortune+cowsay+lolcat) et 6 lignes d'infos
-#     système au login, une seule fois par session.
+# FR: Affiche une citation française (share/fortunes, dans la bouche de cowsay,
+#     colorée par lolcat) et 6 lignes d'infos système au login, une seule fois
+#     par session.
 #     neofetch calculait tout (GPU, résolution, thème, police du terminal…)
 #     pour qu'on n'en garde que 6 lignes : de 0,5 à 2,7 s par shell. Les mêmes
 #     lignes sont lues dans /proc, /sys et /etc/os-release, sans un seul
@@ -21,14 +22,51 @@ _coolbash_motd_enabled() {
   return 0
 }
 
+# FR : citations en français, une par ligne, un fichier par thème :
+#       - embarquées : <racine CoolBash>/share/fortunes/<thème>.txt
+#       - personnelles : ~/.coolbash/fortunes/<thème>.txt (jamais écrasées)
+#      Tirage en pur bash (mapfile + RANDOM) : zéro processus, là où le
+#      programme fortune coûtait 28 ms. COOLBASH_FORTUNE="dev chuck" limite aux
+#      thèmes cités ; chaque fichier retenu a le même poids, un thème répété pèse
+#      donc plus lourd. Un thème inconnu est ignoré ; aucun thème valide = tous.
+_coolbash_fortune() {
+  # FR : la sortie est écrite dans la variable nommée par $1 — aucun nom local
+  #      ne doit pouvoir la masquer, d'où le préfixe _cf_.
+  local _cf_out="$1" _cf_root="${COOLBASH_ROOT:-${COOLBASH_PREFIX:-$HOME/.coolbash}}"
+  local _cf_dirs=("$_cf_root/share/fortunes" "${COOLBASH_PREFIX:-$HOME/.coolbash}/fortunes")
+  local _cf_d _cf_t _cf_f _cf_files=() _cf_lines=() _cf_n
+  for _cf_t in ${COOLBASH_FORTUNE:-}; do
+    for _cf_d in "${_cf_dirs[@]}"; do [[ -s "$_cf_d/$_cf_t.txt" ]] && _cf_files+=("$_cf_d/$_cf_t.txt"); done
+  done
+  if (( ${#_cf_files[@]} == 0 )); then
+    for _cf_d in "${_cf_dirs[@]}"; do for _cf_f in "$_cf_d"/*.txt; do [[ -s "$_cf_f" ]] && _cf_files+=("$_cf_f"); done; done
+  fi
+  (( ${#_cf_files[@]} )) || return 1
+  _cf_f="${_cf_files[RANDOM % ${#_cf_files[@]}]}"
+  mapfile -t _cf_lines < "$_cf_f"
+  _cf_n=${#_cf_lines[@]}; (( _cf_n )) || return 1
+  # FR : RANDOM s'arrête à 32767 — combiné pour couvrir les gros fichiers.
+  for _ in 1 2 3 4 5; do
+    printf -v "$_cf_out" '%s' "${_cf_lines[(RANDOM * 32768 + RANDOM) % _cf_n]}"
+    [[ -n "${!_cf_out}" && "${!_cf_out}" != \#* ]] && return 0
+  done
+  return 1
+}
+
 _coolbash_motd() {
   _coolbash_motd_enabled || return 0
   [[ -t 1 ]] || return 0
-  if command -v fortune >/dev/null 2>&1 && command -v cowsay >/dev/null 2>&1; then
-    # FR : « -e @@ -T U » = la vache paranoïaque avec sa langue, identique sous
-    #      cowsay (Perl) et Neo-cowsay (Go, 3 ms), qui perd la langue avec -p.
-    if command -v lolcat >/dev/null 2>&1; then fortune -a | cowsay -e @@ -T U | lolcat
-    else fortune -a | cowsay -e @@ -T U; fi
+  local text=""
+  if ! _coolbash_fortune text && command -v fortune >/dev/null 2>&1; then text="$(fortune -a 2>/dev/null)"; fi
+  if [[ -n "$text" ]]; then
+    if command -v cowsay >/dev/null 2>&1; then
+      # FR : « -e @@ -T U » = la vache paranoïaque avec sa langue, identique sous
+      #      cowsay (Perl) et Neo-cowsay (Go, 3 ms), qui perd la langue avec -p.
+      if command -v lolcat >/dev/null 2>&1; then printf '%s\n' "$text" | cowsay -e @@ -T U | lolcat
+      else printf '%s\n' "$text" | cowsay -e @@ -T U; fi
+    else
+      printf '%s\n\n' "$text"
+    fi
   fi
   _coolbash_motd_sysinfo
   export COOLBASH_MOTD_SHOWN=1
