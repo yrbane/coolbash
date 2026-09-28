@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.0 — 2026-09-29 · « Date et disque dans le MOTD »
+### Ajouté
+- **`Date:`** dans le bloc d'infos système, par le `printf %T` intégré à bash (aucun processus) :
+  `Date: 2026-09-29 00:40 (mardi)`, jour de la semaine dans la langue du shell.
+- **`Disk (/):`** utilisé / taille (pourcentage), par un seul `df -Ph /`. Pourcentage en jaune
+  à partir de 80 %, en rouge à partir de 90 %. Sans `df`, la ligne est simplement absente.
+- Tests : date du jour présente, ligne disque au bon format, et rien de cassé sans `df`.
+
 ## 0.13.2 — 2026-09-29 · « Chaque thème à égalité »
 ### Ajouté
 - Test : chaque thème a la même probabilité de sortir, quelle que soit sa taille (un thème d'une

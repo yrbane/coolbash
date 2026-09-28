@@ -6,8 +6,8 @@
 #   ██      ██  ██████     ██    ██████  MODULE: MOTD
 # ─────────────────────────────────────────────────────────────────────────────
 # FR: Affiche une citation française (share/fortunes, dans la bouche de cowsay,
-#     colorée par lolcat) et 6 lignes d'infos système au login, une seule fois
-#     par session.
+#     colorée par lolcat) et 8 lignes d'infos système au login (user@host, OS,
+#     Host, Kernel, Uptime, Date, Disk), une seule fois par session.
 #     neofetch calculait tout (GPU, résolution, thème, police du terminal…)
 #     pour qu'on n'en garde que 6 lignes : de 0,5 à 2,7 s par shell. Les mêmes
 #     lignes sont lues dans /proc, /sys et /etc/os-release, sans un seul
@@ -86,6 +86,20 @@ _coolbash_motd_sysinfo() {
   [[ -n "$host" ]] && printf 'Host: %s\n' "$host"
   printf 'Kernel: %s\n' "$kernel"
   printf 'Uptime: %s\n' "$(_coolbash_motd_uptime "${up%.*}")"
+  # FR : la date par le printf intégré (pas de processus `date`).
+  printf 'Date: %(%Y-%m-%d %H:%M)T (%(%A)T)\n' -1 -1
+  _coolbash_motd_disk
+}
+
+# FR : espace de / — un seul `df -Ph` (format POSIX, lisible), coloré à partir
+#      de 80 % d'occupation. Sans df (PATH réduit), la ligne est absente.
+_coolbash_motd_disk() {
+  local size used pcent color=""
+  command -v df >/dev/null 2>&1 || return 0
+  { read -r _; read -r _ size used _ pcent _; } < <(df -Ph / 2>/dev/null) || return 0
+  [[ "$pcent" =~ ^[0-9]+%$ ]] || return 0
+  if (( ${pcent%\%} >= 90 )); then color='\e[31m'; elif (( ${pcent%\%} >= 80 )); then color='\e[33m'; fi
+  printf "Disk (/): %s used of %s (${color}%s\e[0m)\n" "$used" "$size" "$pcent"
 }
 
 # FR : « 1 day, 7 hours, 1 min » — le format de neofetch.

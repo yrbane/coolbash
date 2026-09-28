@@ -96,6 +96,10 @@ assert_contains "MOTD : titre user@host sans aucun processus" "${sysinfo}" "${US
 assert_contains "MOTD : ligne OS depuis /etc/os-release" "${sysinfo}" "OS: $(. /etc/os-release; echo "$PRETTY_NAME")"
 assert_contains "MOTD : noyau depuis /proc" "${sysinfo}" "Kernel: $(uname -r)"
 assert_eq "MOTD : uptime formaté (days/hours/mins)" "1" "$(printf '%s\n' "${sysinfo}" | grep -cE '^Uptime: ([0-9]+ days?, )?([0-9]+ hours?, )?[0-9]+ mins?$')"
+assert_contains "MOTD : la date du jour, par le printf intégré à bash" "${sysinfo}" "Date: $(date +%Y-%m-%d)"
+assert_not_contains "MOTD : sans df, pas de ligne disque (et pas d'erreur)" "${sysinfo}" "Disk"
+sysinfo_df="$(mod 70-motd.bash '_coolbash_motd_sysinfo')"
+assert_eq "MOTD : espace disque de / (df -h), utilisé / taille (pourcentage)" "1" "$(printf '%s\n' "${sysinfo_df}" | sed 's/\x1b\[[0-9;]*m//g' | grep -cE '^Disk \(/\): [0-9.,]+[KMGTP]? used of [0-9.,]+[KMGTP]? \([0-9]+%\)')"
 assert_eq "MOTD : le module ne lance ni neofetch ni fastfetch" "0" "$(grep -cE '^[^#]*(neofetch|fastfetch)' "${COOLBASH_TEST_ROOT}/modules/70-motd.bash")"
 assert_eq "MOTD : cowsay reçoit -e @@ -T U (Neo-cowsay perd la langue avec -p)" "0" "$(grep -cE '^[^#]*cowsay[^|]* -p' "${COOLBASH_TEST_ROOT}/modules/70-motd.bash")"
 # FR : citations françaises embarquées (share/fortunes/<thème>.txt), tirées en pur bash.
