@@ -34,3 +34,73 @@ Le monde ne tourne pas rond. C'est un ellipsoïde, et il perd de la vitesse.
 L'enfer, c'est les autres. En open space.
 Ma tombe portera : « Il avait dit que ça marcherait. »
 Le progrès, c'est mourir des maladies dont on ne mourait pas avant.
+La mort des autres nous aide à vivre. — Jules Renard
+On ne meurt qu'une fois, mais on redéploie souvent.
+Il y a des moments où tout réussit. Il ne faut pas s'effrayer : ça passe. — Jules Renard
+Un code est dit hérité quand son auteur est mort, ou fait très bien semblant.
+Je ne suis pas sincère, même quand je dis que je ne le suis pas. — Jules Renard
+Un testament n'est qu'un README que personne ne lit avant qu'il soit trop tard.
+Si l'argent ne fait pas le bonheur, rendez-le. — Jules Renard
+Chaque commit est une petite pierre tombale : une date, un nom, et un message qui ment.
+C'est un terrible avantage de n'avoir rien fait, mais il ne faut pas en abuser. — Rivarol
+Je ne laisse aucune trace. Enfin si, dans les logs, mais qui les lit ?
+Tout ce qui est excessif est insignifiant. — Talleyrand
+Notre espèce a inventé la roue, l'écriture et la réunion du lundi matin. Deux sur trois, c'est honorable.
+Quand je me regarde, je me désole ; quand je me compare, je me console. — Talleyrand
+Savoir qu'on va mourir est le seul privilège de l'homme sur la machine. Elle s'en passe très bien.
+C'est pire qu'un crime, c'est une faute. — Talleyrand
+Le serveur est mort en production. Comme tout le monde, au fond.
+La parole a été donnée à l'homme pour déguiser sa pensée. — Talleyrand
+Sur une tombe, deux dates et un tiret. Toute une vie tient dans le tiret.
+Avalez une couleuvre chaque matin, et vous ne trouverez rien de dégoûtant le reste de la journée. — Chamfort
+Sans nous, la Terre tournera très bien. Elle avait d'ailleurs commencé un peu avant.
+Vivre est une maladie dont le sommeil nous soulage toutes les seize heures. C'est un palliatif ; la mort est le remède. — Chamfort
+On naît sans documentation et on meurt sans changelog.
+Cynique : misérable dont la vue défectueuse lui fait voir les choses telles qu'elles sont, et non telles qu'elles devraient être. — Ambrose Bierce
+Corps humain : livré sans garantie, sans manuel, et sans possibilité de retour.
+Année : période de trois cent soixante-cinq déceptions. — Ambrose Bierce
+Mes ancêtres ont survécu à la peste, aux guerres et aux famines pour que je réponde à des courriels.
+Naissance : la première et la plus terrible de toutes les catastrophes. — Ambrose Bierce
+Tout ce qui a un début a une fin. Sauf la boucle où tu as oublié l'incrément.
+Égoïste : personne de mauvais goût, qui s'intéresse davantage à elle-même qu'à moi. — Ambrose Bierce
+Avec le temps, toutes les blessures guérissent. Il suffit d'attendre que le patient meure.
+Avenir : période où nos affaires prospèrent, nos amis sont sincères et notre bonheur est assuré. — Ambrose Bierce
+Mourir, c'est se déconnecter sans avoir sauvegardé.
+L'expérience est le nom que chacun donne à ses erreurs. — Oscar Wilde
+Nous sommes tous des versions bêta que personne ne finira de tester.
+Il n'y a que deux tragédies en ce monde : ne pas obtenir ce qu'on désire, et l'obtenir. — Oscar Wilde
+Vivre est un bug parfaitement documenté : on connaît l'issue, on n'a jamais trouvé le correctif.
+Chaque fois que les gens sont d'accord avec moi, j'ai l'impression de m'être trompé. — Oscar Wilde
+Mourir en héros reste mourir. Seuls les survivants en profitent.
+Pardonnez toujours à vos ennemis : rien ne les agace davantage. — Oscar Wilde
+Comme la nature a horreur du vide, elle a inventé les réunions.
+Les rumeurs concernant ma mort sont très exagérées. — Mark Twain
+Les moines gardaient un crâne sur leur bureau pour se souvenir de la mort. Nous avons la boîte de réception.
+Ne remettez jamais à demain ce que vous pouvez faire après-demain. — Mark Twain
+Les regrets ne durent qu'une vie. C'est déjà une consolation.
+Allez au paradis pour le climat, en enfer pour la compagnie. — Mark Twain
+Personne ne t'oubliera. Le cache, lui, expire au bout de vingt-quatre heures.
+L'homme est le seul animal qui rougit. C'est aussi le seul qui en ait besoin. — Mark Twain
+Une carrière, c'est un trou dont on extrait des pierres jusqu'à épuisement. Le mot est bien choisi.
+Tout le monde veut vivre longtemps, mais personne ne veut être vieux. — Jonathan Swift
+Dans toute dispute, le dernier mot revient au médecin légiste.
+Quand un vrai génie paraît en ce monde, on le reconnaît à ce signe : les sots se liguent tous contre lui. — Jonathan Swift
+Mourir est la seule chose que l'homme fasse sans se plaindre. Faute de retour d'expérience, sans doute.
+Le soleil ni la mort ne se peuvent regarder fixement. — La Rochefoucauld
+Seule espèce à savoir qu'elle finira, l'humanité continue pourtant les mises en production le vendredi.
+Nous avons tous assez de force pour supporter les maux d'autrui. — La Rochefoucauld
+Entre un cimetière et une base de données historique, une différence : au cimetière, on ne réveille personne.
+Nous promettons selon nos espérances, et nous tenons selon nos craintes. — La Rochefoucauld
+Chacun meurt seul ; certains dans un fil de discussion à vingt-trois participants.
+La vie oscille, comme un pendule, de la souffrance à l'ennui. — Schopenhauer
+Rien ne se perd, rien ne se crée, tout se transforme. En dette technique.
+Chaque jour est une petite vie : chaque réveil une petite naissance, chaque coucher une petite mort. — Schopenhauer
+On enterre les morts pour les oublier plus vite ; on archive les projets pour la même raison.
+Le doute n'est pas un état agréable, mais la certitude est absurde. — Voltaire
+Apprendre à vivre prend toute une vie ; il ne reste ensuite plus le temps de mettre en pratique.
+Il est dangereux d'avoir raison dans des choses où des hommes accrédités ont tort. — Voltaire
+Sois gentil avec les stagiaires : ce sont eux qui rédigeront ton post-mortem.
+Je n'ai jamais souhaité la mort de personne, mais j'ai lu certaines nécrologies avec un grand plaisir. — Clarence Darrow
+Pour qu'on dise enfin du bien de toi, il suffit de mourir. C'est le prix des éloges.
+Dernières volontés : désactivez mon compte avant que quelqu'un ne relise mes commentaires.
+Toute civilisation finit en ruines ; la nôtre finira en fichiers de configuration.

@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.13.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.13.1-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -253,7 +253,7 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 ### 💬 Citations du MOTD
 
 Le MOTD tire une citation **en français** dans `share/fortunes/<thème>.txt` (une par ligne), en pur
-bash : zéro processus, là où le programme `fortune` coûtait 28 ms. Douze thèmes sont embarqués :
+bash : zéro processus, là où le programme `fortune` coûtait 28 ms. Douze thèmes sont embarqués, une centaine de citations chacun (et dix mille pour Chuck) :
 
 | Thème         | Contenu                                                    |
 | ------------- | ---------------------------------------------------------- |

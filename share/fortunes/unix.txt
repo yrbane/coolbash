@@ -30,3 +30,73 @@ Les logs disent tout. Encore faut-il les lire avant de les faire tourner.
 tail -f est le feu de camp du sysadmin.
 Ne fais jamais confiance à un fichier qui commence par un point sans le lire.
 Quand tout le reste échoue, lis les instructions. Elles sont dans /usr/share/doc.
+Un pipe bien posé vaut mieux qu'un fichier temporaire oublié dans /tmp.
+Écris des programmes qui parlent à d'autres programmes : le texte est leur seule langue commune.
+Zéro est le seul chiffre que le shell aime entendre.
+Fermer un terminal sans tmux, c'est quitter une pièce en éteignant la lumière sur tout le monde.
+Les pages de man sont écrites pour ceux qui savent déjà ; voilà pourquoi on les lit trois fois.
+Emacs est un excellent système d'exploitation ; certains y installent même un éditeur.
+La querelle vim contre emacs a survécu à la plupart des machines qui l'ont hébergée.
+Dans vim, le mode insertion est un privilège, pas un droit.
+:wq est la seule prière que vim exauce à coup sûr.
+Trop malin, l'alias finit par cacher la commande qu'il devait rendre facile.
+Avant de créer un alias, demande-toi si tes doigts le retrouveront sur la machine d'un collègue.
+cron s'exécute à l'heure ; c'est son PATH qui n'est jamais celui que tu croyais.
+Une tâche planifiée qui marche en test échoue à trois heures du matin, quand personne ne regarde.
+Les permissions ne sont pas un obstacle : c'est une conversation sur qui tu es.
+Entre un texte et un programme, il n'y a qu'un bit : celui de l'exécution.
+sed remplace sans rancune ; c'est toi qui oublies le g à la fin.
+awk sait compter les colonnes ; c'est toi qui as perdu le séparateur.
+grep -r est une lampe torche ; grep -rn est une lampe torche avec une carte.
+Chaque répertoire du PATH est un ami à qui tu confies tes clés. Choisis tes amis.
+Le ./ devant une commande dit au shell : c'est ici, pas ailleurs.
+Petites pièces, grandes idées : toute la philosophie Unix tient dans un pipe.
+Un bon outil se compose ; un mauvais outil se configure.
+Un fichier de configuration bien commenté est une lettre à ton futur toi.
+Ton .bashrc raconte ta vie mieux que ton CV.
+Versionne tes dotfiles : tu pourras au moins regretter proprement.
+Ton prompt est le seul décor que tu verras toute la journée ; soigne-le.
+Ce que tu tapes deux fois mérite un alias ; ce que tu tapes dix fois mérite un script.
+Écrire un script shell, c'est coller ensemble des outils qui ne se sont jamais rencontrés.
+Sans set -e, un script continue de marcher longtemps après sa mort.
+Le point-virgule enchaîne, le && exige, le || console.
+xargs est l'interprète entre ceux qui parlent en lignes et ceux qui parlent en arguments.
+find cherche, locate se souvient, et toi tu tapes ls dans chaque répertoire.
+Rediriger vers /dev/null n'efface pas l'erreur ; ça la rend juste inaudible.
+2>&1 : quatre caractères pour cesser d'ignorer la moitié de ce qu'on te dit.
+tee est la seule façon d'écouter une conversation sans l'interrompre.
+history | grep, c'est la mémoire de ceux qui n'en ont plus.
+Ctrl-R : chercher dans le passé ce qu'on n'a pas eu la sagesse de noter.
+Broken pipe n'est pas une panne, c'est un lecteur qui en a assez entendu.
+Le zombie n'a plus de corps, mais il garde son numéro de processus.
+Bien écrit, un démon ne parle qu'à syslog, et rarement.
+La sortie standard est pour les résultats ; l'erreur standard est pour tout ce que tu préférerais oublier.
+Caché ne veut pas dire secret : le dotfile a simplement de la retenue.
+ls -la ne montre rien de neuf ; il montre ce que tu évitais de regarder.
+chown change le propriétaire, jamais les responsabilités.
+root peut tout faire ; c'est exactement pourquoi il ne devrait presque rien faire.
+umask est la politesse par défaut de tes fichiers envers les autres.
+Suivre un lien symbolique, c'est croire une promesse : le fichier est par là. Parfois, il n'y est plus.
+touch est la plus douce des commandes : elle ne fait qu'exister.
+cat a été écrit pour concaténer, pas pour lire. Personne ne s'en souvient.
+yes répond oui pour l'éternité, sans jamais savoir à quoi.
+--dry-run est le seul ami qui te prévient avant que tu fasses une bêtise.
+Toute option courte finit par avoir une version longue, que personne n'apprend.
+La sortie d'un programme est l'entrée d'un autre ; ne la décore pas.
+Quand le journal ne tourne jamais, il remplit d'abord le disque, puis la journée.
+df raconte le passé ; du raconte les coupables.
+Comme par hasard, le disque est plein juste quand tu voulais écrire quelque chose d'important.
+Une regex qui marche du premier coup cache un cas que tu n'as pas testé.
+Dans une regex, le point correspond à tout, sauf à ce que tu espérais.
+Il n'y a pas de bug dans sed, seulement des expressions régulières mal comprises.
+Sans heredoc, il faudrait ouvrir un fichier pour dire plus de trois lignes.
+Sans local, une variable de fonction est un accident global qui attend son heure.
+Lu trop tard, $? raconte l'histoire d'une autre commande.
+En shell, l'espace est un séparateur, un argument et un piège. Souvent les trois à la fois.
+Première ligne du fichier, le shebang est la seule qui décide de tout le reste.
+Mieux vaut une commande simple qu'on comprend qu'un pipeline brillant qu'on n'ose plus toucher.
+Il semble que la perfection soit atteinte non quand il n'y a plus rien à ajouter, mais quand il n'y a plus rien à retrancher. — Antoine de Saint-Exupéry
+Ce qui se conçoit bien s'énonce clairement, et les mots pour le dire arrivent aisément. — Nicolas Boileau
+Bonheur du terminal : un prompt vide, un curseur qui clignote, rien à corriger.
+Chaque outil Unix est un mot ; le pipe en fait une phrase.
+Ne redémarre pas tout de suite : lis d'abord ce que le processus essayait de te dire.

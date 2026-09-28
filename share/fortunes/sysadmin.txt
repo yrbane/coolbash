@@ -32,3 +32,73 @@ Une bonne infrastructure est ennuyeuse. Personne ne parle des serveurs qui march
 Ce n'est pas la panne qui coûte cher, c'est la surprise.
 Toute infrastructure critique repose sur un script écrit par un stagiaire parti en 2016.
 Tout ce qui a été fait à la main sera refait à la main. Par toi, un dimanche.
+L'astreinte, c'est un téléphone qui ne sonne jamais, sauf à 3 h 12.
+Post-mortem sans blâme, disent-ils. Puis ils demandent qui a lancé la commande.
+Sur un post-it, le mot de passe root. Seul composant de l'infra sans aucune panne en quinze ans.
+Trois phases pour une migration : l'optimisme, le week-end, le retour arrière.
+Tous les systèmes sont opérationnels, dit la page de statut. Elle est hébergée sur le dernier qui le soit.
+Rotation des logs activée. Ils tournent désormais en boucle sur un disque plein.
+Un certificat auto-signé, c'est une promesse faite à soi-même : personne d'autre n'y croit.
+Quatre minutes pour corriger la zone DNS. Vingt-quatre heures de TTL pour l'expliquer aux utilisateurs.
+La facture cloud est élastique. Vers le haut, surtout.
+Rien n'est plus permanent qu'une solution temporaire installée en pleine nuit.
+En astreinte, chaque notification devient un petit arrêt cardiaque, y compris celles de ta mère.
+Kernel panic : le seul instant où la machine et l'administrateur sont enfin d'accord.
+Monitoring configuré partout. Les seuils datent du serveur d'avant.
+Douze caractères, symboles, majuscules : un mot de passe robuste. C'est le même partout.
+Deux heures de maintenance annoncées. La page « nous revenons bientôt » est restée en ligne trois jours.
+« Voir avec l'ancien admin », dit la doc. « Voir la doc », dit l'ancien admin.
+Chiffrer les données au repos protège contre tout le monde, y compris celui qui a perdu la clé.
+À 95 %, le disque envoie une alerte. À 100 %, il envoie du silence.
+Déploiement réussi. On attend maintenant de savoir sur quoi il a réussi.
+La mise à jour de sécurité a corrigé la faille. Et le service, tant qu'à faire.
+Un incident majeur, c'est un incident mineur avec un directeur dans la salle.
+Cause racine : humaine, toujours. Correctif : un « if », en général.
+Personne ne surveille l'espace disque du serveur de sauvegarde. C'est lui qui surveille les autres.
+Tout un week-end à migrer la base. Lundi, seul retour : « le logo est plus petit, non ? »
+Rien ne réveille un administrateur plus vite qu'un mail automatique intitulé « Succès ».
+Ouvert « juste pour le test », le port l'est encore. Le test date de 2017.
+Un ticket urgent posé le vendredi à 17 h 55 mesure ton temps de réponse, pas une urgence.
+Le cloud ne tombe jamais. Il « connaît une dégradation régionale ».
+Quand le VPN tombe, on découvre qui travaillait vraiment.
+Écrite, la procédure de retour arrière. Testée, jamais. Utilisée, ce soir.
+Une alerte quand le service tombe. Quatre-vingt-dix quand il remonte.
+Trois secondes de dérive NTP suffisent pour que deux serveurs ne soient plus d'accord sur qui a raison.
+Expirer tous les 90 jours rend le mot de passe plus sûr : il gagne un chiffre à chaque fois.
+Dans le partage réseau nommé « tmp » se trouvent les documents les plus importants de l'entreprise.
+Jamais un sysadmin ne dit « impossible ». Il dit « il faudra un ticket ».
+Pendant l'incident, tout le monde veut aider. Après l'incident, tout le monde était en réunion.
+Haute disponibilité : deux nœuds. Même baie, même prise, même onduleur.
+Équitable, le répartiteur de charge : chaque serveur reçoit exactement les mêmes erreurs.
+IPv6 est déployé depuis dix ans. Sur les slides.
+Personne ne sait ce que fait ce conteneur. Personne n'ose l'arrêter.
+« À changer » : c'est le mot de passe du compte de service. Littéralement.
+Survivant du datacenter, de la migration cloud et de trois DSI, le serveur a été tué par une mise à jour de fuseau horaire.
+Nos procédures d'urgence sont dans un outil derrière le SSO. Notre urgence, c'est le SSO.
+Stockage illimité, disait l'offre. La facture a lu le même contrat.
+Meilleur outil de supervision jamais conçu : le client qui appelle.
+Déploiement en un clic : quatorze clics en moyenne, plus un appel.
+Tout est dans le journal système. Il suffit de trouver la bonne minute parmi les trois millions.
+Redémarrer le service prend dix secondes. Trouver qui a le droit de le faire prend l'après-midi.
+Avec un certificat wildcard, tous les sous-domaines expirent en même temps. C'est son côté équitable.
+Seul poste sans antivirus : celui de l'admin. « Je sais ce que je fais. »
+Payée à l'heure, l'astreinte. Offerte, la peur.
+Deux minutes de panne. Quatre pages de rapport. Deux heures de réunion.
+On a éteint le vieux serveur pour voir si quelqu'un l'utilisait. Quelqu'un l'utilisait.
+Chez nous, le chaos engineering n'est pas une discipline. C'est un mardi.
+Dépôt Git : trois fichiers .env, deux clés privées, un README qui dit de ne jamais faire ça.
+Résolution garantie en quatre heures. Le chronomètre démarre quand l'infogérant aura lu le ticket.
+Supprimer ? Jamais. Renommer en .old et attendre que le disque se plaigne.
+Coupure électrique : l'onduleur a été testé. Notre capacité à courir aussi.
+Parfaitement sécurisé, un système où plus personne ne peut travailler. Objectif atteint le lundi du déploiement du MFA.
+DNS interne, DNS externe et fichier hosts du poste utilisateur : trois avis, aucune majorité.
+Soixante indicateurs sur le tableau de bord. Un seul regardé : l'heure.
+« On verra en prod » est une stratégie de test.
+Chiffrée, la sauvegarde. La clé était dedans.
+Mardi soir, le patch corrige le patch de mardi matin.
+99,9 % de disponibilité promis. Les 0,1 % tombent tous pendant la démo.
+Baie idéale : des câbles de couleur. Baie réelle : une couleur de câble.
+Infrastructure as code, disent-ils. Le code, c'est deux mille lignes de YAML que personne ne relit.
+Mémoire à 98 %. « C'est normal, c'est du cache. » C'est aussi ce qu'on avait dit la dernière fois.
+Snapshot de 2021 sur la machine virtuelle. Elle tourne encore dessus.
+Selon l'utilisateur, il n'a rien fait. Selon le journal d'audit, si.

@@ -34,3 +34,73 @@ La ligne de code la plus chère est celle qu'on écrit en pensant qu'on la réé
 Le logiciel est comme le fromage : il vieillit, mais ça ne l'améliore pas toujours.
 Rien ne vieillit plus vite qu'un commentaire.
 Il y a toujours un test qui échoue seulement sur la CI.
+Sprint : on arrive essoufflé au bout de deux semaines et on recommence le lundi.
+Approuver une revue de code en quatre secondes, ce n'est pas relire. C'est signer.
+Trois lignes modifiées reçoivent douze commentaires. Trois mille lignes sont fusionnées sans un mot.
+Un test qui n'a jamais échoué ne prouve rien. Il n'a peut-être jamais rien vérifié.
+« Ce sera prêt la semaine prochaine » est une unité de temps, pas une date.
+L'IA écrit le code en dix secondes. Comprendre pourquoi il ne marche pas prend le reste de la journée.
+Multiplier l'estimation par deux ne suffit pas. Il faut aussi changer l'unité.
+Ce mot de passe est dans le dépôt depuis 2019. Il a plus d'ancienneté que la moitié de l'équipe.
+Il n'y a pas d'environnement de préproduction. Il y a des utilisateurs qui ne se plaignent pas encore.
+Mettre à jour une dépendance, c'est tirer sur un fil pour découvrir ce qui est cousu à quoi.
+Le fichier de configuration a plus de commentaires que le code. C'est là qu'on a vraiment souffert.
+Quand le client dit « c'est simple », il parle de l'idée. Jamais de l'implémentation.
+Un bug reproductible est à moitié corrigé. Un bug aléatoire est une carrière.
+« Une erreur est survenue. » Merci, on avait remarqué.
+Tout réécrire depuis zéro : la seule décision que chaque génération de développeurs prend avec la même certitude.
+Le code mort n'est jamais vraiment mort. Il attend qu'on supprime celui qui le remplaçait.
+Commit « petites corrections » : quarante-sept fichiers modifiés.
+On peut lire un fichier de mille lignes ou le comprendre. Rarement les deux.
+Huit heures de travail, deux heures de code. Le reste sert à décider quoi coder.
+La fonction s'appelle handleData. Elle ne gère rien et ce ne sont pas des données.
+Chaque message d'erreur bien écrit a été rédigé par quelqu'un qui l'a rencontré à trois heures du matin.
+Un microservice, c'est un monolithe qui a appris à perdre des paquets.
+Dans le doute, ajoute un log. Dans le doute persistant, ajoute-en un deuxième.
+« On verra en phase deux » est l'endroit où les fonctionnalités vont mourir en paix.
+Le client veut le bouton bleu. Il veut aussi qu'il soit vert. Voilà la spécification.
+Installer une bibliothèque pour aligner du texte a rapatrié huit cents paquets et une opinion sur les licences.
+Aucun plan de migration ne survit au premier contact avec les données réelles.
+Ce paramètre s'appelle flag. Il a onze valeurs possibles et aucune n'est booléenne.
+La CI est verte. Elle a aussi ignoré tous les tests marqués « lent ».
+Quand l'IA propose du code, elle a la confiance d'un senior et l'expérience d'un stagiaire du premier jour.
+Une variable globale est un secret que tout le monde partage et que personne n'assume.
+Dans « c'est juste un petit changement », le mot « juste » coûte en moyenne trois jours.
+On ne supprime pas une fonctionnalité. On la cache derrière un flag, puis on oublie le flag.
+Toute ligne écrite après vingt-deux heures sera relue avec stupeur avant dix heures.
+Expliquer son bug à voix haute à un collègue qui n'écoute pas reste le meilleur outil de débogage.
+Première fois on écrit, deuxième fois on copie, troisième fois on invente une abstraction qu'on regrettera.
+Ce point-virgule manquant a coûté une heure. Dans un autre langage, sa présence en aurait coûté deux.
+Soixante niveaux dans la pile d'appels. Le bug est au premier.
+Tout projet finit par réinventer un tableur, en moins bien.
+Selon le README, le projet se lance en une commande. Le README a tort.
+Il existe un langage parfait. Personne n'est d'accord sur lequel.
+Sur le tableau blanc, l'architecture est toujours propre.
+Cette expression régulière fonctionne. Personne ne sait pourquoi, et personne n'osera la modifier.
+Déploiement réussi : personne n'en parle. Du moins pas tout de suite.
+Regarder un truc vite fait ouvre en moyenne quarante-trois onglets.
+Les tests unitaires vérifient que la fonction fait ce que le test attend. Reste à savoir lequel des deux a raison.
+Personne n'a jamais codé plus vite grâce au thème sombre. Mais il fallait bien occuper l'après-midi.
+Il n'y a pas de bug le jour de congé. Il y a un collègue qui appelle.
+Nom du projet trouvé avant le dépôt, logo dessiné avant la première ligne. Le produit, on verra.
+La rétrospective a conclu qu'il fallait mieux communiquer. Comme la précédente.
+Avec des points de complexité, on mesure tout, sauf la complexité.
+Formats de date : le seul sujet sur lequel l'humanité entière a réussi à se tromper, chacun différemment.
+Choisir entre tabulations et espaces prend plus de temps que d'écrire le code qu'on indente.
+Si c'est documenté, ce n'est plus un bug. C'est une fonctionnalité dont on a honte.
+Une démo promet un produit. Un produit ne promet plus rien.
+Dans un fichier nommé utils, on range ce qu'on ne sait pas nommer.
+Dire « ça marchait hier » est la version longue de « je ne sais pas ».
+Vieux code n'est pas synonyme de mauvais code. Il a juste survécu à ceux qui savaient pourquoi.
+Supprimer la fonctionnalité que personne n'utilise reste l'optimisation la plus rentable.
+Deux états pour un système distribué : cassé, ou pas encore observé.
+Quarante pages de spécification, et la question qu'on se pose n'y figure pas.
+Savoir quoi écrire fait un bon développeur. Savoir quoi ne pas lire en fait un excellent.
+Écrire « scalable » sur une diapositive signifie qu'on a testé avec dix utilisateurs.
+L'IA a ajouté des tests. Ils vérifient que le code fait exactement ce que le code fait.
+Au début on écrit du code, ensuite on le lit, puis on cherche qui l'a écrit. Git répond : toi.
+Ton terminal ne te juge pas. Il attend juste que tu tapes la même commande une troisième fois.
+Personne ne lit les conditions d'utilisation ni les avertissements du compilateur. Les deux se vengent.
+Rien ne pousse autant à documenter une fonction que d'avoir été le seul à ne pas la comprendre.
+Attendre la fin du build est le seul moment de réflexion garanti de la journée.
+Entre le développement et la production, il n'y a qu'une ligne de configuration. Elle est en commentaire.

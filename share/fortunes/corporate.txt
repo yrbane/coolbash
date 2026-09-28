@@ -34,3 +34,73 @@ Le brainstorming a produit un nuage de mots. Le nuage a produit de la pluie.
 Ce n'est pas une régression, c'est un changement de comportement non documenté.
 Quand le chef dit « on », il pense « vous ».
 Le succès a beaucoup de parents. L'échec a un ticket Jira.
+L'open space favorise la communication : tout le monde entend que tu cherches un autre poste.
+Slide 47 sur 112, titre en gras : « Pour résumer ». Personne n'a encore rien dit.
+Un mail « pour info » est une manière de pouvoir dire un jour : je vous avais prévenus.
+Facturé au forfait, le consultant arrive avec la réponse. Il lui manque seulement la question.
+Une synergie, c'est deux services qui ne se parlaient pas et qui se retrouvent à ne pas se parler dans la même salle.
+Huit mois pour le quick win. Le win est toujours attendu.
+Onboarding : trois jours de présentations, un badge qui ne fonctionne pas et un ordinateur promis pour mardi.
+Après le séminaire de cohésion, tout le monde est enfin d'accord : plus jamais de séminaire de cohésion.
+À date, nous n'avons pas d'éléments. À la date suivante non plus.
+ASAP signifie : dès que vous aurez terminé ce que je vous ai demandé ASAP hier.
+Décalée trois fois, la deadline a changé de nom. Elle s'appelle désormais jalon.
+Manager avec bienveillance, c'est annoncer les mauvaises nouvelles avec un sourire et une police arrondie.
+Vidée chaque trimestre, la boîte à idées alimente directement les archives.
+Nos valeurs sont affichées dans l'ascenseur, entre deux étages où personne ne les applique.
+Ton badge enregistre ton heure d'arrivée. Ta performance, elle, se mesure à ton heure de départ.
+Toutes les décisions se prennent à la machine à café. Elle est en panne depuis mars.
+Douze salles de réunion, toutes réservées, toutes vides. Le vrai sujet se règle dans le couloir.
+En visio, « je vous entends très mal » signifie « je suis sur une autre fenêtre ».
+Tu es en muet. Tu es toujours en muet. Le jour où tu ne le seras pas, tu le regretteras.
+Onze onglets, un CV et le vrai avis sur le projet : merci pour le partage d'écran.
+Pour une note de frais, il faut trois justificatifs, deux signatures et une foi inébranlable en l'avenir.
+Sur le nouvel organigramme, les flèches en pointillés indiquent les gens qui décident vraiment.
+Ton N+1 valide, ton N+2 arbitre, ton N+3 découvre le sujet le jour de la restitution.
+Head of, Lead, Chief : les titres grandissent au rythme où les augmentations rétrécissent.
+Grâce au process, personne n'a plus besoin de réfléchir. Il fonctionne parfaitement.
+Excellence opérationnelle : faire la même chose qu'avant, avec un tableau de bord en plus.
+Un workshop est une réunion avec des post-it. Un atelier est un workshop en français. Dans les deux cas, il reste des post-it.
+Minimum, oui. Viable, non. Mais c'est un produit, et il a été livré à temps.
+Télétravail : le même open space, mais avec ta propre machine à café et ton propre chauffage à payer.
+Tout sera corrigé dans la V2. La V2 est prévue pour la V3.
+Dette technique : emprunt contracté par la direction, remboursé par les développeurs, avec intérêts.
+D'après le benchmark, nos concurrents font exactement pareil. C'est rassurant : on se trompe ensemble.
+Conclusion de l'audit : tout est conforme, sauf la réalité.
+Quarante actions, zéro responsable, une date : voilà ce qu'on appelle un plan d'action.
+Escalader un problème, c'est le confier à quelqu'un qui a moins de temps et moins de contexte que toi.
+Parti de la date de livraison, le rétroplanning arrive à hier.
+Depuis quatre ans, ton one-to-one aborde ton évolution. Elle est toujours en cours.
+Objectifs SMART : Spécifiquement Modifiés Après la Réunion Trimestrielle.
+Ta demande d'augmentation est en cours de validation. Le circuit de validation, lui, s'allonge chaque année.
+Ici, l'innovation est encouragée : salle dédiée, le jeudi, de 14 h à 15 h, sur inscription.
+Disrupter un secteur, c'est refaire ce qu'il faisait déjà, avec une application et sans les salariés.
+Nous avons pivoté. Personne ne sait vers où, mais nous regardons tous dans la même nouvelle direction.
+Data-driven : la décision est déjà prise, on lui a simplement ajouté un graphique.
+Gouvernance clarifiée : il existe désormais un comité chargé de décider qui décide.
+Dans la matrice RACI, tout le monde est consulté, tout le monde est informé et personne n'est responsable.
+Flex office : le problème des bureaux vides a été résolu en supprimant les bureaux.
+Clean desk : à 18 h, le bureau doit être vide. Le collaborateur, lui, l'est depuis longtemps.
+Au pot de départ, on dit enfin ce qu'on pense de quelqu'un. Curieusement, c'est gentil.
+Cette fiche de poste exige dix ans d'expérience sur une technologie qui a trois ans.
+Mobilité interne : changer de chef sans changer de problème.
+Quarante minutes d'e-learning obligatoire, conclues par un quiz que la souris peut réussir seule.
+Présentiel ou distanciel, la réunion commence toujours par « on attend encore deux personnes ».
+Principale menace identifiée par le SWOT : le prochain SWOT.
+Notre storytelling raconte une aventure humaine. Les humains n'ont pas été consultés.
+Notre mission est de créer de la valeur. Notre vision est de la créer plus tard.
+Le stand-up dure quarante-cinq minutes, debout, autour d'un écran, à se demander pourquoi on est debout.
+Conclusion de la rétrospective : il faut mieux communiquer. Comme la précédente. Comme la suivante.
+Sprint terminé, objectifs atteints à 60 %. La course, elle, continue sans ligne d'arrivée.
+La vélocité de l'équipe a doublé depuis qu'on a divisé la taille des tickets par deux.
+Le backlog est l'endroit où les idées partent vieillir dignement.
+Chaque semaine, le reporting consomme la journée qu'il était censé mesurer.
+Vert partout sur le tableau de bord. Il n'a pas été mis à jour depuis le lancement.
+Cent slides, et ça commence par « je vais faire court ».
+Les annexes contiennent les chiffres. Le corps de la présentation contient les adjectifs.
+Pour action, c'est pour toi. Pour info, c'est pour plus tard. Urgent, c'était pour hier.
+Répondre à tous reste le moyen le plus sûr que personne ne lise.
+Le message d'absence est le mail le plus honnête que tu enverras cette année.
+Vendredi, 18 h 07 : « je t'envoie ça pour que tu l'aies en tête ce week-end ».
+Sondage du chief happiness officer sur le bonheur au travail : les résultats sont confidentiels.
+Transparence, valeur clé du groupe, détaillée dans un document en accès restreint.

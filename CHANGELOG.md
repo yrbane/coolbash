@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.1 — 2026-09-29 · « Trois fois plus de citations »
+### Modifié
+- **770 citations de plus** : chacun des onze thèmes rédigés passe d'une trentaine à une
+  centaine de lignes (de 102 pour `unix` à 111 pour `cinema`). Originales pour l'essentiel ;
+  domaine public attribué pour `moralistes`, `humour-noir`, `sciences`, `absurde` (Alphonse
+  Allais) ; proverbes attestés de 26 origines ; répliques VF de 60 films et séries, dont 23
+  francophones.
+- Fusion avec dédoublonnage (accents et casse ignorés) et guillemets rééquilibrés.
+
 ## 0.13.0 — 2026-09-29 · « Une fortune en français »
 ### Ajouté
 - **Citations françaises embarquées** dans `share/fortunes/<thème>.txt`, une par ligne, douze

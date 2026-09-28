@@ -34,3 +34,73 @@ Loi de Cheops : rien n'est jamais construit dans les délais ni dans le budget.
 Loi du bikeshedding : on discute deux heures de la couleur d'un bouton et deux minutes du modèle de données.
 Loi de Amara : on surestime l'effet d'une technologie à court terme et on le sous-estime à long terme.
 Loi de Tesler : toute application a une complexité irréductible. La question est de savoir qui la porte.
+Loi de Pareto : vingt pour cent du code produit quatre-vingts pour cent des bugs. Devine dans quels vingt pour cent tu travailles.
+Loi de Moore : le nombre de transistors double tous les deux ans. La patience des utilisateurs, elle, ne double jamais.
+Loi de Metcalfe : la valeur d'un réseau croît avec le carré de ses utilisateurs. Le nombre de trolls aussi.
+Loi de Gresham : la mauvaise monnaie chasse la bonne. Le mauvais code chasse le bon développeur.
+Loi de Campbell : plus un indicateur sert à décider, plus il sera trafiqué, et plus il déformera ce qu'il mesure.
+Barrière de Chesterton : avant d'enlever une barrière au milieu d'un champ, demande-toi pourquoi quelqu'un l'a posée là.
+Effet Lindy : plus une technologie a survécu longtemps, plus elle survivra encore. COBOL te salue.
+Loi de Stigler : aucune découverte scientifique ne porte le nom de son véritable découvreur. Y compris la loi de Stigler.
+Loi de Muphry : toute critique sur l'orthographe d'autrui contient elle-même une faute, cherche bien.
+Règle des quatre-vingt-dix pour cent : les premiers quatre-vingt-dix pour cent du code prennent quatre-vingt-dix pour cent du temps. Les dix derniers prennent les autres quatre-vingt-dix.
+Loi de Putt : la technique est dominée par deux types de gens, ceux qui comprennent ce qu'ils ne gèrent pas et ceux qui gèrent ce qu'ils ne comprennent pas.
+Première loi de Clarke : quand un expert chevronné dit qu'une chose est possible, il a sans doute raison. Quand il dit qu'elle est impossible, il a très probablement tort.
+Deuxième loi de Clarke : la seule façon de découvrir les limites du possible, c'est de s'aventurer un peu au-delà, dans l'impossible.
+Troisième loi de Clarke : toute technologie suffisamment avancée est indiscernable de la magie. Ou d'un bug.
+Première loi de la robotique, version stagiaire : un script ne doit pas nuire à la production, ni laisser la production subir un dommage par son inaction.
+Deuxième loi de la robotique, version sysadmin : un script obéit à celui qui le lance, sauf si l'ordre est rm -rf sur la racine.
+Troisième loi de la robotique, version serveur : un serveur protège son uptime, tant que cela ne contredit pas les deux premières lois.
+Loi de Gilb : tout ce qu'on doit quantifier peut être mesuré d'une façon quelconque, toujours préférable à ne rien mesurer du tout.
+Loi de Hartree : le temps qui reste avant la fin d'un grand projet informatique est une constante, quelle que soit la date à laquelle on la calcule.
+Loi de Weinberg : si les maçons construisaient comme les programmeurs programment, le premier pic-vert venu détruirait la civilisation.
+Loi de Fitts : plus un bouton est petit et loin, plus il est long à atteindre. Le bouton Annuler l'a bien compris.
+Loi de Hick : plus il y a de choix, plus la décision est longue. Voilà pourquoi tu regardes le menu depuis dix minutes.
+Loi de Jakob : les utilisateurs passent leur temps sur d'autres sites que le tien et veulent que le tien fonctionne pareil.
+Loi de Miller : l'esprit humain retient environ sept éléments. La procédure de déploiement en compte quarante-trois.
+Loi de fer de Pournelle : dans toute bureaucratie, ceux qui servent l'organisation finissent par prendre le pouvoir sur ceux qui servent sa mission.
+Principe de Shirky : les institutions cherchent à préserver le problème dont elles sont la solution.
+Loi de Benford sur la controverse : la passion d'un débat est inversement proportionnelle à la quantité d'informations réellement disponibles.
+Loi de Cole : la somme de l'intelligence sur la planète est constante. La population, elle, augmente.
+Loi de Hutber : l'amélioration signifie la détérioration. Voir toute mise à jour majeure d'une interface.
+Loi de Herblock : si c'est bien, on arrête de le fabriquer.
+Loi d'Ellison : la majorité des utilisateurs ne configure rien. Le mot de passe par défaut est là pour l'éternité.
+Première loi de Kranzberg : la technologie n'est ni bonne, ni mauvaise, ni neutre.
+Loi de Doctorow : dès qu'un verrou est posé sur ton appareil sans te donner la clé, il n'est plus là pour ton bien.
+Loi de Reed : l'utilité d'un grand réseau croît de façon exponentielle avec le nombre de groupes qu'on peut y former.
+Loi de Sod : la tartine tombe toujours du côté beurré, et la prod tombe toujours le vendredi à dix-sept heures.
+Loi de Rothbard : chacun se spécialise dans ce qu'il sait le moins bien faire.
+Loi de Mencken : à tout problème complexe il existe une solution simple, claire et fausse.
+Principe de Feynman : le premier principe est de ne pas se leurrer soi-même, car on est la personne la plus facile à berner.
+Loi de Twyman : tout chiffre qui a l'air intéressant ou différent est généralement faux.
+Loi de Littlewood : chacun devrait s'attendre à vivre un miracle environ une fois par mois. Le tien, c'est la CI qui passe du premier coup.
+Loi de Mooers : un système d'information ne sera pas utilisé dès qu'il est plus pénible d'obtenir l'information que de s'en passer.
+Loi de Nielsen : la bande passante des utilisateurs croît de cinquante pour cent par an. La page d'accueil grossit un peu plus vite.
+Loi de Bell : à peu près chaque décennie apparaît une nouvelle classe d'ordinateurs, moins chère, qui rend l'ancienne ridicule.
+Sophisme de McNamara : mesurer ce qui est facile, ignorer ce qui ne l'est pas, puis décréter que ce qu'on ne mesure pas n'existe pas.
+Effet Streisand : tenter de faire disparaître une information sur internet est le meilleur moyen de la rendre célèbre.
+Effet Pygmalion : les gens finissent par se conformer à ce qu'on attend d'eux. Dis que ton code est propre, il finira peut-être par le croire.
+Effet Barnum : chacun se reconnaît dans une description vague qui pourrait convenir à n'importe qui. Voir les offres d'emploi.
+Effet Zeigarnik : on se souvient mieux d'une tâche interrompue que d'une tâche terminée. Ton cerveau garde ce ticket ouvert depuis mars.
+Effet Ringelmann : plus le groupe est grand, moins chacun fournit d'effort. Douze personnes en visio, une seule qui parle.
+Effet Peltzman : rendre une chose plus sûre incite les gens à prendre plus de risques. Voilà pourquoi tu commites sans tester depuis que la CI existe.
+Paradoxe de Jevons : rendre une ressource plus efficace en augmente la consommation. Un disque plus gros se remplit plus vite.
+Paradoxe de Braess : ajouter une route à un réseau peut ralentir tout le monde. Ajouter un canal Slack aussi.
+Paradoxe de Simpson : une tendance visible dans chaque groupe peut disparaître ou s'inverser quand on les additionne.
+Paradoxe d'Abilene : un groupe prend collectivement une décision que personne, pris individuellement, ne voulait.
+Nombre de Dunbar : un humain gère environ cent cinquante relations stables. Bien moins de dépôts Git.
+Phénomène de Baader-Meinhof : dès que tu découvres un mot, tu le vois partout. Bienvenue dans ta première semaine de Rust.
+Effet Ikea : on surestime la valeur de ce qu'on a assemblé soi-même. Y compris son framework maison.
+Effet de l'autruche : on évite les informations désagréables. Personne n'ouvre le rapport de couverture.
+Loi de Koomey : l'efficacité énergétique des calculs double tous les dix-huit mois. Les onglets ouverts aussi.
+Loi de Gates : la vitesse des logiciels est divisée par deux tous les dix-huit mois, pile pour annuler le gain matériel.
+Loi de Grosch : la puissance d'un ordinateur croît comme le carré de son prix. Le service achats n'a jamais lu cette loi.
+Première loi de Nathan : le logiciel est un gaz, il occupe tout l'espace que le matériel lui laisse.
+Loi de Sutton : quand on cherche un diagnostic, on commence par l'hypothèse la plus probable. Autrement dit, regarde d'abord les logs.
+Loi du stagiaire : la commande la plus dangereuse est toujours la seule pour laquelle personne n'a demandé de confirmation.
+Loi du vendredi soir : la probabilité qu'un déploiement casse est proportionnelle à la vitesse à laquelle son auteur quitte le bureau.
+Loi de la démo : tout ce qui fonctionnait parfaitement pendant les tests échouera dès qu'un décideur regarde l'écran.
+Loi du commentaire TODO : plus le commentaire dit « temporaire », plus le code est définitif.
+Loi de la réunion : la durée d'une réunion s'étire jusqu'à occuper le créneau réservé, quel que soit le contenu.
+Loi du copier-coller : le morceau de code copié le plus vite est celui qu'on cherchera le plus longtemps à déboguer.
+Loi du redémarrage : tout problème informatique disparaît au reboot, sauf celui qu'on montre au support.

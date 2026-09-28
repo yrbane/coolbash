@@ -34,3 +34,73 @@ Si tu crois que la mécanique quantique est claire, c'est que tu n'as pas compri
 Une fonction continue est une fonction qu'on peut dessiner sans lever le crayon. Un projet continu, sans lever la tête.
 Ce n'est pas parce que c'est mesurable que c'est important. Ce n'est pas parce que c'est important que c'est mesurable.
 Le zéro a été inventé pour compter les bugs corrigés du premier coup.
+La théorie des probabilités n'est, au fond, que le bon sens réduit au calcul. — Pierre-Simon de Laplace
+Ce que nous connaissons est peu de chose ; ce que nous ignorons est immense. — attribué à Laplace
+La pensée n'est qu'un éclair au milieu d'une longue nuit. Mais c'est cet éclair qui est tout. — Henri Poincaré
+C'est par la logique qu'on démontre, c'est par l'intuition qu'on invente. — Henri Poincaré
+La science n'a pas de patrie, parce que le savoir est le patrimoine de l'humanité. — Louis Pasteur
+Ayez le culte de l'esprit critique. Réduit à lui-même, il n'est ni un éveilleur d'idées ni un stimulant de grandes choses. — Louis Pasteur
+L'art, c'est moi ; la science, c'est nous. — Claude Bernard
+Le style est l'homme même. — Georges-Louis Leclerc de Buffon
+Le génie n'est qu'une plus grande aptitude à la patience. — attribué à Buffon
+Toute la philosophie n'est fondée que sur deux choses : sur ce qu'on a l'esprit curieux et les yeux mauvais. — Fontenelle
+Assurons-nous bien du fait, avant de nous inquiéter de la cause. — Fontenelle
+Ce n'est pas assez d'avoir l'esprit bon, mais le principal est de l'appliquer bien. — René Descartes
+Le bon sens est la chose du monde la mieux partagée. — René Descartes
+Et pourtant, elle tourne. — attribué à Galilée
+Le livre de la nature est écrit en langue mathématique. — Galilée
+J'ai mesuré les cieux, maintenant je mesure les ombres de la Terre. — Johannes Kepler, épitaphe
+Si j'ai vu plus loin, c'est en me tenant sur les épaules de géants. — Isaac Newton
+Platon est mon ami, Aristote est mon ami, mais ma meilleure amie est la vérité. — Isaac Newton
+La musique est un exercice d'arithmétique secrète, et celui qui s'y livre ignore qu'il manie des nombres. — Leibniz
+Quand il y aura des controverses entre deux philosophes, il suffira qu'ils se disent : calculons. — Leibniz
+Rien ne se passe dans le monde sans qu'il n'y ait quelque part un maximum ou un minimum. — Leonhard Euler
+Pauca sed matura : peu, mais mûr. — devise de Carl Friedrich Gauss
+Nous devons savoir. Nous saurons. — David Hilbert, 1930
+Personne ne nous chassera du paradis que Cantor a créé pour nous. — David Hilbert
+Rien ne va de soi. Rien n'est donné. Tout est construit. — Gaston Bachelard
+L'opinion pense mal ; elle ne pense pas : elle traduit des besoins en connaissances. — Gaston Bachelard
+Allez en avant, et la foi vous viendra. — attribué à d'Alembert, à ses élèves doutant du calcul infinitésimal
+Quiconque, en dehors des mathématiques pures, prononce le mot impossible, manque de prudence. — François Arago
+J'en ai découvert une démonstration véritablement merveilleuse que cette marge est trop étroite pour contenir. — Pierre de Fermat
+Les hommes passent, mais leurs œuvres restent. — Augustin Cauchy
+Je n'ai pas le temps. — Évariste Galois, lettre à Auguste Chevalier, la veille du duel
+L'ignorance engendre plus souvent la confiance que ne le fait la connaissance. — Charles Darwin
+Un homme qui ose perdre une heure de son temps n'a pas découvert la valeur de la vie. — Charles Darwin
+Je suis de ceux qui pensent que la science a une grande beauté. — Marie Curie
+L'étude approfondie de la nature est la source la plus féconde des découvertes mathématiques. — Joseph Fourier
+Je n'ai fait celle-ci plus longue que parce que je n'ai pas eu le loisir de la faire plus courte. — Blaise Pascal
+Le silence éternel de ces espaces infinis m'effraie. — Blaise Pascal
+Le problème avec le monde, c'est que les sots sont sûrs d'eux et les gens intelligents pleins de doutes. — Bertrand Russell
+P = NP ? Si tu trouves la réponse rapidement, tu viens de la démontrer.
+Le problème de l'arrêt est indécidable : personne ne peut prédire si la réunion de 17 h se terminera.
+Il y a 10 sortes de gens : ceux qui comptent en ternaire, ceux qui ne le font pas, et les autres.
+L'infini dénombrable, c'est quand tu peux numéroter tes bugs. L'infini continu, c'est le backlog.
+L'hôtel de Hilbert affiche complet, mais il reste toujours une chambre. Comme ton disque dur.
+x entre dans un bar et commande une bière. Le barman : « Et pour votre valeur ? » — « Inconnue. »
+L'optimiste voit le verre à moitié plein, le pessimiste à moitié vide. Le chimiste voit une solution.
+Théorème d'incomplétude appliqué : toute documentation cohérente contient une fonction qu'elle ne décrit pas.
+Statistiquement, la plupart des gens ont un nombre de jambes supérieur à la moyenne.
+Principe d'incertitude du projet : tu peux connaître la date de livraison ou le périmètre, jamais les deux à la fois.
+Paradoxe de Zénon appliqué au sprint : il reste toujours la moitié des tickets à fermer.
+Un neutrino entre dans un bar. Le barman : « On ne sert pas les neutrinos ici. » Le neutrino était déjà ressorti par le mur d'en face.
+Le boson de Higgs entre dans une église. Le prêtre : « Dehors ! » — « Sans moi, pas de messe. »
+Second principe appliqué aux câbles : laissés seuls dans un tiroir, ils s'emmêlent spontanément, et jamais l'inverse.
+Une variable aléatoire entre dans un bar. Ou pas.
+Dans un espace de Hilbert, personne ne t'entend crier : ton cri est orthogonal à tout le monde.
+Les nombres complexes ont une partie imaginaire. Les plannings aussi.
+Le tri à bulles est en O(n²). La réunion où chacun se présente à tour de rôle aussi.
+Un catalyseur accélère la réaction sans y participer. Voilà, tu connais le rôle du chef de projet.
+Sélection naturelle des commentaires de code : seuls survivent ceux qui mentent avec assurance.
+Le graphène fait un atome d'épaisseur. Le cahier des charges aussi.
+L'humain compte en base dix parce qu'il a dix doigts. L'ordinateur compte en base deux parce qu'il n'en a aucun et qu'il s'en vante.
+Paradoxe du barbier version sysadmin : il administre toutes les machines que personne n'administre. Qui administre la sienne ?
+Démonstration par l'absurde : supposons que la spécification soit complète.
+Le déploiement du vendredi est dans un état superposé : ni réussi ni raté tant que personne n'ouvre le monitoring.
+La relativité au bureau : une minute de compilation dure une heure, une heure de pause dure une minute.
+Hypothèse ergodique de la machine à café : à long terme, tout le monde y passe.
+Le rasoir d'Occam coupe les hypothèses inutiles. Il n'a jamais réussi à couper une réunion.
+Loi des grands nombres : à force de relancer les tests, la moyenne finit par être verte.
+Un ensemble vide entre dans un bar. Le barman ne sert personne.
+En topologie, une tasse et un donut sont la même chose. Le petit-déjeuner du topologue est donc une question de goût.
+Bayes au réveil : sachant qu'il pleut, la probabilité d'avoir laissé le parapluie au bureau augmente nettement.
