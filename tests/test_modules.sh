@@ -110,6 +110,11 @@ for f in "${COOLBASH_TEST_ROOT}"/share/fortunes/*.txt; do
   if (( n >= 25 )); then t_ok "thème ${th} : ${n} citations"; else t_fail "thème ${th} : ${n} citations (minimum 25)"; fi
   assert_eq "thème ${th} : pas d'espace en fin de ligne ni de ligne vide" "0" "$(grep -cE ' $|^$' "$f")"
 done
+# FR : chaque thème a la même probabilité, quelle que soit sa taille (1 ligne contre 1000).
+printf 'A\n' >| "${COOLBASH_TEST_TMP}/.coolbash/fortunes/petit.txt"
+yes B | head -1000 >| "${COOLBASH_TEST_TMP}/.coolbash/fortunes/gros.txt"
+n_petit="$(mod 70-motd.bash 'COOLBASH_ROOT=/nonexistent COOLBASH_FORTUNE="petit gros"; n=0; for _ in $(seq 400); do _coolbash_fortune t; [[ $t == A ]] && n=$((n+1)); done; echo $n')"
+if (( n_petit >= 140 && n_petit <= 260 )); then t_ok "chaque thème a la même probabilité, quelle que soit sa taille (${n_petit}/400 pour le petit)"; else t_fail "tirage biaisé par la taille du thème : ${n_petit}/400 pour le petit (attendu ≈ 200)"; fi
 if (( $(grep -c . "${COOLBASH_TEST_ROOT}/share/fortunes/chuck.txt") >= 5000 )); then t_ok "chuck.txt : plus de 5000 facts"; else t_fail "chuck.txt : moins de 5000 facts"; fi
 assert_not_contains "doctor ne réclame plus fastfetch" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" doctor 2>&1)" "fastfetch"
 

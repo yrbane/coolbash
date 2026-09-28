@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.2 — 2026-09-29 · « Chaque thème à égalité »
+### Ajouté
+- Test : chaque thème a la même probabilité de sortir, quelle que soit sa taille (un thème d'une
+  ligne contre un de mille lignes, 400 tirages). C'était déjà le comportement : le tirage choisit
+  d'abord un fichier à poids égal, puis une ligne dedans. Mesuré : Chuck sort 106 fois sur 1 200,
+  soit un douzième.
+
 ## 0.13.1 — 2026-09-29 · « Trois fois plus de citations »
 ### Modifié
 - **770 citations de plus** : chacun des onze thèmes rédigés passe d'une trentaine à une
