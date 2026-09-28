@@ -54,6 +54,11 @@ assert_contains() {
   if [[ "$2" == *"$3"* ]]; then t_ok "$1"; else t_fail "$1 — « $3 » absent de :"$'\n'"$2"; fi
 }
 
+# assert_not_contains <description> <texte> <fragment>
+assert_not_contains() {
+  if [[ "$2" != *"$3"* ]]; then t_ok "$1"; else t_fail "$1 — « $3 » présent dans :"$'\n'"$2"; fi
+}
+
 # assert_success <description> <commande...>
 assert_success() {
   local desc="$1" out rc; shift

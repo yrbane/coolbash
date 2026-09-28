@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.10.0"
+COOLBASH_VERSION="0.11.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -73,6 +73,7 @@ COOLBASH_PS0_TITLE|1|0 = ne pas toucher au titre du terminal
 COOLBASH_PS0_EXTRA||fragment ajouté à la fin de PS0
 COOLBASH_PS1_OSC7|1|0 = ne pas annoncer le dossier courant (OSC 7)
 COOLBASH_NVM_LAZY|1|0 = charger nvm.sh au démarrage (lent)
+COOLBASH_STARTUP_TIME|1|temps de démarrage affiché : 0 = non, verbose = par module
 COOLBASH_FZF|1|0 = pas de raccourcis fzf (Ctrl-R)
 COOLBASH_FZF_KEYBINDINGS||fichier key-bindings.bash à utiliser
 COOLBASH_MOTD|1|0 = pas de MOTD (MOTD_DISABLE=1 aussi)
@@ -138,16 +139,61 @@ _coolbash_disabled() {
   return 1
 }
 
+# FR : âge du processus bash courant en ms (Linux : /proc). C'est le temps de
+#      démarrage réel du shell, /etc/bash.bashrc et ~/.bashrc compris — pas
+#      seulement CoolBash. Champ 22 de /proc/$$/stat (starttime, en 1/100 s)
+#      = 20e mot après « (comm) » ; /proc/uptime a deux décimales.
+_coolbash_shell_age_ms() {
+  local _sa_out="$1" _sa_up _sa_stat
+  read -r _sa_up _ 2>/dev/null < /proc/uptime || return 1
+  read -r _sa_stat 2>/dev/null < "/proc/$$/stat" || return 1
+  _sa_stat="${_sa_stat##*) }"
+  # shellcheck disable=SC2086
+  set -- $_sa_stat
+  [[ "${20:-}" =~ ^[0-9]+$ && "$_sa_up" =~ ^[0-9]+\.[0-9]{2}$ ]] || return 1
+  printf -v "$_sa_out" '%d' $(( (10#${_sa_up%.*}${_sa_up#*.} - 10#${20}) * 10 ))
+}
+
+# FR : « le bash est lent à lancer » — la première réponse est un chiffre.
+#      Total = âge du shell (Linux), part CoolBash = EPOCHREALTIME (bash ≥ 5).
+#      Un second `source ~/.bashrc` dans le même shell n'affiche que la part
+#      CoolBash : l'âge du processus n'a alors plus de sens.
+_coolbash_startup_report() {
+  local t0="$1" init="" total="" ms color
+  [[ -n "$t0" && -n "${EPOCHREALTIME:-}" ]] && init=$(( (10#${EPOCHREALTIME//[.,]/} - 10#${t0//[.,]/}) / 1000 ))
+  [[ -z "${COOLBASH_STARTUP_REPORTED:-}" ]] && _coolbash_shell_age_ms total
+  COOLBASH_STARTUP_REPORTED=1
+  ms="${total:-$init}"
+  [[ -n "$ms" ]] || return 0
+  if (( ms < 250 )); then color='\e[32m'; elif (( ms < 700 )); then color='\e[33m'; else color='\e[31m'; fi
+  printf "⚡ démarrage ${color}%s ms\e[0m" "$ms"
+  [[ -n "$total" && -n "$init" ]] && printf ' · CoolBash %s ms' "$init"
+  printf '\n'
+  if (( ms >= 250 )); then
+    if [[ -n "$total" && -n "$init" ]] && (( total - init > init )); then
+      printf "   → l'essentiel vient d'ailleurs : /etc/bash.bashrc, ~/.profile ou le reste du ~/.bashrc\n"
+    elif [[ "${COOLBASH_STARTUP_TIME:-1}" != verbose ]]; then
+      printf '   → COOLBASH_STARTUP_TIME=verbose détaille le temps par module\n'
+    fi
+  fi
+}
+
 # FR : charge ~/.coolbash/modules/*.bash dans l'ordre lexical (00-… avant 90-…),
 #      le glob bash étant trié. Un module en échec n'empêche pas les suivants.
+#      Temps de démarrage affiché en shell interactif (COOLBASH_STARTUP_TIME).
 _coolbash_cmd_init() {
-  local f
+  local f name t0="${EPOCHREALTIME:-}" tm show=0 verbose=0
+  [[ "${COOLBASH_STARTUP_TIME:-1}" != 0 && $- == *i* ]] && show=1
+  [[ $show == 1 && "${COOLBASH_STARTUP_TIME:-1}" == verbose && -n "$t0" ]] && verbose=1
   for f in "${COOLBASH_MODULE_DIR}"/*.bash; do
     [[ -r "$f" ]] || continue
     _coolbash_disabled "$f" && continue
+    tm="${EPOCHREALTIME:-}"
     # shellcheck disable=SC1090
     source "$f" || _coolbash_error "module en échec : $f"
+    if (( verbose )); then name="${f##*/}"; printf '   %-22s %4d ms\n' "${name%.bash}" $(( (10#${EPOCHREALTIME//[.,]/} - 10#${tm//[.,]/}) / 1000 )); fi
   done
+  (( show )) && _coolbash_startup_report "$t0"
   # FR : expose `coolbash <command>` dans le shell courant.
   #      `config` tourne dans ce shell pour voir les variables non exportées.
   unalias coolbash 2>/dev/null

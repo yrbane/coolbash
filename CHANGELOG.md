@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.11.0 — 2026-09-28 · « Combien de temps pour ouvrir un shell ? »
+### Ajouté
+- **Temps de démarrage affiché** à l'ouverture de chaque shell interactif, sous le MOTD :
+  `⚡ démarrage 412 ms · CoolBash 39 ms`. Le total est l'âge réel du processus bash
+  (`/proc`, Linux), donc `/etc/bash.bashrc`, `~/.profile` et tout le `~/.bashrc` compris ;
+  la part CoolBash est mesurée avec `EPOCHREALTIME`. Vert sous 250 ms, jaune sous 700 ms,
+  rouge au-delà.
+- **Le chiffre dit où chercher** : quand CoolBash pèse moins de la moitié d'un démarrage lent,
+  la ligne renvoie vers `/etc/bash.bashrc`, `~/.profile` et le reste du `~/.bashrc` ;
+  sinon elle propose `COOLBASH_STARTUP_TIME=verbose`, qui affiche le temps de **chaque module**.
+- **`COOLBASH_STARTUP_TIME`** : `1` (défaut), `0` = muet, `verbose` = détail par module.
+  Listée par `coolbash config`.
+- Un second `source ~/.bashrc` dans un shell déjà ouvert n'affiche que la part CoolBash :
+  l'âge du processus n'aurait alors plus de sens.
+- Tests : `tests/test_startup.sh` (affichage, shell non interactif muet, `0`, `verbose`,
+  re-source, total incluant ce qui précède la ligne `source`) ; `assert_not_contains` dans `lib.sh`.
+
 ## 0.10.0 — 2026-09-19 · « Un ~/.bashrc d'une ligne »
 ### Ajouté
 - **Module `35-toolchains`** : remplace les blocs que les installeurs ajoutent au `~/.bashrc`.

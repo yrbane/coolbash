@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.10.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.11.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -38,7 +38,7 @@ source ~/.bashrc
 ✨ **Modular design** — chaque domaine (historique, prompt, couleurs, etc.) a son module dédié.
 🧠 **Documenté** — commentaires détaillés en français, code en anglais.
 🎨 **Prompt stylé** — couleurs adaptatives, icônes Nerd Font, emoji différents pour root et user.
-⚡ **Performant** — historique partagé sans rechargement complet, prompt léger.
+⚡ **Performant** — historique partagé sans rechargement complet, prompt léger, et le temps de démarrage affiché à chaque ouverture (`⚡ démarrage 412 ms · CoolBash 39 ms`).
 🔐 **Safe by default** — `umask`, `noclobber`, et alias protecteurs (`rm -i`, `cp -i`, `mv -i`).
 🐧 **Compatible serveurs** — fonctionne sans dépendances inutiles.
 
@@ -233,6 +233,7 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
 | `COOLBASH_NVM_LAZY=0`           | Charger `nvm.sh` au démarrage (≈ 0,7 s par shell) au lieu du chargement paresseux |
+| `COOLBASH_STARTUP_TIME`         | Temps de démarrage affiché à l'ouverture : `1` (défaut), `0` = muet, `verbose` = temps de chaque module. Le total est l'âge du processus (tout le `~/.bashrc` compris), la part CoolBash à côté |
 | `COOLBASH_FZF=0`                | Pas de raccourcis fzf (`Ctrl-R`, `Ctrl-T`, `Alt-C`), chargés sinon en shell interactif |
 | `COOLBASH_FZF_KEYBINDINGS`      | Fichier `key-bindings.bash` à utiliser (sinon emplacements Arch, Debian, Fedora, `~/.fzf`) |
 | `COOLBASH_FONT=0`               | `install` n'installe pas de police (serveurs, machines sans réseau)   |
