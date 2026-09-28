@@ -201,16 +201,20 @@ _coolbash_motd_note() {
 }
 
 # FR : disques — un seul `df -Phl` (local, format POSIX, lisible) : / toujours,
-#      les autres partitions seulement à partir de 80 %. Seuls les vrais
-#      périphériques (/dev/…, sauf loop) comptent : pas de tmpfs, pas de snap.
+#      (même en overlay dans un conteneur), les autres partitions seulement à
+#      partir de 80 % et seulement les vrais périphériques (/dev/…, sauf loop) :
+#      pas de tmpfs, pas de snap.
 #      Sans df (PATH réduit), pas de ligne.
 _coolbash_motd_disk() {
   local fs size used _ pcent mount p color
   command -v df >/dev/null 2>&1 || return 0
   while read -r fs size used _ pcent mount; do
-    [[ "$fs" == /dev/* && "$fs" != /dev/loop* && "$pcent" =~ ^[0-9]+%$ ]] || continue
+    [[ "$pcent" =~ ^[0-9]+%$ ]] || continue
     p="${pcent%\%}"
-    [[ "$mount" == / || "$p" -ge 80 ]] || continue
+    # FR : / toujours (même overlay, en conteneur) ; sinon un vrai périphérique à ≥ 80 %.
+    if [[ "$mount" != / ]]; then
+      [[ "$fs" == /dev/* && "$fs" != /dev/loop* && "$p" -ge 80 ]] || continue
+    fi
     _coolbash_motd_pcent_color color "$p"
     printf "Disk (%s): %s used of %s (${color}%s\e[0m)\n" "$mount" "$used" "$size" "$pcent"
   done < <(df -Phl 2>/dev/null)
