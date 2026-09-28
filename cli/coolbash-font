@@ -21,7 +21,7 @@ FONT_NAME="JetBrainsMono Nerd Font"
 FONT_URL="${COOLBASH_FONT_URL:-https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz}"
 FONT_DIR="${XDG_DATA_HOME:-${HOME}/.local/share}/fonts/coolbash-nerd"
 
-log()  { printf '\e[32m[CoolBash]\e[0m %s\n' "$*"; }
+log() { printf '\e[32m[CoolBash]\e[0m %s\n' "$*"; }
 warn() { printf '\e[33m[CoolBash]\e[0m %s\n' "$*" >&2; }
 
 font_status() {
@@ -49,28 +49,35 @@ font_download() {
 
 font_install() {
   if [[ "${COOLBASH_FONT:-1}" == 0 ]]; then
-    log "Police : installation désactivée (COOLBASH_FONT=0)."; return 0
+    log "Police : installation désactivée (COOLBASH_FONT=0)."
+    return 0
   fi
   if [[ $EUID -eq 0 ]]; then
-    log "Police : rien à installer pour root (mode safe, icônes standard)."; return 0
+    log "Police : rien à installer pour root (mode safe, icônes standard)."
+    return 0
   fi
   if font_status; then
-    log "Police : une Nerd Font est déjà installée."; return 0
+    log "Police : une Nerd Font est déjà installée."
+    return 0
   fi
   if ! command -v tar >/dev/null 2>&1 || ! command -v xz >/dev/null 2>&1; then
-    give_up "Police : tar et xz sont requis (Debian : apt install xz-utils)."; return 1
+    give_up "Police : tar et xz sont requis (Debian : apt install xz-utils)."
+    return 1
   fi
 
-  local tmp; tmp="$(mktemp -d)" || return 1
+  local tmp
+  tmp="$(mktemp -d)" || return 1
   # shellcheck disable=SC2064
   trap "rm -rf '${tmp}'" EXIT
   log "Police : téléchargement de ${FONT_NAME}…"
   if ! font_download "${FONT_URL}" "${tmp}/font.tar.xz"; then
-    give_up "Police : téléchargement impossible (${FONT_URL}) — curl ou wget requis, et un accès réseau."; return 1
+    give_up "Police : téléchargement impossible (${FONT_URL}) — curl ou wget requis, et un accès réseau."
+    return 1
   fi
   mkdir -p "${tmp}/out"
   if ! tar -xJf "${tmp}/font.tar.xz" -C "${tmp}/out" 2>/dev/null; then
-    give_up "Police : archive illisible."; return 1
+    give_up "Police : archive illisible."
+    return 1
   fi
   # FR : on ne crée le dossier final qu'une fois l'extraction réussie.
   mkdir -p "${FONT_DIR}"
@@ -92,8 +99,9 @@ font_install() {
 font_record() {
   local prefix="${COOLBASH_PREFIX:-${HOME}/.coolbash}" st
   [[ -d "${prefix}" ]] || return 0
-  font_status; st=$?
-  echo "${st}" >| "${prefix}/.nerdfont"
+  font_status
+  st=$?
+  echo "${st}" >|"${prefix}/.nerdfont"
 }
 
 font_remove() {
@@ -104,8 +112,16 @@ font_remove() {
 }
 
 case "${1:-}" in
-  status)  font_status ;;
-  install) font_install; rc=$?; font_record; exit "${rc}" ;;
-  remove)  font_remove ;;
-  *)       echo "Usage: coolbash-font status|install|remove" >&2; exit 64 ;;
+  status) font_status ;;
+  install)
+    font_install
+    rc=$?
+    font_record
+    exit "${rc}"
+    ;;
+  remove) font_remove ;;
+  *)
+    echo "Usage: coolbash-font status|install|remove" >&2
+    exit 64
+    ;;
 esac

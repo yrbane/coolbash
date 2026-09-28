@@ -22,7 +22,7 @@ _coolbash_completion_load() {
   # FR: alias `g` → completion git.
   declare -F _git >/dev/null 2>&1 && complete -o default -o nospace -F _git g
   command -v composer >/dev/null 2>&1 && eval "$(composer completion bash 2>/dev/null)" || true
-  command -v symfony  >/dev/null 2>&1 && eval "$(symfony completion bash 2>/dev/null)" || true
+  command -v symfony >/dev/null 2>&1 && eval "$(symfony completion bash 2>/dev/null)" || true
   # shellcheck disable=SC1091
   [[ -f "$HOME/.fzf.bash" ]] && . "$HOME/.fzf.bash" 2>/dev/null || true
   return 0

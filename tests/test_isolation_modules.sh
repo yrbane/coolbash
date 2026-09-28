@@ -17,7 +17,8 @@ CORE="${COOLBASH_TEST_ROOT}/modules/00-core.bash"
 
 for m in "${COOLBASH_TEST_ROOT}"/modules/*.bash; do
   name="$(basename "$m" .bash)"
-  pre=""; [[ "$name" != "00-core" ]] && pre="source \"${CORE}\";"
+  pre=""
+  [[ "$name" != "00-core" ]] && pre="source \"${CORE}\";"
   leaks="$(MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c "
     ${pre}
     set +o noclobber

@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.15.3-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.16.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -183,8 +183,14 @@ Suite de tests en bash pur, sans dépendance (shellcheck est utilisé s'il est p
 
 ```bash
 make test               # ou : bash tests/run.sh [motif]
-make verify             # bash -n + shellcheck
+make lint               # bash -n + shellcheck + shfmt (style), = make verify
+make fmt                # applique shfmt (options dans .editorconfig)
 ```
+
+La CI épingle **shellcheck 0.11.0** et **shfmt 3.14.1** : les mêmes versions localement évitent
+les avertissements propres à une version. Trois jobs : Ubuntu, Debian 13 sous un utilisateur
+normal, et **installation à froid** (Debian nue, `install.sh`, premier shell : le MOTD, le temps
+de démarrage et le prompt sont capturés et vérifiés).
 
 | Fichier                       | Ce qui est vérifié                                                                 |
 | ----------------------------- | ---------------------------------------------------------------------------------- |

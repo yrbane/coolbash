@@ -1,8 +1,8 @@
 # shellcheck shell=bash
-#   ███    ███  ██████  ████████ ██████  
-#   ████  ████ ██    ██    ██    ██   ██ 
-#   ██ ████ ██ ██    ██    ██    ██   ██ 
-#   ██  ██  ██ ██    ██    ██    ██   ██ 
+#   ███    ███  ██████  ████████ ██████
+#   ████  ████ ██    ██    ██    ██   ██
+#   ██ ████ ██ ██    ██    ██    ██   ██
+#   ██  ██  ██ ██    ██    ██    ██   ██
 #   ██      ██  ██████     ██    ██████  MODULE: MOTD
 # ─────────────────────────────────────────────────────────────────────────────
 # FR: Affiche une citation française (share/fortunes, dans la bouche de cowsay,
@@ -38,13 +38,14 @@ _coolbash_fortune() {
   for _cf_t in ${COOLBASH_FORTUNE:-}; do
     for _cf_d in "${_cf_dirs[@]}"; do [[ -s "$_cf_d/$_cf_t.txt" ]] && _cf_files+=("$_cf_d/$_cf_t.txt"); done
   done
-  if (( ${#_cf_files[@]} == 0 )); then
+  if ((${#_cf_files[@]} == 0)); then
     for _cf_d in "${_cf_dirs[@]}"; do for _cf_f in "$_cf_d"/*.txt; do [[ -s "$_cf_f" ]] && _cf_files+=("$_cf_f"); done; done
   fi
-  (( ${#_cf_files[@]} )) || return 1
+  ((${#_cf_files[@]})) || return 1
   _cf_f="${_cf_files[RANDOM % ${#_cf_files[@]}]}"
-  mapfile -t _cf_lines < "$_cf_f"
-  _cf_n=${#_cf_lines[@]}; (( _cf_n )) || return 1
+  mapfile -t _cf_lines <"$_cf_f"
+  _cf_n=${#_cf_lines[@]}
+  ((_cf_n)) || return 1
   # FR : RANDOM s'arrête à 32767 — combiné pour couvrir les gros fichiers.
   for _ in 1 2 3 4 5; do
     printf -v "$_cf_out" '%s' "${_cf_lines[(RANDOM * 32768 + RANDOM) % _cf_n]}"
@@ -62,7 +63,8 @@ _coolbash_motd() {
     if command -v cowsay >/dev/null 2>&1; then
       # FR : « -e @@ -T U » = la vache paranoïaque avec sa langue, identique sous
       #      cowsay (Perl) et Neo-cowsay (Go, 3 ms), qui perd la langue avec -p.
-      if command -v lolcat >/dev/null 2>&1; then printf '%s\n' "$text" | cowsay -e @@ -T U | lolcat
+      if command -v lolcat >/dev/null 2>&1; then
+        printf '%s\n' "$text" | cowsay -e @@ -T U | lolcat
       else printf '%s\n' "$text" | cowsay -e @@ -T U; fi
     else
       printf '%s\n\n' "$text"
@@ -75,31 +77,36 @@ _coolbash_motd() {
 # FR : même présentation que « neofetch --stdout », en pur bash.
 _coolbash_motd_sysinfo() {
   local kernel os="" host="" up title line uptime
-  read -r kernel 2>/dev/null < /proc/sys/kernel/osrelease || return 0
-  read -r up _ 2>/dev/null < /proc/uptime || return 0
+  read -r kernel 2>/dev/null </proc/sys/kernel/osrelease || return 0
+  read -r up _ 2>/dev/null </proc/uptime || return 0
   # FR : lu ligne à ligne plutôt que sourcé dans un sous-shell (≈ 1 ms de fork).
   if [[ -r /etc/os-release ]]; then
     while IFS= read -r line; do
-      [[ "$line" == PRETTY_NAME=* ]] && { os="${line#PRETTY_NAME=}"; os="${os%\"}"; os="${os#\"}"; break; }
-    done < /etc/os-release
+      [[ "$line" == PRETTY_NAME=* ]] && {
+        os="${line#PRETTY_NAME=}"
+        os="${os%\"}"
+        os="${os#\"}"
+        break
+      }
+    done </etc/os-release
   fi
-  read -r host 2>/dev/null < /sys/class/dmi/id/product_name
+  read -r host 2>/dev/null </sys/class/dmi/id/product_name
   title="${USER:-$LOGNAME}@${HOSTNAME%%.*}"
   printf '%s\n%s\n' "$title" "${title//?/-}"
-  [[ -n "$os" ]]   && printf 'OS: %s %s\n' "$os" "${HOSTTYPE:-}"
+  [[ -n "$os" ]] && printf 'OS: %s %s\n' "$os" "${HOSTTYPE:-}"
   [[ -n "$host" ]] && printf 'Host: %s\n' "$host"
   printf 'Kernel: %s\n' "$kernel"
   _coolbash_motd_uptime uptime "${up%.*}"
   printf 'Uptime: %s\n' "$uptime"
   # FR : la date par le printf intégré (pas de processus `date`).
   _coolbash_motd_hidden date || printf 'Date: %(%Y-%m-%d %H:%M)T (%(%A)T)\n' -1 -1
-  _coolbash_motd_hidden disk    || _coolbash_motd_disk
-  _coolbash_motd_hidden mem     || _coolbash_motd_mem
-  _coolbash_motd_hidden load    || _coolbash_motd_load
+  _coolbash_motd_hidden disk || _coolbash_motd_disk
+  _coolbash_motd_hidden mem || _coolbash_motd_mem
+  _coolbash_motd_hidden load || _coolbash_motd_load
   _coolbash_motd_hidden battery || _coolbash_motd_battery
-  _coolbash_motd_hidden reboot  || _coolbash_motd_reboot
-  _coolbash_motd_hidden failed  || _coolbash_motd_failed
-  _coolbash_motd_hidden note    || _coolbash_motd_note
+  _coolbash_motd_hidden reboot || _coolbash_motd_reboot
+  _coolbash_motd_hidden failed || _coolbash_motd_failed
+  _coolbash_motd_hidden note || _coolbash_motd_note
 }
 
 # FR : COOLBASH_MOTD_HIDE="battery load" — lignes à ne pas afficher.
@@ -112,14 +119,20 @@ _coolbash_motd_hidden() {
 # FR : couleur d'un pourcentage d'occupation : jaune dès 80, rouge dès 90.
 #      Sortie dans la variable $1 (pas de sous-shell : chaque $(…) coûte ≈ 1 ms).
 _coolbash_motd_pcent_color() {
-  if (( $2 >= 90 )); then printf -v "$1" '\e[31m'; elif (( $2 >= 80 )); then printf -v "$1" '\e[33m'; else printf -v "$1" ''; fi
+  if (($2 >= 90)); then printf -v "$1" '\e[31m'; elif (($2 >= 80)); then printf -v "$1" '\e[33m'; else printf -v "$1" ''; fi
 }
 
 # FR : kB → « 6.2G » (une décimale), sans processus. Sortie dans la variable $1.
 _coolbash_motd_human_kb() {
   local kb="$2" unit=K div=1
-  if (( kb >= 1048576 )); then unit=G; div=1048576; elif (( kb >= 1024 )); then unit=M; div=1024; fi
-  printf -v "$1" '%d.%d%s' $(( kb / div )) $(( kb % div * 10 / div )) "$unit"
+  if ((kb >= 1048576)); then
+    unit=G
+    div=1048576
+  elif ((kb >= 1024)); then
+    unit=M
+    div=1024
+  fi
+  printf -v "$1" '%d.%d%s' $((kb / div)) $((kb % div * 10 / div)) "$unit"
 }
 
 # FR : mémoire — /proc/meminfo (MemAvailable = ce que le noyau pourrait libérer).
@@ -128,12 +141,14 @@ _coolbash_motd_mem() {
   while read -r key val _; do
     case "$key" in MemTotal:) total="$val" ;; MemAvailable:) avail="$val" ;; esac
     [[ -n "$total" && -n "$avail" ]] && break
-  done 2>/dev/null < /proc/meminfo
+  done 2>/dev/null </proc/meminfo
   [[ "$total" =~ ^[0-9]+$ && "$avail" =~ ^[0-9]+$ && "$total" -gt 0 ]] || return 0
   local color h_used h_total
-  used=$(( total - avail )); pcent=$(( used * 100 / total ))
+  used=$((total - avail))
+  pcent=$((used * 100 / total))
   _coolbash_motd_pcent_color color "$pcent"
-  _coolbash_motd_human_kb h_used "$used"; _coolbash_motd_human_kb h_total "$total"
+  _coolbash_motd_human_kb h_used "$used"
+  _coolbash_motd_human_kb h_total "$total"
   printf "Mem: %s used of %s (${color}%s%%\e[0m)\n" "$h_used" "$h_total" "$pcent"
 }
 
@@ -141,12 +156,15 @@ _coolbash_motd_mem() {
 #      Rouge si la charge 1 min dépasse le nombre de cœurs, jaune à partir de la moitié.
 _coolbash_motd_load() {
   local l1 l5 l15 _ cores=0 c color="" l1c
-  read -r l1 l5 l15 _ 2>/dev/null < /proc/loadavg || return 0
-  for c in /sys/devices/system/cpu/cpu[0-9]*; do [[ -d "$c" ]] && cores=$(( cores + 1 )); done
-  (( cores > 0 )) || cores=1
-  l1c="${l1/[.,]/}"; l1c="${l1c#0}"; l1c="${l1c:-0}"   # 0.52 → 52 (centièmes)
-  if (( 10#$l1c >= cores * 100 )); then color='\e[31m'; elif (( 10#$l1c >= cores * 50 )); then color='\e[33m'; fi
-  local plural=""; (( cores > 1 )) && plural=s
+  read -r l1 l5 l15 _ 2>/dev/null </proc/loadavg || return 0
+  for c in /sys/devices/system/cpu/cpu[0-9]*; do [[ -d "$c" ]] && cores=$((cores + 1)); done
+  ((cores > 0)) || cores=1
+  l1c="${l1/[.,]/}"
+  l1c="${l1c#0}"
+  l1c="${l1c:-0}" # 0.52 → 52 (centièmes)
+  if ((10#$l1c >= cores * 100)); then color='\e[31m'; elif ((10#$l1c >= cores * 50)); then color='\e[33m'; fi
+  local plural=""
+  ((cores > 1)) && plural=s
   printf "Load: ${color}%s\e[0m %s %s (%d core%s)\n" "$l1" "$l5" "$l15" "$cores" "$plural"
 }
 
@@ -154,11 +172,11 @@ _coolbash_motd_load() {
 _coolbash_motd_battery() {
   local b cap status color=""
   for b in /sys/class/power_supply/BAT*; do
-    read -r cap 2>/dev/null < "$b/capacity" || continue
-    read -r status 2>/dev/null < "$b/status" || status="unknown"
+    read -r cap 2>/dev/null <"$b/capacity" || continue
+    read -r status 2>/dev/null <"$b/status" || status="unknown"
     [[ "$cap" =~ ^[0-9]+$ ]] || continue
     if [[ "$status" == Discharging ]]; then
-      if (( cap < 20 )); then color='\e[31m'; elif (( cap < 40 )); then color='\e[33m'; fi
+      if ((cap < 20)); then color='\e[31m'; elif ((cap < 40)); then color='\e[33m'; fi
     fi
     printf "Battery: ${color}%s%%\e[0m (%s)\n" "$cap" "$status"
   done
@@ -171,11 +189,14 @@ _coolbash_motd_battery() {
 # shellcheck disable=SC2120  # FR : les arguments servent aux tests
 _coolbash_motd_reboot() {
   local modules="${1:-/usr/lib/modules}" flag="${2:-/var/run/reboot-required}" kernel="" d any=0
-  if [[ -f "$flag" ]]; then printf '\e[31mReboot required\e[0m (%s)\n' "$flag"; return 0; fi
-  read -r kernel 2>/dev/null < /proc/sys/kernel/osrelease || return 0
+  if [[ -f "$flag" ]]; then
+    printf '\e[31mReboot required\e[0m (%s)\n' "$flag"
+    return 0
+  fi
+  read -r kernel 2>/dev/null </proc/sys/kernel/osrelease || return 0
   [[ -d "$modules" ]] || return 0
   for d in "$modules"/*/; do [[ -d "$d" ]] && any=1 && break; done
-  (( any )) || return 0
+  ((any)) || return 0
   [[ -d "$modules/$kernel" ]] || printf '\e[31mReboot required\e[0m: kernel %s is running but its modules are gone (kernel updated)\n' "$kernel"
   return 0
 }
@@ -186,9 +207,10 @@ _coolbash_motd_failed() {
   command -v systemctl >/dev/null 2>&1 || return 0
   while read -r unit _; do
     [[ -n "$unit" ]] || continue
-    n=$(( n + 1 )); names+="${names:+, }$unit"
+    n=$((n + 1))
+    names+="${names:+, }$unit"
   done < <(systemctl --failed --no-legend --plain 2>/dev/null)
-  (( n > 0 )) && printf '\e[31mFailed units: %d\e[0m (%s)\n' "$n" "$names"
+  ((n > 0)) && printf '\e[31mFailed units: %d\e[0m (%s)\n' "$n" "$names"
   return 0
 }
 
@@ -196,8 +218,9 @@ _coolbash_motd_failed() {
 _coolbash_motd_note() {
   local file="${COOLBASH_PREFIX:-$HOME/.coolbash}/motd.txt" lines=()
   [[ -s "$file" ]] || return 0
-  mapfile -t lines < "$file"
-  printf '\n'; printf '\e[36m%s\e[0m\n' "${lines[@]}"
+  mapfile -t lines <"$file"
+  printf '\n'
+  printf '\e[36m%s\e[0m\n' "${lines[@]}"
 }
 
 # FR : disques — un seul `df -Phl` (local, format POSIX, lisible) : / toujours,
@@ -224,10 +247,21 @@ _coolbash_motd_disk() {
 # FR : « 1 day, 7 hours, 1 min » — le format de neofetch. $1 = variable de sortie.
 _coolbash_motd_uptime() {
   local s="$2" d h m out=""
-  d=$(( s / 86400 )); h=$(( s % 86400 / 3600 )); m=$(( s % 3600 / 60 ))
-  (( d > 0 )) && { out="$d day"; (( d > 1 )) && out+=s; out+=", "; }
-  (( h > 0 )) && { out+="$h hour"; (( h > 1 )) && out+=s; out+=", "; }
-  out+="$m min"; (( m != 1 )) && out+=s
+  d=$((s / 86400))
+  h=$((s % 86400 / 3600))
+  m=$((s % 3600 / 60))
+  ((d > 0)) && {
+    out="$d day"
+    ((d > 1)) && out+=s
+    out+=", "
+  }
+  ((h > 0)) && {
+    out+="$h hour"
+    ((h > 1)) && out+=s
+    out+=", "
+  }
+  out+="$m min"
+  ((m != 1)) && out+=s
   printf -v "$1" '%s' "$out"
 }
 _coolbash_motd

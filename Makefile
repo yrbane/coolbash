@@ -6,7 +6,7 @@ ROOT   := $(abspath .)
 #      forme `source $HOME/.coolbash/cli/coolbash init`).
 SOURCE_LINE = source "$(PREFIX)/cli/coolbash" init
 
-.PHONY: install update uninstall verify test font
+.PHONY: install update uninstall verify lint fmt test font
 
 install:
 	@echo "[CoolBash] Installing to $(PREFIX)..."
@@ -72,6 +72,8 @@ uninstall:
 font:
 	@COOLBASH_PREFIX="$(PREFIX)" bash cli/coolbash-font install
 
+SH_FILES := cli/coolbash cli/coolbash-font install.sh modules/*.bash tests/*.sh
+
 verify:
 	@echo "[CoolBash] Verifying syntax..."
 	@# FR : `bash -n a b` ne vérifie que `a` (b devient $$1) — d'où la boucle.
@@ -81,7 +83,22 @@ verify:
 	else \
 	  echo "  shellcheck absent : contrôle limité à 'bash -n'."; \
 	fi
+	@# FR : style uniforme (options dans .editorconfig). Fatal si shfmt est là
+	@#      et trouve un écart : `make fmt` corrige.
+	@if command -v shfmt >/dev/null 2>&1; then \
+	  out="$$(shfmt -l $(SH_FILES))"; \
+	  if [[ -n "$$out" ]]; then echo "  ✘ shfmt : fichiers à formater (make fmt) :"; echo "$$out" | sed 's/^/      /'; exit 1; fi; \
+	else \
+	  echo "  shfmt absent : style non vérifié (https://github.com/mvdan/sh)."; \
+	fi
 	@echo "[CoolBash] Verification complete ✅"
+
+# FR : `make lint` = verify (nom attendu par tout le monde) ; `make fmt` applique shfmt.
+lint: verify
+
+fmt:
+	@command -v shfmt >/dev/null 2>&1 || { echo "shfmt absent : https://github.com/mvdan/sh/releases" >&2; exit 1; }
+	@shfmt -w $(SH_FILES) && echo "[CoolBash] Formaté ✅"
 
 test:
 	@bash tests/run.sh

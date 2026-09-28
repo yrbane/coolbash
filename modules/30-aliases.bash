@@ -54,7 +54,10 @@ please() {
   local cmd
   cmd="$(HISTTIMEFORMAT='' builtin fc -ln -1 -1 2>/dev/null)"
   cmd="${cmd#"${cmd%%[![:space:]]*}"}"
-  if [[ -z "$cmd" || "$cmd" == please* ]]; then echo "please: aucune commande à relancer." >&2; return 1; fi
+  if [[ -z "$cmd" || "$cmd" == please* ]]; then
+    echo "please: aucune commande à relancer." >&2
+    return 1
+  fi
   printf 'sudo %s\n' "$cmd"
   eval "sudo $cmd"
 }

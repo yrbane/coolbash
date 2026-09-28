@@ -18,4 +18,4 @@ for t in "${ROOT}"/tests/test_*"${pattern}"*.sh; do
 done
 
 printf '\n%d fichier(s) OK, %d en échec\n' "${pass}" "${fail}"
-(( fail == 0 ))
+((fail == 0))

@@ -8,7 +8,7 @@
 # FR: Ajouts PATH idempotents + couleurs LS_COLORS via dircolors.
 
 [[ -d "$HOME/.local/bin" ]] && path_prepend "$HOME/.local/bin"
-[[ -d "$HOME/bin"        ]] && path_prepend "$HOME/bin"
+[[ -d "$HOME/bin" ]] && path_prepend "$HOME/bin"
 path_append "/usr/games"
 path_append "/usr/local/games"
 # FR : gems Ruby utilisateur — quelle que soit la version, seulement si présent.

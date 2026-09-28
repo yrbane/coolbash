@@ -26,7 +26,7 @@ fi
 if [[ -d "${ANDROID_HOME:-$HOME/Android/Sdk}" ]]; then
   export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
   [[ -d "$ANDROID_HOME/platform-tools" ]] && path_append "$ANDROID_HOME/platform-tools"
-  [[ -d "$ANDROID_HOME/emulator" ]]       && path_append "$ANDROID_HOME/emulator"
+  [[ -d "$ANDROID_HOME/emulator" ]] && path_append "$ANDROID_HOME/emulator"
 fi
 
 [[ -d "$HOME/.foundry/bin" ]] && path_append "$HOME/.foundry/bin"
@@ -41,7 +41,7 @@ fi
 #     ce dernier cas on prend la version installée la plus récente.
 _coolbash_nvm_default_bin() {
   local alias="" dir best=""
-  read -r alias 2>/dev/null < "$NVM_DIR/alias/default"
+  read -r alias 2>/dev/null <"$NVM_DIR/alias/default"
   alias="${alias#v}"
   if [[ "$alias" =~ ^[0-9][0-9.]*$ ]]; then
     for dir in "$NVM_DIR/versions/node/v${alias}" "$NVM_DIR/versions/node/v${alias}".*; do
@@ -53,8 +53,12 @@ _coolbash_nvm_default_bin() {
     local major top=-1
     for dir in "$NVM_DIR"/versions/node/v*; do
       [[ -d "$dir/bin" ]] || continue
-      major="${dir##*/v}"; major="${major%%.*}"
-      if [[ "$major" =~ ^[0-9]+$ ]] && (( major >= top )); then top="$major"; best="$dir"; fi
+      major="${dir##*/v}"
+      major="${major%%.*}"
+      if [[ "$major" =~ ^[0-9]+$ ]] && ((major >= top)); then
+        top="$major"
+        best="$dir"
+      fi
     done
   fi
   [[ -n "$best" ]] && path_prepend "$best/bin"

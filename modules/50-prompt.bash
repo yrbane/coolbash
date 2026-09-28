@@ -21,7 +21,7 @@
 #                COOLBASH_PROMPT_BELL_MS (défaut 30000, 0 = jamais),
 #                COOLBASH_PROMPT_TOOLS=0, PROMPT_DIRTRIM (défaut 3).
 
-if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4) )); then
+if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
   return 0
 fi
 
@@ -43,13 +43,15 @@ declare -gA COOLBASH_PROMPT_COLOR COOLBASH_PROMPT_SYM
 _coolbash_prompt_init_icons() {
   local -n s=COOLBASH_PROMPT_SYM
   if [[ -z "${COOLBASH_PROMPT_ICONS:-}" ]]; then
-    if [[ "${TERM:-}" == linux ]]; then COOLBASH_PROMPT_ICONS=0
-    elif _coolbash_safe; then COOLBASH_PROMPT_ICONS=basic
+    if [[ "${TERM:-}" == linux ]]; then
+      COOLBASH_PROMPT_ICONS=0
+    elif _coolbash_safe; then
+      COOLBASH_PROMPT_ICONS=basic
     else
       local font=""
       COOLBASH_PROMPT_ICONS=nerd
       if [[ -z "${SSH_CONNECTION:-}${SSH_TTY:-}${SSH_CLIENT:-}" ]] \
-         && read -r font 2>/dev/null < "${COOLBASH_PREFIX:-$HOME/.coolbash}/.nerdfont" && [[ "$font" == 1 ]]; then
+        && read -r font 2>/dev/null <"${COOLBASH_PREFIX:-$HOME/.coolbash}/.nerdfont" && [[ "$font" == 1 ]]; then
         COOLBASH_PROMPT_ICONS=basic
       fi
     fi
@@ -61,16 +63,19 @@ _coolbash_prompt_init_icons() {
       #      nf-fa-times_circle, nf-fa-cog, nf-fa-lock, nf-fa-plug, nf-fa-cube,
       #      nf-dev-php, nf-dev-nodejs_small.
       s=([user]=$'\uf007' [host]=$'\uf108' [branch]=$'\ue725' [venv]=$'\ue73c'
-         [time]=$'\uf252' [path]=$'\uf07c' [root]=$'\U000f033e'
-         [clock]=$'\uf017' [err]=$'\uf057' [jobs]=$'\uf013' [ro]=$'\uf023'
-         [ssh]=$'\uf1e6' [container]=$'\uf1b2' [php]=$'\ue73d' [node]=$'\ue718') ;;
+        [time]=$'\uf252' [path]=$'\uf07c' [root]=$'\U000f033e'
+        [clock]=$'\uf017' [err]=$'\uf057' [jobs]=$'\uf013' [ro]=$'\uf023'
+        [ssh]=$'\uf1e6' [container]=$'\uf1b2' [php]=$'\ue73d' [node]=$'\ue718')
+      ;;
     0)
       s=([user]="" [host]="" [branch]="" [venv]="" [time]="" [path]="" [root]=""
-         [clock]="" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="" [container]="" [php]="" [node]="") ;;
+        [clock]="" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="" [container]="" [php]="" [node]="")
+      ;;
     *)
       COOLBASH_PROMPT_ICONS=basic
       s=([user]="" [host]="" [branch]="⎇" [venv]="⚗" [time]="⧗" [path]="" [root]="⚠"
-         [clock]="⏱" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="⇄" [container]="▣" [php]="" [node]="") ;;
+        [clock]="⏱" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="⇄" [container]="▣" [php]="" [node]="")
+      ;;
   esac
 }
 _coolbash_prompt_init_icons
@@ -89,27 +94,36 @@ _coolbash_prompt_init_host() {
   local m h=0 i name="${HOSTNAME:-localhost}"
   COOLBASH_PROMPT_HOST_KIND=local
   for m in ${COOLBASH_PROMPT_CONTAINER_MARKERS:-/.dockerenv /run/.containerenv}; do
-    [[ -e "$m" ]] && { COOLBASH_PROMPT_HOST_KIND=container; break; }
+    [[ -e "$m" ]] && {
+      COOLBASH_PROMPT_HOST_KIND=container
+      break
+    }
   done
   if [[ "${COOLBASH_PROMPT_HOST_KIND}" == local && -n "${SSH_CONNECTION:-}${SSH_TTY:-}${SSH_CLIENT:-}" ]]; then
     COOLBASH_PROMPT_HOST_KIND=ssh
   fi
-  for (( i = 0; i < ${#name}; i++ )); do printf -v m '%d' "'${name:i:1}"; h=$(( (h * 31 + m) % 65521 )); done
+  for ((i = 0; i < ${#name}; i++)); do
+    printf -v m '%d' "'${name:i:1}"
+    h=$(((h * 31 + m) % 65521))
+  done
   if [[ "${COLORTERM:-}" =~ (24bit|truecolor) ]]; then
     local -a pal=("255 120 120" "255 180 80" "220 220 90" "120 220 120" "90 200 220" "150 150 255" "230 130 230" "255 150 190")
     # shellcheck disable=SC2086
     c[host_hash]="$(_coolbash_prompt_rgb ${pal[h % 8]})"
   else
-    c[host_hash]="\[\e[$(( 31 + h % 6 ))m\]"
+    c[host_hash]="\[\e[$((31 + h % 6))m\]"
   fi
 }
 
-_coolbash_prompt_rgb()   { printf '\[\e[38;2;%s;%s;%sm\]' "$1" "$2" "$3"; }
+_coolbash_prompt_rgb() { printf '\[\e[38;2;%s;%s;%sm\]' "$1" "$2" "$3"; }
 _coolbash_prompt_bgrgb() { printf '\[\e[48;2;%s;%s;%sm\]' "$1" "$2" "$3"; }
 
 _coolbash_prompt_init_colors() {
   local -n c=COOLBASH_PROMPT_COLOR
-  c[reset]='\[\e[0m\]'; c[bold]='\[\e[1m\]'; c[path]='\[\e[1;34m\]'; c[time]='\[\e[0;36m\]'
+  c[reset]='\[\e[0m\]'
+  c[bold]='\[\e[1m\]'
+  c[path]='\[\e[1;34m\]'
+  c[time]='\[\e[0;36m\]'
   if [[ "${COLORTERM:-}" =~ (24bit|truecolor) ]]; then
     c[user]="$(_coolbash_prompt_rgb 110 210 65)"
     c[user_accent]="$(_coolbash_prompt_rgb 200 120 255)"
@@ -119,8 +133,13 @@ _coolbash_prompt_init_colors() {
     c[root]="$(_coolbash_prompt_rgb 255 110 110)"
     c[root_accent]="$(_coolbash_prompt_rgb 255 170 80)"
   else
-    c[user]='\[\e[36m\]'; c[user_accent]='\[\e[35m\]'; c[git]='\[\e[33m\]'; c[info]='\[\e[34m\]'
-    c[err]='\[\e[41m\]\[\e[97m\]'; c[root]='\[\e[31m\]'; c[root_accent]='\[\e[91m\]'
+    c[user]='\[\e[36m\]'
+    c[user_accent]='\[\e[35m\]'
+    c[git]='\[\e[33m\]'
+    c[info]='\[\e[34m\]'
+    c[err]='\[\e[41m\]\[\e[97m\]'
+    c[root]='\[\e[31m\]'
+    c[root_accent]='\[\e[91m\]'
   fi
 }
 _coolbash_prompt_init_colors
@@ -129,7 +148,8 @@ _coolbash_prompt_init_host
 # --- Emoji de session --------------------------------------------------------
 _coolbash_prompt_pick_emoji() {
   local -a pool
-  if [[ $EUID -eq 0 ]]; then pool=(👹 💀 🤖 🔧 🧯 🧱 🔥 🏴‍☠️ ⚙️ 🧪 🛠️ 🧰)
+  if [[ $EUID -eq 0 ]]; then
+    pool=(👹 💀 🤖 🔧 🧯 🧱 🔥 🏴‍☠️ ⚙️ 🧪 🛠️ 🧰)
   else pool=(🐶 🐱 🐹 🐻 🦊 🐼 🐸 🦄 🐝 🦋 🐙 🐬 🐧 🦖 🐢 🐍 🌿 🌼 🌻 🌈 🚀); fi
   printf '%s' "${pool[RANDOM % ${#pool[@]}]}"
 }
@@ -159,7 +179,7 @@ COOLBASH_PROMPT_PS0_SINK=()
 
 _coolbash_prompt_ps0_title() {
   local n cmd
-  read -r n cmd <<< "$(HISTTIMEFORMAT='' builtin history 1)"
+  read -r n cmd <<<"$(HISTTIMEFORMAT='' builtin history 1)"
   [[ -n "${cmd:-}" ]] || return 0
   printf '\e]0;%s\a' "${cmd:0:70}"
 }
@@ -177,7 +197,7 @@ _coolbash_prompt_ps0_build() {
 
 _coolbash_prompt_term_has_title() {
   case "${TERM:-}" in
-    xterm*|rxvt*|tmux*|screen*|alacritty*|foot*|kitty*|wezterm*|contour*) return 0 ;;
+    xterm* | rxvt* | tmux* | screen* | alacritty* | foot* | kitty* | wezterm* | contour*) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -185,8 +205,8 @@ _coolbash_prompt_ps0_build
 
 _coolbash_prompt_elapsed() {
   local now="${EPOCHREALTIME//[.,]/}"
-  if (( COOLBASH_PROMPT_T0 > 0 )); then
-    COOLBASH_PROMPT_LAST_MS=$(( (now - COOLBASH_PROMPT_T0) / 1000 ))
+  if ((COOLBASH_PROMPT_T0 > 0)); then
+    COOLBASH_PROMPT_LAST_MS=$(((now - COOLBASH_PROMPT_T0) / 1000))
   else
     COOLBASH_PROMPT_LAST_MS=0
   fi
@@ -195,11 +215,11 @@ _coolbash_prompt_elapsed() {
 
 _coolbash_prompt_duration() {
   local ms="${COOLBASH_PROMPT_LAST_MS:-0}" min="${COOLBASH_PROMPT_MIN_MS:-1000}"
-  (( ms >= min )) || return 0
-  if (( ms >= 60000 )); then
-    printf '%dm%02ds' $(( ms / 60000 )) $(( ms % 60000 / 1000 ))
+  ((ms >= min)) || return 0
+  if ((ms >= 60000)); then
+    printf '%dm%02ds' $((ms / 60000)) $((ms % 60000 / 1000))
   else
-    printf '%d.%02ds' $(( ms / 1000 )) $(( ms % 1000 / 10 ))
+    printf '%d.%02ds' $((ms / 1000)) $((ms % 1000 / 10))
   fi
 }
 
@@ -213,25 +233,31 @@ _coolbash_prompt_git() {
   while IFS= read -r line; do
     case "$line" in
       "# branch.head "*) head="${line#"# branch.head "}" ;;
-      "# branch.oid "*)  oid="${line#"# branch.oid "}" ;;
-      "# branch.ab "*)   line="${line#"# branch.ab +"}"; ahead="${line%% *}"; behind="${line##*-}" ;;
-      "# stash "*)       stash="${line#"# stash "}" ;;
-      "1 "*|"2 "*)       [[ "${line:2:1}" != "." ]] && staged=1
-                         [[ "${line:3:1}" != "." ]] && unstaged=1 ;;
-      "? "*)             untracked=1 ;;
-      "u "*)             conflict=1 ;;
+      "# branch.oid "*) oid="${line#"# branch.oid "}" ;;
+      "# branch.ab "*)
+        line="${line#"# branch.ab +"}"
+        ahead="${line%% *}"
+        behind="${line##*-}"
+        ;;
+      "# stash "*) stash="${line#"# stash "}" ;;
+      "1 "* | "2 "*)
+        [[ "${line:2:1}" != "." ]] && staged=1
+        [[ "${line:3:1}" != "." ]] && unstaged=1
+        ;;
+      "? "*) untracked=1 ;;
+      "u "*) conflict=1 ;;
     esac
   done < <(GIT_OPTIONAL_LOCKS=0 git status "${opts[@]}" 2>/dev/null)
   [[ -n "$head" ]] || return 0
   [[ "$head" == "(detached)" ]] && head="${oid:0:7}"
   local flags=""
-  (( staged ))    && flags+="*"
-  (( unstaged ))  && flags+="+"
-  (( untracked )) && flags+="?"
-  (( conflict ))  && flags+="!"
-  (( ahead ))     && flags+="↑${ahead}"
-  (( behind ))    && flags+="↓${behind}"
-  (( stash ))     && flags+="≡${stash}"
+  ((staged)) && flags+="*"
+  ((unstaged)) && flags+="+"
+  ((untracked)) && flags+="?"
+  ((conflict)) && flags+="!"
+  ((ahead)) && flags+="↑${ahead}"
+  ((behind)) && flags+="↓${behind}"
+  ((stash)) && flags+="≡${stash}"
   printf '%s%s' "$head" "$flags"
 }
 
@@ -240,18 +266,20 @@ _coolbash_prompt_git() {
 _coolbash_prompt_status() {
   local ec="${1:-0}" what
   [[ "$ec" =~ ^[0-9]+$ ]] || return 0
-  (( ec == 0 )) && return 0
+  ((ec == 0)) && return 0
   case "$ec" in
     129) what=HUP ;; 130) what=INT ;; 131) what=QUIT ;; 134) what=ABRT ;;
     137) what=KILL ;; 139) what=SEGV ;; 141) what=PIPE ;; 143) what=TERM ;;
-    *)   what="$ec" ;;
+    *) what="$ec" ;;
   esac
   printf '%s %s' "${COOLBASH_PROMPT_SYM[err]:-✖}" "$what"
 }
 
 _coolbash_prompt_venv() {
-  if [[ -n "${VIRTUAL_ENV:-}" ]]; then printf '%s' "${VIRTUAL_ENV##*/}"
-  elif [[ -n "${CONDA_DEFAULT_ENV:-}" ]]; then printf '%s' "${CONDA_DEFAULT_ENV}"
+  if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+    printf '%s' "${VIRTUAL_ENV##*/}"
+  elif [[ -n "${CONDA_DEFAULT_ENV:-}" ]]; then
+    printf '%s' "${CONDA_DEFAULT_ENV}"
   fi
   return 0
 }
@@ -261,7 +289,7 @@ _coolbash_prompt_jobs() {
   local -a j
   # shellcheck disable=SC2207
   j=($(jobs -p))
-  (( ${#j[@]} )) && printf '%s %d' "${COOLBASH_PROMPT_SYM[jobs]:-⚙}" "${#j[@]}"
+  ((${#j[@]})) && printf '%s %d' "${COOLBASH_PROMPT_SYM[jobs]:-⚙}" "${#j[@]}"
   return 0
 }
 
@@ -281,8 +309,12 @@ _coolbash_prompt_tool_version() {
   [[ -n "$_tvr_valr_bin" ]] || return 1
   if [[ -z "${COOLBASH_PROMPT_TOOL_CACHE[$_tvr_valr_bin]+x}" ]]; then
     case "$_tvr_valr_tool" in
-      php)  _tvr_val="$("$_tvr_valr_bin" -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null)" ;;
-      node) _tvr_val="$("$_tvr_valr_bin" --version 2>/dev/null)"; _tvr_val="${_tvr_val#v}"; _tvr_val="${_tvr_val%.*}" ;;
+      php) _tvr_val="$("$_tvr_valr_bin" -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null)" ;;
+      node)
+        _tvr_val="$("$_tvr_valr_bin" --version 2>/dev/null)"
+        _tvr_val="${_tvr_val#v}"
+        _tvr_val="${_tvr_val%.*}"
+        ;;
     esac
     COOLBASH_PROMPT_TOOL_CACHE[$_tvr_valr_bin]="$_tvr_val"
   fi
@@ -311,11 +343,14 @@ _coolbash_prompt_tools() {
 #      octet (LC_ALL=C), ce qui couvre l'UTF-8.
 _coolbash_prompt_osc7() {
   local LC_ALL=C path="$PWD" out="" i c
-  for (( i = 0; i < ${#path}; i++ )); do
+  for ((i = 0; i < ${#path}; i++)); do
     c="${path:i:1}"
     case "$c" in
       [A-Za-z0-9/_.~-]) out+="$c" ;;
-      *) printf -v c '%%%02X' "'$c"; out+="$c" ;;
+      *)
+        printf -v c '%%%02X' "'$c"
+        out+="$c"
+        ;;
     esac
   done
   printf '%s' '\[\e]7;file://'"${HOSTNAME:-localhost}${out}"'\a\]'
@@ -324,8 +359,8 @@ _coolbash_prompt_osc7() {
 #      terminaux) + OSC 777 (notification bureau : foot, urxvt, VTE récents).
 _coolbash_prompt_notify() {
   local ms="${COOLBASH_PROMPT_LAST_MS:-0}" min="${COOLBASH_PROMPT_BELL_MS:-30000}" n cmd dur
-  (( min > 0 && ms >= min )) || return 0
-  read -r n cmd <<< "$(HISTTIMEFORMAT='' builtin history 1 2>/dev/null)"
+  ((min > 0 && ms >= min)) || return 0
+  read -r n cmd <<<"$(HISTTIMEFORMAT='' builtin history 1 2>/dev/null)"
   dur="$(COOLBASH_PROMPT_MIN_MS=0 _coolbash_prompt_duration)"
   printf '%s' '\[\a\e]777;notify;CoolBash;'"${cmd:-Commande terminée} · ${dur}"'\a\]'
 }
@@ -343,9 +378,18 @@ _coolbash_prompt_build() {
   clock='[\t]'
   [[ -n "${s[clock]}" ]] && clock="${s[clock]} \t"
   case "${COOLBASH_PROMPT_HOST_KIND:-local}" in
-    ssh)       hicon="${s[ssh]}";       hcolor="${c[host_hash]}" ;;
-    container) hicon="${s[container]}"; hcolor="${c[host_hash]}" ;;
-    *)         hicon="${s[host]}";      hcolor="${c[user_accent]}" ;;
+    ssh)
+      hicon="${s[ssh]}"
+      hcolor="${c[host_hash]}"
+      ;;
+    container)
+      hicon="${s[container]}"
+      hcolor="${c[host_hash]}"
+      ;;
+    *)
+      hicon="${s[host]}"
+      hcolor="${c[user_accent]}"
+      ;;
   esac
   if [[ $EUID -eq 0 ]]; then
     who="${c[root]}${c[bold]}${s[root]:+${s[root]} }root${c[reset]}"
@@ -354,16 +398,22 @@ _coolbash_prompt_build() {
   else
     who="${c[user]}${c[bold]}${s[user]:+${s[user]} }\u${c[reset]}"
     # FR : chevron rouge après un échec — le repère le plus rapide.
-    if (( ec == 0 )); then chevron="${c[user]}\$${c[reset]}"; else chevron="${c[root]}\$${c[reset]}"; fi
+    if ((ec == 0)); then chevron="${c[user]}\$${c[reset]}"; else chevron="${c[root]}\$${c[reset]}"; fi
   fi
   host="${hcolor} ${hicon:+${hicon}  }\h${c[reset]}"
   [[ -w "$PWD" ]] || ro="${s[ro]:+${s[ro]} }"
-  seg="$(_coolbash_prompt_git)";       [[ -n "$seg" ]] && git=" ${c[git]}${s[branch]:+${s[branch]} }${seg}${c[reset]}"
-  seg="$(_coolbash_prompt_venv)";      [[ -n "$seg" ]] && venv=" ${c[info]}${s[venv]:+${s[venv]} }${seg}${c[reset]}"
-  _coolbash_prompt_tools seg;          [[ -n "$seg" ]] && tools=" ${c[info]}${seg}${c[reset]}"
-  seg="$(_coolbash_prompt_duration)";  [[ -n "$seg" ]] && dur=" ${c[info]}${s[time]:+${s[time]} }${seg}${c[reset]}"
-  seg="$(_coolbash_prompt_jobs)";      [[ -n "$seg" ]] && jobs=" ${c[info]}${seg}${c[reset]}"
-  seg="$(_coolbash_prompt_status "$ec")"; [[ -n "$seg" ]] && err=" ${c[err]} ${seg} ${c[reset]}"
+  seg="$(_coolbash_prompt_git)"
+  [[ -n "$seg" ]] && git=" ${c[git]}${s[branch]:+${s[branch]} }${seg}${c[reset]}"
+  seg="$(_coolbash_prompt_venv)"
+  [[ -n "$seg" ]] && venv=" ${c[info]}${s[venv]:+${s[venv]} }${seg}${c[reset]}"
+  _coolbash_prompt_tools seg
+  [[ -n "$seg" ]] && tools=" ${c[info]}${seg}${c[reset]}"
+  seg="$(_coolbash_prompt_duration)"
+  [[ -n "$seg" ]] && dur=" ${c[info]}${s[time]:+${s[time]} }${seg}${c[reset]}"
+  seg="$(_coolbash_prompt_jobs)"
+  [[ -n "$seg" ]] && jobs=" ${c[info]}${seg}${c[reset]}"
+  seg="$(_coolbash_prompt_status "$ec")"
+  [[ -n "$seg" ]] && err=" ${c[err]} ${seg} ${c[reset]}"
   # FR : titre remis par PS1, sauf si la distribution le fait déjà dans
   #      PROMPT_COMMAND (Arch : /etc/bash.bashrc écrit \033]0;…).
   local title=""

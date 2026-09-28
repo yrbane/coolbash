@@ -35,8 +35,11 @@ case "${LC_ALL:-${LANG:-}}" in
   *) export LANG=C.UTF-8 LC_ALL=C.UTF-8 ;;
 esac
 
-t_ok()   { printf '  \e[32m✔\e[0m %s\n' "$1"; }
-t_fail() { printf '  \e[31m✘\e[0m %s\n' "$1"; COOLBASH_TEST_FAILS=$((COOLBASH_TEST_FAILS + 1)); }
+t_ok() { printf '  \e[32m✔\e[0m %s\n' "$1"; }
+t_fail() {
+  printf '  \e[31m✘\e[0m %s\n' "$1"
+  COOLBASH_TEST_FAILS=$((COOLBASH_TEST_FAILS + 1))
+}
 t_skip() { printf '  \e[33m–\e[0m %s (ignoré)\n' "$1"; }
 
 # assert_eq <description> <attendu> <obtenu>
@@ -61,18 +64,21 @@ assert_not_contains() {
 
 # assert_success <description> <commande...>
 assert_success() {
-  local desc="$1" out rc; shift
-  out="$("$@" 2>&1)"; rc=$?
-  if (( rc == 0 )); then t_ok "$desc"; else t_fail "$desc — code $rc :"$'\n'"$out"; fi
+  local desc="$1" out rc
+  shift
+  out="$("$@" 2>&1)"
+  rc=$?
+  if ((rc == 0)); then t_ok "$desc"; else t_fail "$desc — code $rc :"$'\n'"$out"; fi
 }
 
 # assert_failure <description> <commande...>
 assert_failure() {
-  local desc="$1"; shift
+  local desc="$1"
+  shift
   if "$@" >/dev/null 2>&1; then t_fail "$desc — la commande a réussi alors qu'un échec était attendu"; else t_ok "$desc"; fi
 }
 
-assert_file()    { if [[ -f "$2" ]]; then t_ok "$1"; else t_fail "$1 — fichier absent : $2"; fi; }
+assert_file() { if [[ -f "$2" ]]; then t_ok "$1"; else t_fail "$1 — fichier absent : $2"; fi; }
 assert_no_path() { if [[ ! -e "$2" ]]; then t_ok "$1"; else t_fail "$1 — chemin encore présent : $2"; fi; }
 
 # FR : copie jetable du dépôt (Makefile, cli, modules) pour les tests qui
@@ -81,11 +87,12 @@ make_fake_clone() {
   local dest="$1"
   mkdir -p "${dest}"
   cp -r "${COOLBASH_TEST_ROOT}/Makefile" "${COOLBASH_TEST_ROOT}/install.sh" "${COOLBASH_TEST_ROOT}/cli" \
-     "${COOLBASH_TEST_ROOT}/modules" "${COOLBASH_TEST_ROOT}/tests" "${COOLBASH_TEST_ROOT}/share" "${dest}/"
+    "${COOLBASH_TEST_ROOT}/modules" "${COOLBASH_TEST_ROOT}/tests" "${COOLBASH_TEST_ROOT}/share" \
+    "${COOLBASH_TEST_ROOT}/.editorconfig" "${dest}/"
 }
 
 t_done() {
-  if (( COOLBASH_TEST_FAILS > 0 )); then
+  if ((COOLBASH_TEST_FAILS > 0)); then
     printf '  → %d assertion(s) en échec\n' "${COOLBASH_TEST_FAILS}"
     exit 1
   fi

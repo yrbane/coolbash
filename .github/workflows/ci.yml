@@ -6,15 +6,26 @@ on:
     tags: ['v*']
   pull_request:
 
+# FR : les mêmes shellcheck et shfmt qu'en local — un avertissement propre à une
+#      autre version (SC2120 sur 0.10) a déjà fait rougir la CI pour rien.
+env:
+  SHELLCHECK_VERSION: v0.11.0
+  SHFMT_VERSION: v3.14.1
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Installer shellcheck
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-      - name: Vérification syntaxe + lint
-        run: make verify
+      - name: Installer shellcheck et shfmt (versions épinglées)
+        run: |
+          curl -sSL "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ
+          sudo install -m 755 "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
+          curl -sSL -o shfmt "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION}_linux_amd64"
+          sudo install -m 755 shfmt /usr/local/bin/shfmt
+          shellcheck --version | head -2; shfmt --version
+      - name: Vérification syntaxe + lint + style
+        run: make lint
       - name: Suite de tests
         run: make test
 
@@ -25,11 +36,53 @@ jobs:
     container: debian:13
     steps:
       - name: Installer les outils
-        run: apt-get update -qq && apt-get install -y -qq git make shellcheck xz-utils curl
+        run: |
+          apt-get update -qq && apt-get install -y -qq git make xz-utils curl
+          curl -sSL "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ
+          install -m 755 "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
+          curl -sSL -o shfmt "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION}_linux_amd64"
+          install -m 755 shfmt /usr/local/bin/shfmt
       - uses: actions/checkout@v4
       - name: Vérification + tests sous un utilisateur normal
         run: |
           useradd -m tester
           cp -r . /home/tester/coolbash
           chown -R tester:tester /home/tester/coolbash
-          su tester -c 'cd ~/coolbash && make verify && make test'
+          su tester -c 'cd ~/coolbash && make lint && make test'
+
+  # FR : le scénario d'un nouveau PC — Debian nue, install.sh, premier shell.
+  #      On capture le MOTD et le prompt du premier terminal, comme Arthur.
+  install-froid:
+    runs-on: ubuntu-latest
+    container: debian:13
+    steps:
+      - name: Installer le strict nécessaire
+        run: apt-get update -qq && apt-get install -y -qq git make bsdutils procps
+      - uses: actions/checkout@v4
+      - name: install.sh depuis un clone local
+        run: |
+          useradd -m tester
+          git config --global --add safe.directory "$PWD"
+          git clone -q --bare . /home/tester/src.git
+          git show HEAD:install.sh > /home/tester/install.sh
+          chown -R tester:tester /home/tester
+          su tester -c 'cd && COOLBASH_REPO_URL=/home/tester/src.git COOLBASH_FONT=0 bash install.sh'
+          su tester -c 'cd && grep -c cli/coolbash .bashrc && test -x .coolbash/cli/coolbash'
+      - name: Le premier terminal affiche le MOTD, le temps de démarrage et le prompt CoolBash
+        run: |
+          cat > /home/tester/premier.sh <<'EOF'
+          #!/bin/bash
+          # FR : un vrai tty (script), un shell interactif, le prompt construit puis affiché.
+          cd
+          script -qec 'bash -ic "_coolbash_prompt_build; echo PS1=\$PS1"' /dev/null
+          EOF
+          chown tester:tester /home/tester/premier.sh
+          su tester -c 'bash ~/premier.sh' > premier-shell.txt 2>&1 || true
+          sed 's/\x1b\[[0-9;]*m//g' premier-shell.txt
+          grep -q 'Kernel:' premier-shell.txt
+          grep -q 'démarrage' premier-shell.txt
+          grep -q 'PS1=.* at ' premier-shell.txt
+      - name: coolbash doctor et update
+        run: |
+          su tester -c 'cd && bash .coolbash/cli/coolbash doctor' || true
+          su tester -c 'cd && bash .coolbash/cli/coolbash version'

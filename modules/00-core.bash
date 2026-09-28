@@ -34,7 +34,7 @@ export EDITOR="${EDITOR:-nano}"
 export VISUAL="${VISUAL:-nano}"
 export PAGER="${PAGER:-less}"
 export LESS='-R --mouse --ignore-case --LONG-PROMPT --prompt="Less → %f  %lb/%L  (line %l)"'
-export LESSSECURE=1        # FR: Désactive les fonctions risquées de less (!, |)
+export LESSSECURE=1 # FR: Désactive les fonctions risquées de less (!, |)
 
 # FR: Sécurité douce: ne pas écraser par accident, permissions par défaut restrictives.
 umask 027
@@ -52,8 +52,8 @@ shopt -s autocd cdspell dirspell checkjobs extglob globstar histappend cmdhist c
 # FR : un alias homonyme (ancienne version, ~/.bash_aliases) serait développé à la
 #      lecture de « nom() { » → erreur de syntaxe au rechargement du .bashrc.
 unalias path_prepend path_append 2>/dev/null
-path_prepend() { case ":$PATH:" in *":$1:"*) ;; *) PATH="$1:$PATH";; esac; }
-path_append()  { case ":$PATH:" in *":$1:"*) ;; *) PATH="$PATH:$1";; esac; }
+path_prepend() { case ":$PATH:" in *":$1:"*) ;; *) PATH="$1:$PATH" ;; esac }
+path_append() { case ":$PATH:" in *":$1:"*) ;; *) PATH="$PATH:$1" ;; esac }
 
 # FR: Ajout idempotent d'une fonction en tête de PROMPT_COMMAND (tableau ou
 #     chaîne, selon la version de bash). Utilisé par 10-history et 50-prompt.

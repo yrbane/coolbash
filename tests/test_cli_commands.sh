@@ -25,17 +25,17 @@ assert_eq "la version de la CLI est celle en tête du CHANGELOG" "${changelog_ve
 mods="${COOLBASH_TEST_TMP}/modules"
 mkdir -p "${mods}"
 # FR : créés dans le désordre pour vérifier que c'est le nom qui fait l'ordre.
-echo 'COOLBASH_TEST_ORDER+="c"' > "${mods}/90-last.bash"
-echo 'COOLBASH_TEST_ORDER+="a"' > "${mods}/00-first.bash"
-echo 'COOLBASH_TEST_ORDER+="b"' > "${mods}/50-middle.bash"
-echo 'COOLBASH_TEST_ORDER+="X"' > "${mods}/not-a-module.txt"
+echo 'COOLBASH_TEST_ORDER+="c"' >"${mods}/90-last.bash"
+echo 'COOLBASH_TEST_ORDER+="a"' >"${mods}/00-first.bash"
+echo 'COOLBASH_TEST_ORDER+="b"' >"${mods}/50-middle.bash"
+echo 'COOLBASH_TEST_ORDER+="X"' >"${mods}/not-a-module.txt"
 order="$(COOLBASH_MODULE_DIR="${mods}" bash --norc --noprofile -c 'source "$1" init; echo "${COOLBASH_TEST_ORDER}"' _ "${CLI}")"
 assert_eq "init charge les modules *.bash dans l'ordre lexical, et rien d'autre" "abc" "${order}"
 
 # --- init : un module qui échoue n'empêche pas les suivants ------------------
 mkdir -p "${mods}2"
-echo 'false' > "${mods}2/10-fails.bash"
-echo 'COOLBASH_TEST_OK=1' > "${mods}2/20-next.bash"
+echo 'false' >"${mods}2/10-fails.bash"
+echo 'COOLBASH_TEST_OK=1' >"${mods}2/20-next.bash"
 res="$(COOLBASH_MODULE_DIR="${mods}2" bash --norc --noprofile -c 'source "$1" init 2>/dev/null; echo "rc=$? ok=${COOLBASH_TEST_OK-}"' _ "${CLI}")"
 assert_eq "init continue après un module en échec et renvoie 0" "rc=0 ok=1" "${res}"
 
@@ -60,10 +60,12 @@ assert_success "coolbash verify via COOLBASH_REPO délègue au clone" \
   env COOLBASH_REPO="${clone}" COOLBASH_PREFIX="${COOLBASH_TEST_TMP}/fake" bash "${fake}/coolbash" verify
 
 # --- doctor ------------------------------------------------------------------
-home="${COOLBASH_TEST_TMP}/dhome"; mkdir -p "${home}"
+home="${COOLBASH_TEST_TMP}/dhome"
+mkdir -p "${home}"
 make_fake_clone "${home}/clone"
 make -s -C "${home}/clone" install PREFIX="${home}/.coolbash" BASHRC="${home}/.bashrc" >/dev/null
-doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1)"; rc=$?
+doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1)"
+rc=$?
 assert_eq "coolbash doctor renvoie 0 sur une installation saine" "0" "${rc}"
 assert_contains "doctor vérifie la version de bash" "${doc}" "bash"
 assert_contains "doctor vérifie la ligne du .bashrc" "${doc}" ".bashrc"
@@ -74,8 +76,9 @@ fc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash
 assert_contains "coolbash fortune <thème> respecte le thème" "${fc,,}" "chuck norris"
 assert_contains "coolbash help mentionne fortune" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" help)" "fortune"
 assert_contains "doctor vérifie la locale" "${doc}" "locale"
-: > "${home}/.bashrc"
-doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1)"; rc=$?
+: >"${home}/.bashrc"
+doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1)"
+rc=$?
 assert_eq "doctor échoue si le .bashrc ne charge pas CoolBash" "1" "${rc}"
 assert_contains "…et le dit" "${doc}" "✘"
 

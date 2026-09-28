@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.16.0 — 2026-09-29 · « Lint, style et installation à froid »
+### Ajouté
+- **`make lint`** (= `make verify`) : `bash -n`, shellcheck, et **shfmt** si présent, fatal au
+  moindre écart de style. **`make fmt`** applique shfmt. Options dans `.editorconfig`
+  (2 espaces, `case` indenté, opérateur binaire en début de ligne).
+- **CI : versions épinglées** de shellcheck (0.11.0) et shfmt (3.14.1), identiques sur Ubuntu et
+  Debian, pour ne plus rougir sur un avertissement propre à une version.
+- **CI : job « install-froid »** : Debian 13 nue, `install.sh` depuis un clone local, premier shell
+  interactif capturé (`script`) : le MOTD, la ligne de démarrage et un `PS1` doivent y être. Puis
+  `coolbash doctor` et `version`. Le scénario d'un nouveau PC, rejoué à chaque commit.
+- `coolbash doctor` liste shfmt parmi les outils optionnels.
+### Modifié
+- Tout le code passé au format shfmt (21 fichiers, aucun changement de comportement : la suite
+  de tests est identique avant et après).
+
 ## 0.15.3 — 2026-09-29 · « chuck norris, en minuscules aussi »
 ### Corrigé
 - Tests : certains facts écrivent « chuck norris » sans majuscules ; les tests du thème `chuck`

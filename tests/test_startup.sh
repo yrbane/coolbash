@@ -44,7 +44,7 @@ assert_eq "un second source ~/.bashrc ré-affiche le temps (sans l'âge du proce
 out="$(printf 'source "%s" init\nsleep 1\nsource "%s" init\n' "${CLI}" "${CLI}" \
   | MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" COOLBASH_MODULE_DIR="${COOLBASH_TEST_ROOT}/modules" \
     bash --norc --noprofile -i 2>/dev/null | grep 'démarrage' | tail -1 | grep -oE '[0-9]+ ms' | head -1 | grep -oE '[0-9]+')"
-if [[ "${out}" =~ ^[0-9]+$ ]] && (( out < 1000 )); then
+if [[ "${out}" =~ ^[0-9]+$ ]] && ((out < 1000)); then
   t_ok "le second affichage ne compte pas le temps écoulé depuis l'ouverture du shell (${out} ms)"
 else
   t_fail "le second affichage compte l'âge du shell : ${out} ms"
@@ -54,7 +54,7 @@ fi
 out="$(printf 'sleep 1\nsource "%s" init\n' "${CLI}" \
   | MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" COOLBASH_MODULE_DIR="${COOLBASH_TEST_ROOT}/modules" \
     bash --norc --noprofile -i 2>/dev/null | grep 'démarrage' | grep -oE '[0-9]+ ms' | head -1 | grep -oE '[0-9]+')"
-if [[ "${out}" =~ ^[0-9]+$ ]] && (( out >= 1000 )); then
+if [[ "${out}" =~ ^[0-9]+$ ]] && ((out >= 1000)); then
   t_ok "le total inclut ce qui précède la ligne source (${out} ms après un sleep 1)"
 else
   t_fail "le total ignore ce qui précède la ligne source : ${out} ms après un sleep 1"

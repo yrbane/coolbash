@@ -45,7 +45,7 @@ assert_contains "_coolbash_history_sync est dans PROMPT_COMMAND" \
   "_coolbash_history_sync"
 hist="${COOLBASH_TEST_TMP}/hist"
 seen="$(printf 'source "%s"; source "%s"\necho coolbash-marker\ncat "$HISTFILE"\n' "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/10-history.bash" \
-        | MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" HISTFILE="${hist}" bash --norc --noprofile -i 2>/dev/null | grep -c "echo coolbash-marker")"
+  | MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" HISTFILE="${hist}" bash --norc --noprofile -i 2>/dev/null | grep -c "echo coolbash-marker")"
 assert_eq "une commande est écrite dans HISTFILE dès le prompt suivant" "1" "${seen}"
 
 # --- 60-completion : chargement différé au premier Tab (bug : jamais appelé) --
@@ -67,10 +67,12 @@ mod() { COOLBASH_T_ROOT="${COOLBASH_TEST_ROOT}" MOTD_DISABLE=1 HOME="${COOLBASH_
 
 # FR : `alias please='sudo !!'` ne marchait pas — pas d'expansion d'historique dans un alias.
 assert_eq "please est une fonction, plus un alias" "function" "$(mod 30-aliases.bash 'type -t please')"
-fakebin="${COOLBASH_TEST_TMP}/fakebin"; mkdir -p "${fakebin}"
-printf '#!/bin/sh\necho "SUDO:$*"\n' > "${fakebin}/sudo"; chmod +x "${fakebin}/sudo"
+fakebin="${COOLBASH_TEST_TMP}/fakebin"
+mkdir -p "${fakebin}"
+printf '#!/bin/sh\necho "SUDO:$*"\n' >"${fakebin}/sudo"
+chmod +x "${fakebin}/sudo"
 got="$(printf 'source "%s"; source "%s"\necho bonjour le monde\nplease\n' "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/30-aliases.bash" \
-      | MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" PATH="${fakebin}:${PATH}" bash --norc --noprofile -i 2>/dev/null | grep '^SUDO:')"
+  | MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" PATH="${fakebin}:${PATH}" bash --norc --noprofile -i 2>/dev/null | grep '^SUDO:')"
 assert_contains "please relance la dernière commande avec sudo" "${got}" "echo bonjour le monde"
 
 # FR : vu en 0.9.3 — `source ~/.bashrc` dans un shell où `please` est encore l'alias d'une
@@ -93,7 +95,10 @@ assert_no_path "…aucun ~/.gitconfig créé au chargement" "${COOLBASH_TEST_TMP
 #      Les infos système sont lues dans /proc, /sys et /etc/os-release : zéro processus.
 sysinfo="$(mod 70-motd.bash 'PATH=/nonexistent; _coolbash_motd_sysinfo')"
 assert_contains "MOTD : titre user@host sans aucun processus" "${sysinfo}" "${USER:-$(id -un)}@${HOSTNAME}"
-assert_contains "MOTD : ligne OS depuis /etc/os-release" "${sysinfo}" "OS: $(. /etc/os-release; echo "$PRETTY_NAME")"
+assert_contains "MOTD : ligne OS depuis /etc/os-release" "${sysinfo}" "OS: $(
+  . /etc/os-release
+  echo "$PRETTY_NAME"
+)"
 assert_contains "MOTD : noyau depuis /proc" "${sysinfo}" "Kernel: $(uname -r)"
 assert_eq "MOTD : uptime formaté (days/hours/mins)" "1" "$(printf '%s\n' "${sysinfo}" | grep -cE '^Uptime: ([0-9]+ days?, )?([0-9]+ hours?, )?[0-9]+ mins?$')"
 assert_contains "MOTD : la date du jour, par le printf intégré à bash" "${sysinfo}" "Date: $(date +%Y-%m-%d)"
@@ -119,21 +124,23 @@ assert_not_contains "COOLBASH_MOTD_HIDE=load coupe la ligne de charge" "${hidden
 assert_not_contains "COOLBASH_MOTD_HIDE=date coupe la date" "${hidden}" "Date:"
 assert_contains "…mais garde le reste" "${hidden}" "Kernel:"
 # redémarrage requis : modules du noyau courant disparus (Arch) ou fichier drapeau (Debian)
-rb="${COOLBASH_TEST_TMP}/reboot"; mkdir -p "${rb}/modules/$(uname -r)" "${rb}/modules/9.9.9-other"
+rb="${COOLBASH_TEST_TMP}/reboot"
+mkdir -p "${rb}/modules/$(uname -r)" "${rb}/modules/9.9.9-other"
 assert_empty "reboot : modules du noyau courant présents, rien à dire" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/modules' '${rb}/absent'")"
 rm -r "${rb}/modules/$(uname -r)"
 assert_contains "reboot : les modules du noyau qui tourne ont disparu → Reboot required" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/modules' '${rb}/absent'" | strip_colors)" "Reboot required"
-: > "${rb}/flag"
+: >"${rb}/flag"
 assert_contains "reboot : fichier /var/run/reboot-required → Reboot required" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/nomodules' '${rb}/flag'" | strip_colors)" "Reboot required"
 assert_empty "reboot : sans dossier de modules ni drapeau (conteneur), rien" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/nomodules' '${rb}/absent'")"
 # unités systemd en échec : un seul systemctl, affiché seulement si > 0
-printf '#!/bin/bash\nprintf "nginx.service loaded failed failed Web\\ncups.service loaded failed failed Print\\n"\n' >| "${fakebin}/systemctl"; chmod +x "${fakebin}/systemctl"
+printf '#!/bin/bash\nprintf "nginx.service loaded failed failed Web\\ncups.service loaded failed failed Print\\n"\n' >|"${fakebin}/systemctl"
+chmod +x "${fakebin}/systemctl"
 assert_contains "failed : deux unités en échec, comptées et nommées" "$(mod 70-motd.bash "PATH='${fakebin}'; _coolbash_motd_failed" | strip_colors)" "Failed units: 2 (nginx.service, cups.service)"
-printf '#!/bin/bash\nexit 0\n' >| "${fakebin}/systemctl"
+printf '#!/bin/bash\nexit 0\n' >|"${fakebin}/systemctl"
 assert_empty "failed : aucune unité en échec, pas de ligne" "$(mod 70-motd.bash "PATH='${fakebin}'; _coolbash_motd_failed")"
 assert_empty "failed : sans systemctl, rien" "$(mod 70-motd.bash "PATH=/nonexistent; _coolbash_motd_failed")"
 # disques : / toujours, les autres seulement à partir de 80 %, jamais tmpfs ni loop
-cat >| "${fakebin}/df" <<'FAKEDF'
+cat >|"${fakebin}/df" <<'FAKEDF'
 #!/bin/bash
 # FR : PATH réduit au fakebin — seulement des builtins ici.
 printf '%s\n' 'Filesystem Size Used Avail Use% Mounted on' \
@@ -153,7 +160,7 @@ assert_not_contains "disk : les loop (snap) sont ignorés" "${disks}" "snap"
 assert_not_contains "disk : tmpfs ignoré" "${disks}" "/run"
 # note personnelle
 mkdir -p "${COOLBASH_TEST_TMP}/.coolbash"
-printf 'Penser au dentiste\nRenouveler le certificat\n' >| "${COOLBASH_TEST_TMP}/.coolbash/motd.txt"
+printf 'Penser au dentiste\nRenouveler le certificat\n' >|"${COOLBASH_TEST_TMP}/.coolbash/motd.txt"
 noted="$(mod 70-motd.bash 'PATH=/nonexistent; _coolbash_motd_sysinfo')"
 assert_contains "note : ~/.coolbash/motd.txt est affiché" "${noted}" "Penser au dentiste"
 assert_contains "note : toutes les lignes" "${noted}" "Renouveler le certificat"
@@ -163,57 +170,71 @@ rm "${COOLBASH_TEST_TMP}/.coolbash/motd.txt"
 # FR : citations françaises embarquées (share/fortunes/<thème>.txt), tirées en pur bash.
 fort() { mod 70-motd.bash "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' PATH=/nonexistent; $1 _coolbash_fortune t && printf '%s' \"\$t\""; }
 assert_eq "fortune embarquée : une citation sans aucun processus" "1" "$(fort '' | grep -c .)"
-for _ in 1 2 3; do fc="$(fort 'COOLBASH_FORTUNE=chuck')"; assert_contains "COOLBASH_FORTUNE=chuck ne tire que des facts Chuck Norris" "${fc,,}" "chuck norris"; done
+for _ in 1 2 3; do
+  fc="$(fort 'COOLBASH_FORTUNE=chuck')"
+  assert_contains "COOLBASH_FORTUNE=chuck ne tire que des facts Chuck Norris" "${fc,,}" "chuck norris"
+done
 assert_eq "un thème inconnu retombe sur tous les thèmes" "1" "$(fort 'COOLBASH_FORTUNE=inexistant' | grep -c .)"
-mkdir -p "${COOLBASH_TEST_TMP}/.coolbash/fortunes"; printf 'ma citation perso\n' >| "${COOLBASH_TEST_TMP}/.coolbash/fortunes/perso.txt"
+mkdir -p "${COOLBASH_TEST_TMP}/.coolbash/fortunes"
+printf 'ma citation perso\n' >|"${COOLBASH_TEST_TMP}/.coolbash/fortunes/perso.txt"
 assert_eq "les fichiers de ~/.coolbash/fortunes/ sont des thèmes" "ma citation perso" "$(fort 'COOLBASH_FORTUNE=perso')"
 for f in "${COOLBASH_TEST_ROOT}"/share/fortunes/*.txt; do
-  n="$(grep -c . "$f")"; th="$(basename "$f" .txt)"
-  if (( n >= 25 )); then t_ok "thème ${th} : ${n} citations"; else t_fail "thème ${th} : ${n} citations (minimum 25)"; fi
+  n="$(grep -c . "$f")"
+  th="$(basename "$f" .txt)"
+  if ((n >= 25)); then t_ok "thème ${th} : ${n} citations"; else t_fail "thème ${th} : ${n} citations (minimum 25)"; fi
   assert_eq "thème ${th} : pas d'espace en fin de ligne ni de ligne vide" "0" "$(grep -cE ' $|^$' "$f")"
 done
 # FR : chaque thème a la même probabilité, quelle que soit sa taille (1 ligne contre 1000).
-printf 'A\n' >| "${COOLBASH_TEST_TMP}/.coolbash/fortunes/petit.txt"
-yes B | head -1000 >| "${COOLBASH_TEST_TMP}/.coolbash/fortunes/gros.txt"
+printf 'A\n' >|"${COOLBASH_TEST_TMP}/.coolbash/fortunes/petit.txt"
+yes B | head -1000 >|"${COOLBASH_TEST_TMP}/.coolbash/fortunes/gros.txt"
 n_petit="$(mod 70-motd.bash 'COOLBASH_ROOT=/nonexistent COOLBASH_FORTUNE="petit gros"; n=0; for _ in $(seq 400); do _coolbash_fortune t; [[ $t == A ]] && n=$((n+1)); done; echo $n')"
-if (( n_petit >= 140 && n_petit <= 260 )); then t_ok "chaque thème a la même probabilité, quelle que soit sa taille (${n_petit}/400 pour le petit)"; else t_fail "tirage biaisé par la taille du thème : ${n_petit}/400 pour le petit (attendu ≈ 200)"; fi
-if (( $(grep -c . "${COOLBASH_TEST_ROOT}/share/fortunes/chuck.txt") >= 5000 )); then t_ok "chuck.txt : plus de 5000 facts"; else t_fail "chuck.txt : moins de 5000 facts"; fi
+if ((n_petit >= 140 && n_petit <= 260)); then t_ok "chaque thème a la même probabilité, quelle que soit sa taille (${n_petit}/400 pour le petit)"; else t_fail "tirage biaisé par la taille du thème : ${n_petit}/400 pour le petit (attendu ≈ 200)"; fi
+if (($(grep -c . "${COOLBASH_TEST_ROOT}/share/fortunes/chuck.txt") >= 5000)); then t_ok "chuck.txt : plus de 5000 facts"; else t_fail "chuck.txt : moins de 5000 facts"; fi
 assert_not_contains "doctor ne réclame plus fastfetch" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" doctor 2>&1)" "fastfetch"
 
 assert_eq "up ne laisse pas fuiter sa variable de boucle" "" "$(cd "${COOLBASH_TEST_TMP}" && mod 40-functions.bash 'up 1; echo "${i-}"')"
 assert_eq "timer mesure en millisecondes" "1" "$(mod 40-functions.bash 'timer sleep 0.2' | grep -cE '0\.2[0-9]{2}s')"
 assert_contains "workon sans .venv : message clair" "$(cd "${COOLBASH_TEST_TMP}" && mod 34-python-venv.bash 'workon')" "No .venv"
-mkdir -p "${COOLBASH_TEST_TMP}/proj/.venv/bin"; echo 'return 3' > "${COOLBASH_TEST_TMP}/proj/.venv/bin/activate"
+mkdir -p "${COOLBASH_TEST_TMP}/proj/.venv/bin"
+echo 'return 3' >"${COOLBASH_TEST_TMP}/proj/.venv/bin/activate"
 assert_eq "workon : une activation en échec n'affiche pas « No .venv »" "0" "$(cd "${COOLBASH_TEST_TMP}/proj" && mod 34-python-venv.bash 'workon' | grep -c 'No .venv')"
 
 # --- 0.9.0 : historique, fzf, pacman, extract --------------------------------
 assert_contains "HISTIGNORE écarte history/fg/bg/jobs" "$(mod 10-history.bash 'echo "$HISTIGNORE"')" "history*:fg:bg:jobs"
-kb="${COOLBASH_TEST_TMP}/kb.bash"; echo 'COOLBASH_TEST_KB=loaded' > "${kb}"
-printf '#!/bin/sh\nexit 0\n' > "${fakebin}/fzf"; chmod +x "${fakebin}/fzf"
+kb="${COOLBASH_TEST_TMP}/kb.bash"
+echo 'COOLBASH_TEST_KB=loaded' >"${kb}"
+printf '#!/bin/sh\nexit 0\n' >"${fakebin}/fzf"
+chmod +x "${fakebin}/fzf"
 hist_i() { printf 'source "%s"; source "%s"\necho "kb=${COOLBASH_TEST_KB-none}"\n' "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/10-history.bash" | env "$@" MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" HISTFILE="${COOLBASH_TEST_TMP}/h2" PATH="${fakebin}:${PATH}" COOLBASH_FZF_KEYBINDINGS="${kb}" bash --norc --noprofile -i 2>/dev/null | grep -o 'kb=[a-z]*' | tail -1; }
 assert_eq "shell interactif + fzf : raccourcis fzf (Ctrl-R) chargés" "kb=loaded" "$(hist_i)"
 assert_eq "COOLBASH_FZF=0 : pas de raccourcis fzf" "kb=none" "$(hist_i COOLBASH_FZF=0)"
 assert_eq "mode safe : pas de raccourcis fzf" "kb=none" "$(hist_i COOLBASH_MODE=safe)"
 assert_eq "shell non interactif : rien n'est chargé" "none" "$(PATH="${fakebin}:${PATH}" COOLBASH_FZF_KEYBINDINGS="${kb}" mod 10-history.bash 'echo "${COOLBASH_TEST_KB-none}"')"
 
-pm="${COOLBASH_TEST_TMP}/pm"; mkdir -p "${pm}"; printf '#!/bin/sh\nexit 0\n' > "${pm}/pacman"; chmod +x "${pm}/pacman"
+pm="${COOLBASH_TEST_TMP}/pm"
+mkdir -p "${pm}"
+printf '#!/bin/sh\nexit 0\n' >"${pm}/pacman"
+chmod +x "${pm}/pacman"
 for t in bash env ls grep dircolors; do p="$(command -v "$t")" && ln -sf "$p" "${pm}/$t"; done
 assert_contains "pacman détecté (sans apt) : mêmes alias, routés vers pacman" "$(PATH="${pm}" mod 30-aliases.bash 'alias ain; alias aug')" "pacman -S"
 
-ex="${COOLBASH_TEST_TMP}/ex"; mkdir -p "${ex}/src"; echo salut > "${ex}/src/a.txt"
+ex="${COOLBASH_TEST_TMP}/ex"
+mkdir -p "${ex}/src"
+echo salut >"${ex}/src/a.txt"
 tar -czf "${ex}/pack.tar.gz" -C "${ex}/src" a.txt
 (cd "${ex}" && mod 40-functions.bash 'extract -d pack.tar.gz' >/dev/null)
 assert_file "extract -d : extrait dans un dossier au nom de l'archive" "${ex}/pack/a.txt"
 assert_no_path "…et pas dans le dossier courant" "${ex}/a.txt"
 (cd "${ex}" && mod 40-functions.bash 'extract pack.tar.gz' >/dev/null)
 assert_file "extract sans -d : dossier courant, comme avant" "${ex}/a.txt"
-: > "${ex}/x.rar"
+: >"${ex}/x.rar"
 out="$(cd "${ex}" && PATH="${pm}" mod 40-functions.bash 'extract x.rar; echo "rc=$?"')"
 assert_contains "extract : outil manquant signalé par son nom" "${out}" "unrar"
 assert_contains "…avec un code d'erreur" "${out}" "rc=3"
 
 # --- 35-toolchains : SDK dans le PATH seulement s'ils existent, nvm paresseux --
-th="${COOLBASH_TEST_TMP}/th"; mkdir -p "${th}"
+th="${COOLBASH_TEST_TMP}/th"
+mkdir -p "${th}"
 tc() { MOTD_DISABLE=1 HOME="${th}" PATH=/usr/bin:/bin bash --norc --noprofile -c 'source "$1"; source "$2"; shift 2; eval "$*"' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/35-toolchains.bash" "$@" 2>&1; }
 assert_eq "aucun SDK installé : PATH inchangé, rien d'exporté" "/usr/bin:/bin||" "$(tc 'echo "$PATH|${PNPM_HOME-}|${ANDROID_HOME-}"')"
 mkdir -p "${th}/.cargo/bin" "${th}/.local/share/pnpm" "${th}/Android/Sdk/platform-tools" "${th}/Android/Sdk/emulator" "${th}/.foundry/bin"
@@ -227,18 +248,23 @@ assert_eq "rechargé deux fois : pas de doublon dans le PATH" "1" "$(tc 'source 
 # FR : nvm.sh coûte ~700 ms par shell. On met le node par défaut dans le PATH en lisant
 #      ~/.nvm/alias/default (zéro processus) et `nvm` ne se charge qu'au premier appel.
 mkdir -p "${th}/.nvm/alias" "${th}/.nvm/versions/node/v20.1.0/bin" "${th}/.nvm/versions/node/v24.14.0/bin"
-printf 'echo x >> "%s/nvm.loaded"\nnvm() { echo "vrai nvm: $*"; }\n' "${th}" > "${th}/.nvm/nvm.sh"
-echo '24.14.0' > "${th}/.nvm/alias/default"
+printf 'echo x >> "%s/nvm.loaded"\nnvm() { echo "vrai nvm: $*"; }\n' "${th}" >"${th}/.nvm/nvm.sh"
+echo '24.14.0' >"${th}/.nvm/alias/default"
 assert_contains "node par défaut (alias exact) dans le PATH" ":$(tc 'echo "$PATH"'):" ":${th}/.nvm/versions/node/v24.14.0/bin:"
-echo '20' > "${th}/.nvm/alias/default"
+echo '20' >"${th}/.nvm/alias/default"
 assert_contains "alias partiel (20) : version installée correspondante" ":$(tc 'echo "$PATH"'):" ":${th}/.nvm/versions/node/v20.1.0/bin:"
-echo 'lts/*' > "${th}/.nvm/alias/default"
+echo 'lts/*' >"${th}/.nvm/alias/default"
 assert_contains "alias non résolu (lts/*) : la plus récente installée" ":$(tc 'echo "$PATH"'):" ":${th}/.nvm/versions/node/v24.14.0/bin:"
-rm -f "${th}/nvm.loaded"; tc 'true' >/dev/null
+rm -f "${th}/nvm.loaded"
+tc 'true' >/dev/null
 assert_no_path "nvm.sh n'est PAS chargé au démarrage" "${th}/nvm.loaded"
 assert_eq "NVM_DIR exporté" "${th}/.nvm" "$(tc 'echo "$NVM_DIR"')"
 assert_eq "premier appel à nvm : charge nvm.sh puis relaie les arguments" "vrai nvm: use 20" "$(tc 'nvm use 20')"
-assert_eq "COOLBASH_NVM_LAZY=0 : chargement immédiat, comme avant" "1" "$(rm -f "${th}/nvm.loaded"; COOLBASH_NVM_LAZY=0 tc 'true' >/dev/null; wc -l < "${th}/nvm.loaded")"
+assert_eq "COOLBASH_NVM_LAZY=0 : chargement immédiat, comme avant" "1" "$(
+  rm -f "${th}/nvm.loaded"
+  COOLBASH_NVM_LAZY=0 tc 'true' >/dev/null
+  wc -l <"${th}/nvm.loaded"
+)"
 assert_eq "mode safe : ni nvm ni SDK" "/usr/bin:/bin" "$(COOLBASH_MODE=safe tc 'echo "$PATH"')"
 
 t_done

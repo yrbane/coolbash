@@ -16,10 +16,10 @@ for _ in $(seq 1 "${runs}"); do
   MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" COOLBASH_MODULE_DIR="${COOLBASH_TEST_ROOT}/modules" \
     bash --norc --noprofile -c 'source "$1" init' _ "${CLI}" >/dev/null 2>&1
   t1="${EPOCHREALTIME//[.,]/}"
-  total=$(( total + (t1 - t0) / 1000 ))
+  total=$((total + (t1 - t0) / 1000))
 done
-avg=$(( total / runs ))
-if (( avg <= budget )); then
+avg=$((total / runs))
+if ((avg <= budget)); then
   t_ok "init complet en ${avg} ms en moyenne (budget ${budget} ms)"
 else
   t_fail "init complet trop lent : ${avg} ms en moyenne (budget ${budget} ms)"

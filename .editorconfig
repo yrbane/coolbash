@@ -1,0 +1,28 @@
+# FR : lu par shfmt (make lint / make fmt) et par les éditeurs.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{bash,sh}]
+indent_style = space
+indent_size = 2
+switch_case_indent = true
+binary_next_line = true
+
+# FR : cli/coolbash et cli/coolbash-font n'ont pas d'extension. Un motif avec
+#      « / » est ancré à la racine, d'où une section séparée.
+[cli/*]
+indent_style = space
+indent_size = 2
+switch_case_indent = true
+binary_next_line = true
+
+[{Makefile,*.mk}]
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false
