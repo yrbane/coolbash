@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.1 — 2026-09-29 · « Formaté »
+### Corrigé
+- `make lint` refusait le dépôt (deux lignes de `cheat` hors format shfmt) : la CI de la 0.17.0 était
+  rouge et elle n'a pas été taguée. Reformaté, rien d'autre.
+
 ## 0.17.0 — 2026-09-29 · « Sept commandes du quotidien »
 ### Ajouté
 - **`backup fichier dossier…`** : copie horodatée à côté, `nom.AAAA-MM-JJ-HHMM.bak`, `cp -a`

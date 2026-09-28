@@ -81,7 +81,10 @@ assert_file "fortune --add crée ~/.coolbash/fortunes/perso.txt" "${home}/.coolb
 assert_contains "fortune --add annonce le fichier et le nombre" "${fa}" "perso.txt"
 HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" fortune --add "Une deuxième" boulot >/dev/null 2>&1
 assert_eq "fortune --add <texte> <thème> écrit dans le thème demandé" "Une deuxième" "$(cat "${home}/.coolbash/fortunes/boulot.txt")"
-assert_eq "fortune --add sans texte → erreur, code 1" "1" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" fortune --add >/dev/null 2>&1; echo $?)"
+assert_eq "fortune --add sans texte → erreur, code 1" "1" "$(
+  HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" fortune --add >/dev/null 2>&1
+  echo $?
+)"
 assert_eq "…et le thème perso est tiré par coolbash fortune perso" "Ma première citation" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" fortune perso)"
 # bench : N démarrages, moyenne, et le détail par module
 bn="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" bench 2 2>&1)"

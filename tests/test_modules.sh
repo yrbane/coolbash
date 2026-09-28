@@ -268,9 +268,13 @@ assert_eq "COOLBASH_NVM_LAZY=0 : chargement immédiat, comme avant" "1" "$(
 assert_eq "mode safe : ni nvm ni SDK" "/usr/bin:/bin" "$(COOLBASH_MODE=safe tc 'echo "$PATH"')"
 
 # --- 0.17.0 : sept commandes du quotidien ------------------------------------
-fb="${COOLBASH_TEST_TMP}/fb17"; mkdir -p "${fb}"
+fb="${COOLBASH_TEST_TMP}/fb17"
+mkdir -p "${fb}"
 # backup : copie horodatée à côté, fichiers et dossiers
-bk="${COOLBASH_TEST_TMP}/bk"; mkdir -p "${bk}/dossier"; printf 'contenu\n' >| "${bk}/fichier.conf"; printf 'x\n' >| "${bk}/dossier/a"
+bk="${COOLBASH_TEST_TMP}/bk"
+mkdir -p "${bk}/dossier"
+printf 'contenu\n' >|"${bk}/fichier.conf"
+printf 'x\n' >|"${bk}/dossier/a"
 out="$(cd "${bk}" && mod 40-functions.bash 'backup fichier.conf dossier')"
 set -- "${bk}"/fichier.conf.[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9].bak
 assert_eq "backup : un fichier → fichier.conf.AAAA-MM-JJ-HHMM.bak" "1" "$([[ -f "$1" ]] && echo $#)"
@@ -280,7 +284,7 @@ assert_eq "backup : un dossier aussi (copie récursive)" "1" "$([[ -d "$1" ]] &&
 assert_contains "backup : annonce chaque copie" "${out}" ".bak"
 assert_eq "backup : fichier absent → erreur, code 1" "1" "$(cd "${bk}" && mod 40-functions.bash 'backup absent >/dev/null 2>&1; echo $?')"
 # whoport : qui tient un port (ss, sinon lsof) — faux ss
-cat >| "${fb}/ss" <<'FAKESS'
+cat >|"${fb}/ss" <<'FAKESS'
 #!/bin/bash
 printf '%s\n' 'tcp LISTEN 0 511 *:8080 *:* users:(("node",pid=4242,fd=19))' 'udp UNCONN 0 0 0.0.0.0:8080 0.0.0.0:* users:(("dnsmasq",pid=77,fd=4))'
 FAKESS
@@ -290,11 +294,12 @@ assert_contains "whoport : nom du processus" "${wp}" "node"
 assert_contains "whoport : PID" "${wp}" "4242"
 assert_contains "whoport : protocole" "${wp}" "tcp"
 assert_contains "whoport : plusieurs écouteurs listés" "${wp}" "dnsmasq"
-printf '#!/bin/bash\nexit 0\n' >| "${fb}/ss"
+printf '#!/bin/bash\nexit 0\n' >|"${fb}/ss"
 assert_contains "whoport : port libre → le dit" "$(mod 40-functions.bash "PATH='${fb}'; whoport 8080 2>&1")" "libre"
 assert_eq "whoport : sans argument → usage, code 1" "1" "$(mod 40-functions.bash 'whoport >/dev/null 2>&1; echo $?')"
 # serve : premier port libre, python3 sinon php, URL affichée — faux python3
-printf '#!/bin/bash\necho "python3 $*"\n' >| "${fb}/python3"; chmod +x "${fb}/python3"
+printf '#!/bin/bash\necho "python3 $*"\n' >|"${fb}/python3"
+chmod +x "${fb}/python3"
 sv="$(cd "${bk}" && mod 40-functions.bash "PATH='${fb}'; serve . 8123")"
 assert_contains "serve : lance http.server sur le port demandé" "${sv}" "python3 -m http.server --directory . 8123"
 assert_contains "serve : affiche l'URL" "${sv}" "http://localhost:8123/"
@@ -304,10 +309,11 @@ assert_contains "serve : ni python3 ni php → message clair" "$(mod 40-function
 port="$(mod 40-functions.bash 'PATH=/nonexistent; _coolbash_free_port 8000; echo')"
 assert_eq "_coolbash_free_port renvoie un port numérique" "1" "$(printf '%s' "${port}" | grep -cE '^[0-9]{4,5}$')"
 # cheat : tldr si présent, sinon la section EXAMPLES du man
-printf '#!/bin/bash\necho "tldr:$1"\n' >| "${fb}/tldr"; chmod +x "${fb}/tldr"
+printf '#!/bin/bash\necho "tldr:$1"\n' >|"${fb}/tldr"
+chmod +x "${fb}/tldr"
 assert_contains "cheat : tldr d'abord" "$(mod 40-functions.bash "PATH='${fb}'; cheat tar")" "tldr:tar"
 rm "${fb}/tldr"
-cat >| "${fb}/man" <<'FAKEMAN'
+cat >|"${fb}/man" <<'FAKEMAN'
 #!/bin/bash
 printf '%s\n' 'NAME' '       tar - archive' '' 'EXAMPLES' '       tar -czf a.tgz dir' '       tar -xzf a.tgz' '' 'SEE ALSO' '       gzip(1)'
 FAKEMAN
@@ -317,7 +323,8 @@ assert_contains "cheat : sans tldr, la section EXAMPLES du man" "${ch}" "tar -xz
 assert_not_contains "cheat : …et rien d'autre" "${ch}" "SEE ALSO"
 assert_eq "cheat : sans argument → usage, code 1" "1" "$(mod 40-functions.bash 'cheat >/dev/null 2>&1; echo $?')"
 # please : les redirections et les pipes passent sous sudo (sudo bash -c), pas au shell courant
-printf '#!/bin/bash\necho "sudo:$*"\n' >| "${fb}/sudo"; chmod +x "${fb}/sudo"
+printf '#!/bin/bash\necho "sudo:$*"\n' >|"${fb}/sudo"
+chmod +x "${fb}/sudo"
 pl="$(mod 30-aliases.bash "set -o history; history -s 'echo 1 > /etc/x'; PATH='${fb}'; please 2>&1")"
 assert_contains "please : une redirection → sudo bash -c" "${pl}" "sudo:bash -c echo 1 > /etc/x"
 pl="$(mod 30-aliases.bash "set -o history; history -s 'systemctl restart nginx'; PATH='${fb}'; please 2>&1")"
