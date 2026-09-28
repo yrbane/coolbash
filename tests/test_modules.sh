@@ -89,8 +89,15 @@ assert_eq "31-git n'écrit plus dans la config git globale" "0" "$(grep -cE '^[^
 mod 31-git.bash true >/dev/null
 assert_no_path "…aucun ~/.gitconfig créé au chargement" "${COOLBASH_TEST_TMP}/.gitconfig"
 
-assert_contains "MOTD : fastfetch d'abord (neofetch est abandonné)" "$(cat "${COOLBASH_TEST_ROOT}/modules/70-motd.bash")" "fastfetch"
-assert_contains "doctor liste fastfetch" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" doctor 2>&1)" "fastfetch"
+# FR : neofetch calculait tout (GPU, thème, police…) pour 6 lignes : jusqu'à 2,7 s.
+#      Les infos système sont lues dans /proc, /sys et /etc/os-release : zéro processus.
+sysinfo="$(mod 70-motd.bash 'PATH=/nonexistent; _coolbash_motd_sysinfo')"
+assert_contains "MOTD : titre user@host sans aucun processus" "${sysinfo}" "${USER:-$(id -un)}@${HOSTNAME}"
+assert_contains "MOTD : ligne OS depuis /etc/os-release" "${sysinfo}" "OS: $(. /etc/os-release; echo "$PRETTY_NAME")"
+assert_contains "MOTD : noyau depuis /proc" "${sysinfo}" "Kernel: $(uname -r)"
+assert_eq "MOTD : uptime formaté (days/hours/mins)" "1" "$(printf '%s\n' "${sysinfo}" | grep -cE '^Uptime: ([0-9]+ days?, )?([0-9]+ hours?, )?[0-9]+ mins?$')"
+assert_eq "MOTD : le module ne lance ni neofetch ni fastfetch" "0" "$(grep -cE '^[^#]*(neofetch|fastfetch)' "${COOLBASH_TEST_ROOT}/modules/70-motd.bash")"
+assert_not_contains "doctor ne réclame plus fastfetch" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" doctor 2>&1)" "fastfetch"
 
 assert_eq "up ne laisse pas fuiter sa variable de boucle" "" "$(cd "${COOLBASH_TEST_TMP}" && mod 40-functions.bash 'up 1; echo "${i-}"')"
 assert_eq "timer mesure en millisecondes" "1" "$(mod 40-functions.bash 'timer sleep 0.2' | grep -cE '0\.2[0-9]{2}s')"

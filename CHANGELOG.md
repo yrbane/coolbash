@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.12.0 — 2026-09-28 · « Le MOTD ne fait plus attendre »
+### Corrigé
+- **Démarrage de 2,7 s** sur un poste Arch : `⚡ démarrage 2720 ms · CoolBash 2687 ms`, dont
+  `70-motd` pour presque tout. `neofetch` calculait GPU, résolution, thème, police du
+  terminal… pour qu'on n'en garde que 6 lignes (`neofetch --stdout | sed -n 1,6p`) :
+  de 0,5 à 2,7 s par shell selon le cache.
+### Modifié
+- **Infos système en pur bash** : titre `user@host`, OS (`/etc/os-release`), Host
+  (`/sys/class/dmi/id/product_name`), Kernel (`/proc/sys/kernel/osrelease`) et Uptime
+  (`/proc/uptime`, format neofetch `1 day, 7 hours, 1 min`). Même présentation, zéro
+  processus, ≈ 1 ms. Sans `/proc` (macOS), le bloc est simplement absent.
+- `fastfetch` et `neofetch` ne sont plus utilisés ni suggérés par `coolbash doctor`.
+- Tests : le bloc s'affiche avec `PATH=/nonexistent`, le module ne cite plus
+  neofetch/fastfetch hors commentaires.
+
 ## 0.11.0 — 2026-09-28 · « Combien de temps pour ouvrir un shell ? »
 ### Ajouté
 - **Temps de démarrage affiché** à l'ouverture de chaque shell interactif, sous le MOTD :

@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.11.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.12.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -124,7 +124,7 @@ coolbash/
 | `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`…) |
 | `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji, icônes)  |
 | `60-completion.bash`      | Completions Bash/Git/fzf                            |
-| `70-motd.bash`            | Fortune + fastfetch (affichage une fois par session) |
+| `70-motd.bash`            | Fortune + infos système lues dans `/proc` (une fois par session, zéro processus) |
 | `90-local-overrides.bash` | Surcharges locales (vide par défaut)                |
 
 ---
