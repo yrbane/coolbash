@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.1 — 2026-09-28 · « La vache retrouve sa langue »
+### Corrigé
+- **MOTD** : `cowsay -e @@ -T U` au lieu de `-T U -p`. Même vache paranoïaque sous le cowsay
+  Perl (28 ms) et sous Neo-cowsay (Go, 3 ms, binaire GitHub de Code-Hex), qui ignorait la
+  langue quand `-p` était passé.
+- Test : le module ne passe plus `-p` à cowsay.
+
 ## 0.12.0 — 2026-09-28 · « Le MOTD ne fait plus attendre »
 ### Corrigé
 - **Démarrage de 2,7 s** sur un poste Arch : `⚡ démarrage 2720 ms · CoolBash 2687 ms`, dont

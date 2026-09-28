@@ -25,8 +25,10 @@ _coolbash_motd() {
   _coolbash_motd_enabled || return 0
   [[ -t 1 ]] || return 0
   if command -v fortune >/dev/null 2>&1 && command -v cowsay >/dev/null 2>&1; then
-    if command -v lolcat >/dev/null 2>&1; then fortune -a | cowsay -T U -p | lolcat
-    else fortune -a | cowsay -T U -p; fi
+    # FR : « -e @@ -T U » = la vache paranoïaque avec sa langue, identique sous
+    #      cowsay (Perl) et Neo-cowsay (Go, 3 ms), qui perd la langue avec -p.
+    if command -v lolcat >/dev/null 2>&1; then fortune -a | cowsay -e @@ -T U | lolcat
+    else fortune -a | cowsay -e @@ -T U; fi
   fi
   _coolbash_motd_sysinfo
   export COOLBASH_MOTD_SHOWN=1
