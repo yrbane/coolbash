@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.19.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.20.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -94,6 +94,7 @@ coolbash/
 │   ├─ 34-python-venv.bash
 │   ├─ 35-toolchains.bash
 │   ├─ 40-functions.bash
+│   ├─ 41-navigation.bash
 │   ├─ 50-prompt.bash
 │   ├─ 60-completion.bash
 │   ├─ 70-motd.bash
@@ -125,7 +126,8 @@ coolbash/
 | `33-devtools.bash`        | Symfony, PHP, yt-dlp                                |
 | `34-python-venv.bash`     | Helpers pour venv Python                            |
 | `35-toolchains.bash`      | SDK du HOME dans le `PATH` (cargo, pnpm, Android, foundry), nvm paresseux |
-| `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`…) |
+| `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`, `backup`, `whoport`, `serve`, `cheat`…) |
+| `41-navigation.bash`      | `j` (saut de dossier par fréquence, pur bash), `bd`, `h`, `hstats`, paquet suggéré pour une commande introuvable |
 | `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji, icônes)  |
 | `60-completion.bash`      | Completions Bash/Git/fzf                            |
 | `70-motd.bash`            | État de la machine (voir ci-dessous), puis une citation française (12 thèmes, `share/fortunes/`) dans la bouche de cowsay, juste au-dessus du prompt ; une fois par session |
@@ -243,6 +245,8 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
 | `COOLBASH_NVM_LAZY=0`           | Charger `nvm.sh` au démarrage (≈ 0,7 s par shell) au lieu du chargement paresseux |
+| `COOLBASH_J=0`                  | Ne pas noter les `cd` (désactive `j`)                                  |
+| `COOLBASH_CNF=0`                | Pas de suggestion de paquet pour une commande introuvable              |
 | `COOLBASH_SERVE_PORT`           | Premier port essayé par `serve` (défaut `8000`)                        |
 | `COOLBASH_MOTD_HIDE`            | Lignes du MOTD à taire, ex. `"battery load"` (mots : `date disk mem load battery reboot failed update note`) |
 | `COOLBASH_FORTUNE`              | Thèmes de citations du MOTD, ex. `"dev chuck"` (défaut : tous, un thème répété pèse plus lourd) |
@@ -336,6 +340,10 @@ Fonctions volontairement exposées dans le shell (tout le reste est préfixé `_
 | `backup`                       | `40-functions`        | `backup fichier dossier…` : copie horodatée à côté, `nom.AAAA-MM-JJ-HHMM.bak` (`cp -a`) |
 | `whoport`                      | `40-functions`        | `whoport 8080` : quel processus tient ce port (pid, nom, ligne de commande), via `ss` ou `lsof` |
 | `serve`                        | `40-functions`        | `serve [dossier] [port]` : serveur HTTP statique (python3, sinon php) sur le premier port libre dès `COOLBASH_SERVE_PORT` (8000), URL affichée |
+| `j`                            | `41-navigation`       | `j coolb` : saute dans le dossier connu le plus fréquent/récent qui correspond (les `cd` sont notés à chaque prompt dans `~/.coolbash/dirs`) ; `j` seul liste ; complétion par Tab |
+| `bd`                           | `41-navigation`       | `bd Dev` : remonte jusqu'au dossier parent nommé (exact, sinon préfixe) |
+| `h`, `hstats`                  | `41-navigation`       | `h motif` cherche dans l'historique daté ; `hstats [N]` tes commandes les plus fréquentes avec leur part |
+| `command_not_found_handle`     | `41-navigation`       | Commande introuvable : le paquet qui la fournit (`pacman -F`, `apt-file`), sinon des noms proches. Shell interactif seulement |
 | `cheat`                        | `40-functions`        | `cheat tar` : exemples par `tldr` si présent, sinon la section EXAMPLES du man, sinon `--help` |
 | `man`                          | `40-functions`        | `man` colorisé                              |
 | `mkcd`, `extract`, `up`, `timer` | `40-functions`      | Créer+entrer, extraire une archive (`extract -d` : dans un dossier à son nom), remonter de N répertoires, chronométrer |

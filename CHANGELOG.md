@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.20.0 — 2026-09-29 · « Sauter, remonter, retrouver »
+### Ajouté
+- **Module `41-navigation`.**
+- **`j <motif>`** : saut de dossier par fréquence, en pur bash. Chaque `cd` est noté à l'affichage
+  du prompt dans `~/.coolbash/dirs` (jamais deux fois de suite, compacté au-delà de 1000 lignes).
+  Score = visites + récence ; un motif qui correspond au nom du dossier prime sur le chemin ;
+  les dossiers disparus sont ignorés. `j` seul liste, Tab complète. `COOLBASH_J=0` désactive.
+- **`bd <nom>`** : remonte jusqu'au dossier parent nommé, exact puis préfixe.
+- **`h <motif>`** : recherche dans l'historique de la session, avec la date ; **`hstats [N]`** :
+  tes commandes les plus fréquentes et leur part (`sudo` transparent).
+- **Commande introuvable** : en shell interactif, `command_not_found_handle` affiche le paquet
+  qui fournit la commande (`pacman -F`, `apt-file`, bases locales, jamais de réseau), sinon des
+  noms proches. Les scripts gardent le comportement de bash. `COOLBASH_CNF=0` désactive.
+- Tests : `tests/test_navigation.sh` (suivi des `cd`, scores, casse, dossier disparu, complétion,
+  `bd`, `h`, `hstats`, handler avec un faux `pacman`, absent en non interactif).
+
 ## 0.19.1 — 2026-09-29 · « La vache en dernier »
 ### Modifié
 - MOTD : l'état de la machine s'affiche d'abord, la citation dans la bouche de cowsay en dernier,
