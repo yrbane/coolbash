@@ -168,6 +168,7 @@ _coolbash_motd_battery() {
 # FR : redémarrage requis — Arch : le dossier des modules du noyau qui tourne a
 #      disparu (le noyau a été mis à jour) ; Debian : /var/run/reboot-required.
 #      Paramètres (tests) : $1 dossier des modules, $2 fichier drapeau.
+# shellcheck disable=SC2120  # FR : les arguments servent aux tests
 _coolbash_motd_reboot() {
   local modules="${1:-/usr/lib/modules}" flag="${2:-/var/run/reboot-required}" kernel="" d any=0
   if [[ -f "$flag" ]]; then printf '\e[31mReboot required\e[0m (%s)\n' "$flag"; return 0; fi

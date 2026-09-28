@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.1 — 2026-09-29 · « shellcheck de la CI »
+### Corrigé
+- `make verify` échouait sur la CI (shellcheck 0.9/0.10, SC2120 sur `_coolbash_motd_reboot`, dont
+  les arguments ne servent qu'aux tests). Avertissement désactivé et commenté. La 0.15.0 n'a pas été
+  taguée.
+
 ## 0.15.0 — 2026-09-29 · « Le MOTD dit l'état de la machine »
 ### Ajouté
 - **`Mem:`** utilisée / totale (pourcentage), depuis `/proc/meminfo` (MemAvailable). Jaune ≥ 80 %,
