@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.14.0"
+COOLBASH_VERSION="0.15.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -78,6 +78,7 @@ COOLBASH_FZF|1|0 = pas de raccourcis fzf (Ctrl-R)
 COOLBASH_FZF_KEYBINDINGS||fichier key-bindings.bash à utiliser
 COOLBASH_MOTD|1|0 = pas de MOTD (MOTD_DISABLE=1 aussi)
 COOLBASH_FORTUNE|(tous)|thèmes de citations du MOTD, ex. "dev chuck"
+COOLBASH_MOTD_HIDE||lignes du MOTD à taire : date disk mem load battery reboot failed note
 COOLBASH_FONT|1|0 = install n'installe pas de police
 COOLBASH_FONT_URL||archive .tar.xz de la police (miroir)
 COOLBASH_PREFIX|~/.coolbash|dossier d'installation

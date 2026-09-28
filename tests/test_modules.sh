@@ -102,6 +102,64 @@ sysinfo_df="$(mod 70-motd.bash '_coolbash_motd_sysinfo')"
 assert_eq "MOTD : espace disque de / (df -h), utilisé / taille (pourcentage)" "1" "$(printf '%s\n' "${sysinfo_df}" | sed 's/\x1b\[[0-9;]*m//g' | grep -cE '^Disk \(/\): [0-9.,]+[KMGTP]? used of [0-9.,]+[KMGTP]? \([0-9]+%\)')"
 assert_eq "MOTD : le module ne lance ni neofetch ni fastfetch" "0" "$(grep -cE '^[^#]*(neofetch|fastfetch)' "${COOLBASH_TEST_ROOT}/modules/70-motd.bash")"
 assert_eq "MOTD : cowsay reçoit -e @@ -T U (Neo-cowsay perd la langue avec -p)" "0" "$(grep -cE '^[^#]*cowsay[^|]* -p' "${COOLBASH_TEST_ROOT}/modules/70-motd.bash")"
+# FR : lignes d'état du MOTD — sans processus (/proc, /sys) ou un seul appel bon marché,
+#      et une ligne n'apparaît que si elle a quelque chose à dire. COOLBASH_MOTD_HIDE les coupe.
+strip_colors() { sed 's/\x1b\[[0-9;]*m//g'; }
+pure="$(mod 70-motd.bash 'PATH=/nonexistent; _coolbash_motd_sysinfo' | strip_colors)"
+assert_eq "MOTD : mémoire depuis /proc/meminfo, utilisée / totale (pourcentage)" "1" "$(printf '%s\n' "${pure}" | grep -cE '^Mem: [0-9]+\.[0-9][KMGT] used of [0-9]+\.[0-9][KMGT] \([0-9]+%\)$')"
+assert_eq "MOTD : charge depuis /proc/loadavg avec le nombre de cœurs" "1" "$(printf '%s\n' "${pure}" | grep -cE '^Load: [0-9]+\.[0-9]+ [0-9]+\.[0-9]+ [0-9]+\.[0-9]+ \([0-9]+ cores?\)$')"
+if compgen -G '/sys/class/power_supply/BAT*/capacity' >/dev/null; then
+  assert_eq "MOTD : batterie depuis /sys (cette machine en a une)" "1" "$(printf '%s\n' "${pure}" | grep -cE '^Battery: [0-9]+% \([A-Za-z ]+\)$')"
+else
+  assert_not_contains "MOTD : pas de batterie ici, pas de ligne" "${pure}" "Battery"
+fi
+hidden="$(mod 70-motd.bash 'PATH=/nonexistent COOLBASH_MOTD_HIDE="mem load date"; _coolbash_motd_sysinfo')"
+assert_not_contains "COOLBASH_MOTD_HIDE=mem coupe la ligne mémoire" "${hidden}" "Mem:"
+assert_not_contains "COOLBASH_MOTD_HIDE=load coupe la ligne de charge" "${hidden}" "Load:"
+assert_not_contains "COOLBASH_MOTD_HIDE=date coupe la date" "${hidden}" "Date:"
+assert_contains "…mais garde le reste" "${hidden}" "Kernel:"
+# redémarrage requis : modules du noyau courant disparus (Arch) ou fichier drapeau (Debian)
+rb="${COOLBASH_TEST_TMP}/reboot"; mkdir -p "${rb}/modules/$(uname -r)" "${rb}/modules/9.9.9-other"
+assert_empty "reboot : modules du noyau courant présents, rien à dire" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/modules' '${rb}/absent'")"
+rm -r "${rb}/modules/$(uname -r)"
+assert_contains "reboot : les modules du noyau qui tourne ont disparu → Reboot required" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/modules' '${rb}/absent'" | strip_colors)" "Reboot required"
+: > "${rb}/flag"
+assert_contains "reboot : fichier /var/run/reboot-required → Reboot required" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/nomodules' '${rb}/flag'" | strip_colors)" "Reboot required"
+assert_empty "reboot : sans dossier de modules ni drapeau (conteneur), rien" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/nomodules' '${rb}/absent'")"
+# unités systemd en échec : un seul systemctl, affiché seulement si > 0
+printf '#!/bin/bash\nprintf "nginx.service loaded failed failed Web\\ncups.service loaded failed failed Print\\n"\n' >| "${fakebin}/systemctl"; chmod +x "${fakebin}/systemctl"
+assert_contains "failed : deux unités en échec, comptées et nommées" "$(mod 70-motd.bash "PATH='${fakebin}'; _coolbash_motd_failed" | strip_colors)" "Failed units: 2 (nginx.service, cups.service)"
+printf '#!/bin/bash\nexit 0\n' >| "${fakebin}/systemctl"
+assert_empty "failed : aucune unité en échec, pas de ligne" "$(mod 70-motd.bash "PATH='${fakebin}'; _coolbash_motd_failed")"
+assert_empty "failed : sans systemctl, rien" "$(mod 70-motd.bash "PATH=/nonexistent; _coolbash_motd_failed")"
+# disques : / toujours, les autres seulement à partir de 80 %, jamais tmpfs ni loop
+cat >| "${fakebin}/df" <<'FAKEDF'
+#!/bin/bash
+# FR : PATH réduit au fakebin — seulement des builtins ici.
+printf '%s\n' 'Filesystem Size Used Avail Use% Mounted on' \
+  'dev 16G 0 16G 0% /dev' \
+  '/dev/nvme0n1p2 535G 462G 73G 87% /' \
+  '/dev/sda1 100G 95G 5G 95% /data' \
+  '/dev/sdb1 2T 1T 1T 50% /mnt/photos' \
+  '/dev/loop3 64M 64M 0 100% /snap/core' \
+  'tmpfs 16G 1M 16G 1% /run'
+FAKEDF
+chmod +x "${fakebin}/df"
+disks="$(mod 70-motd.bash "PATH='${fakebin}'; _coolbash_motd_disk" | strip_colors)"
+assert_contains "disk : / toujours affiché" "${disks}" "Disk (/): 462G used of 535G (87%)"
+assert_contains "disk : une autre partition à 95 % est affichée" "${disks}" "Disk (/data): 95G used of 100G (95%)"
+assert_not_contains "disk : une partition à 50 % ne l'est pas" "${disks}" "/mnt/photos"
+assert_not_contains "disk : les loop (snap) sont ignorés" "${disks}" "snap"
+assert_not_contains "disk : tmpfs ignoré" "${disks}" "/run"
+# note personnelle
+mkdir -p "${COOLBASH_TEST_TMP}/.coolbash"
+printf 'Penser au dentiste\nRenouveler le certificat\n' >| "${COOLBASH_TEST_TMP}/.coolbash/motd.txt"
+noted="$(mod 70-motd.bash 'PATH=/nonexistent; _coolbash_motd_sysinfo')"
+assert_contains "note : ~/.coolbash/motd.txt est affiché" "${noted}" "Penser au dentiste"
+assert_contains "note : toutes les lignes" "${noted}" "Renouveler le certificat"
+assert_not_contains "note : COOLBASH_MOTD_HIDE=note la coupe" "$(mod 70-motd.bash 'PATH=/nonexistent COOLBASH_MOTD_HIDE=note; _coolbash_motd_sysinfo')" "dentiste"
+rm "${COOLBASH_TEST_TMP}/.coolbash/motd.txt"
+
 # FR : citations françaises embarquées (share/fortunes/<thème>.txt), tirées en pur bash.
 fort() { mod 70-motd.bash "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' PATH=/nonexistent; $1 _coolbash_fortune t && printf '%s' \"\$t\""; }
 assert_eq "fortune embarquée : une citation sans aucun processus" "1" "$(fort '' | grep -c .)"

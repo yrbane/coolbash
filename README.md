@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.14.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.15.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -125,7 +125,7 @@ coolbash/
 | `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`…) |
 | `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji, icônes)  |
 | `60-completion.bash`      | Completions Bash/Git/fzf                            |
-| `70-motd.bash`            | Citation française (12 thèmes, `share/fortunes/`) dans la bouche de cowsay + infos système lues dans `/proc` (OS, Host, Kernel, Uptime, Date, espace de `/`), une fois par session |
+| `70-motd.bash`            | Citation française (12 thèmes, `share/fortunes/`) dans la bouche de cowsay + état de la machine (voir ci-dessous), une fois par session |
 | `90-local-overrides.bash` | Surcharges locales (vide par défaut)                |
 
 ---
@@ -234,6 +234,7 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
 | `COOLBASH_NVM_LAZY=0`           | Charger `nvm.sh` au démarrage (≈ 0,7 s par shell) au lieu du chargement paresseux |
+| `COOLBASH_MOTD_HIDE`            | Lignes du MOTD à taire, ex. `"battery load"` (mots : `date disk mem load battery reboot failed note`) |
 | `COOLBASH_FORTUNE`              | Thèmes de citations du MOTD, ex. `"dev chuck"` (défaut : tous, un thème répété pèse plus lourd) |
 | `COOLBASH_STARTUP_TIME`         | Temps de démarrage affiché à l'ouverture : `1` (défaut), `0` = muet, `verbose` = temps de chaque module. Le total est l'âge du processus (tout le `~/.bashrc` compris), la part CoolBash à côté |
 | `COOLBASH_FZF=0`                | Pas de raccourcis fzf (`Ctrl-R`, `Ctrl-T`, `Alt-C`), chargés sinon en shell interactif |
@@ -249,6 +250,26 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PS0_TITLE=0`          | Ne pas mettre la commande en cours dans le titre du terminal          |
 | `COOLBASH_PS0_EXTRA`            | Fragment ajouté à la fin de `PS0` (PS0 personnel)                     |
 | `COOLBASH_MOTD=0` / `MOTD_DISABLE=1` | Pas de MOTD                                                      |
+
+### 🖥️ État de la machine dans le MOTD
+
+Sous la citation, un bloc à la neofetch, mais lu dans `/proc`, `/sys` et quelques fichiers :
+aucun processus, sauf un `df -Phl` et un `systemctl --failed` (≈ 5 ms chacun). Une ligne
+n'apparaît que si elle a quelque chose à dire.
+
+| Ligne            | Source                                   | Couleur                              |
+| ---------------- | ---------------------------------------- | ------------------------------------ |
+| `user@host`, OS, Host, Kernel, Uptime | `/etc/os-release`, `/sys/class/dmi`, `/proc` | —                  |
+| `Date:`          | `printf %T` de bash                      | —                                    |
+| `Disk (/):`      | `df -Phl` : `/` toujours, les autres partitions à partir de 80 % (jamais tmpfs ni loop) | jaune ≥ 80 %, rouge ≥ 90 % |
+| `Mem:`           | `/proc/meminfo` (MemAvailable)           | jaune ≥ 80 %, rouge ≥ 90 %           |
+| `Load:`          | `/proc/loadavg` + nombre de cœurs        | jaune ≥ cœurs/2, rouge ≥ cœurs       |
+| `Battery:`       | `/sys/class/power_supply/BAT*`           | en décharge : jaune < 40 %, rouge < 20 % |
+| `Reboot required` | modules du noyau courant disparus (Arch) ou `/var/run/reboot-required` (Debian) | rouge |
+| `Failed units:`  | `systemctl --failed`, seulement si > 0   | rouge                                |
+| note             | `~/.coolbash/motd.txt`, ton pense-bête   | cyan                                 |
+
+`COOLBASH_MOTD_HIDE="battery load"` tait les lignes citées.
 
 ### 💬 Citations du MOTD
 

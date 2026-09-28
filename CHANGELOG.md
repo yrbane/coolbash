@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.15.0 — 2026-09-29 · « Le MOTD dit l'état de la machine »
+### Ajouté
+- **`Mem:`** utilisée / totale (pourcentage), depuis `/proc/meminfo` (MemAvailable). Jaune ≥ 80 %,
+  rouge ≥ 90 %.
+- **`Load:`** les trois charges de `/proc/loadavg` et le nombre de cœurs (glob `/sys`). Jaune quand
+  la charge 1 min atteint la moitié des cœurs, rouge quand elle les dépasse.
+- **`Battery:`** depuis `/sys/class/power_supply/BAT*`, avec l'état. En décharge : jaune < 40 %,
+  rouge < 20 %. Absente sans batterie.
+- **`Reboot required`** : sur Arch, quand le dossier des modules du noyau qui tourne a disparu (le
+  noyau a été mis à jour) ; sur Debian, quand `/var/run/reboot-required` existe. Rien en conteneur.
+- **`Failed units:`** nombre et noms des unités systemd en échec, par un seul `systemctl --failed`
+  (≈ 5 ms), seulement si > 0.
+- **Note personnelle** : `~/.coolbash/motd.txt` affiché en cyan sous le bloc.
+- **Disques** : `df -Phl` pour toutes les partitions locales, `/` toujours, les autres à partir de
+  80 %. tmpfs, devtmpfs et loop (snap) ignorés.
+- **`COOLBASH_MOTD_HIDE`** : `"battery load"` tait les lignes citées (mots : `date disk mem load
+  battery reboot failed note`). Listée par `coolbash config`.
+- Tests : chaque ligne (sans processus avec `PATH=/nonexistent`, faux `df` et `systemctl`, dossier
+  de modules factice pour le reboot, note, masquage).
+
 ## 0.14.0 — 2026-09-29 · « Date et disque dans le MOTD »
 ### Ajouté
 - **`Date:`** dans le bloc d'infos système, par le `printf %T` intégré à bash (aucun processus) :
