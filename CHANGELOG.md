@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.17.0 — 2026-09-29 · « Sept commandes du quotidien »
+### Ajouté
+- **`backup fichier dossier…`** : copie horodatée à côté, `nom.AAAA-MM-JJ-HHMM.bak`, `cp -a`
+  (dossiers, permissions, dates), horodatage par le `printf %T` de bash.
+- **`whoport 8080`** : quel processus tient ce port — protocole, pid, nom, ligne de commande lue
+  dans `/proc` — via `ss`, sinon `lsof`. Port libre : le dit, code 1.
+- **`serve [dossier] [port]`** : serveur HTTP statique (`python3 -m http.server`, sinon `php -S`)
+  sur le premier port libre à partir de `COOLBASH_SERVE_PORT` (8000), testé en pur bash via
+  `/dev/tcp`. URL affichée en vert.
+- **`cheat commande`** : des exemples, vite — `tldr` si présent, sinon la section EXAMPLES du man
+  (extraite en pur bash, surlignages retirés), sinon `--help`.
+- **`please`** : une commande avec redirection, pipe, `;` ou `&&` est relancée entière sous
+  `sudo bash -c`, au lieu que la redirection s'applique au shell courant sans droits.
+- **`coolbash bench [N]`** : N ouvertures de shell interactif (20 par défaut, vrai tty via
+  `script`), moyenne, min, max, puis le coût de chaque module du plus lourd au plus léger.
+- **`coolbash fortune --add "texte" [thème]`** : ajoute une citation à
+  `~/.coolbash/fortunes/<thème>.txt` (`perso` par défaut), sans ouvrir d'éditeur.
+- Tests : chaque commande avec des faux `ss`, `python3`, `tldr`, `man`, `sudo` ; `bench` et
+  `fortune --add` sur une installation jetable.
+
 ## 0.16.0 — 2026-09-29 · « Lint, style et installation à froid »
 ### Ajouté
 - **`make lint`** (= `make verify`) : `bash -n`, shellcheck, et **shfmt** si présent, fatal au

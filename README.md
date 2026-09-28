@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.16.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.17.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -63,7 +63,8 @@ coolbash <command>
 | `init`      | Charge tous les modules dans le shell courant |
 | `version`   | Affiche la version                            |
 | `config`    | Tous les réglages `COOLBASH_*` avec leur valeur effective (définie ou par défaut) |
-| `fortune`   | Une citation du MOTD, au hasard ou d'un thème donné : `coolbash fortune chuck` |
+| `fortune`   | Une citation du MOTD, au hasard ou d'un thème donné : `coolbash fortune chuck` ; `fortune --add "texte" [thème]` en ajoute une à `~/.coolbash/fortunes/` |
+| `bench`     | `bench [N]` : N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module |
 | `doctor`    | Diagnostic : bash, `.bashrc`, modules, citations, locale, outils optionnels, Nerd Font |
 | `help`      | Affiche l’aide de la CLI                      |
 
@@ -240,6 +241,7 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
 | `COOLBASH_NVM_LAZY=0`           | Charger `nvm.sh` au démarrage (≈ 0,7 s par shell) au lieu du chargement paresseux |
+| `COOLBASH_SERVE_PORT`           | Premier port essayé par `serve` (défaut `8000`)                        |
 | `COOLBASH_MOTD_HIDE`            | Lignes du MOTD à taire, ex. `"battery load"` (mots : `date disk mem load battery reboot failed note`) |
 | `COOLBASH_FORTUNE`              | Thèmes de citations du MOTD, ex. `"dev chuck"` (défaut : tous, un thème répété pèse plus lourd) |
 | `COOLBASH_STARTUP_TIME`         | Temps de démarrage affiché à l'ouverture : `1` (défaut), `0` = muet, `verbose` = temps de chaque module. Le total est l'âge du processus (tout le `~/.bashrc` compris), la part CoolBash à côté |
@@ -323,7 +325,11 @@ Fonctions volontairement exposées dans le shell (tout le reste est préfixé `_
 | Fonction                       | Module                | Rôle                                        |
 | ------------------------------ | --------------------- | ------------------------------------------- |
 | `path_prepend`, `path_append`  | `00-core`             | Ajout idempotent au `PATH`                  |
-| `please`                       | `30-aliases`          | Relance la dernière commande avec `sudo`    |
+| `please`                       | `30-aliases`          | Relance la dernière commande avec `sudo` ; redirections, pipes et `&&` passent entiers sous `sudo bash -c` |
+| `backup`                       | `40-functions`        | `backup fichier dossier…` : copie horodatée à côté, `nom.AAAA-MM-JJ-HHMM.bak` (`cp -a`) |
+| `whoport`                      | `40-functions`        | `whoport 8080` : quel processus tient ce port (pid, nom, ligne de commande), via `ss` ou `lsof` |
+| `serve`                        | `40-functions`        | `serve [dossier] [port]` : serveur HTTP statique (python3, sinon php) sur le premier port libre dès `COOLBASH_SERVE_PORT` (8000), URL affichée |
+| `cheat`                        | `40-functions`        | `cheat tar` : exemples par `tldr` si présent, sinon la section EXAMPLES du man, sinon `--help` |
 | `man`                          | `40-functions`        | `man` colorisé                              |
 | `mkcd`, `extract`, `up`, `timer` | `40-functions`      | Créer+entrer, extraire une archive (`extract -d` : dans un dossier à son nom), remonter de N répertoires, chronométrer |
 | `coolbash_log`, `coolbash_error` | `40-functions`      | Messages colorés (ex-`log`/`error`, renommés en 0.4.0) |

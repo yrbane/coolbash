@@ -59,7 +59,13 @@ please() {
     return 1
   fi
   printf 'sudo %s\n' "$cmd"
-  eval "sudo $cmd"
+  # FR : `sudo echo x > /etc/f` redirigerait dans le shell courant, sans droits :
+  #      redirections, pipes et enchaînements passent entiers sous sudo.
+  if [[ "$cmd" == *[\>\<\|\;]* || "$cmd" == *'&&'* ]]; then
+    sudo bash -c "$cmd"
+  else
+    eval "sudo $cmd"
+  fi
 }
 alias pls='sudo '
 alias sano='sudo -E nano'
