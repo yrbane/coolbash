@@ -138,7 +138,7 @@ cat >| "${fakebin}/df" <<'FAKEDF'
 # FR : PATH réduit au fakebin — seulement des builtins ici.
 printf '%s\n' 'Filesystem Size Used Avail Use% Mounted on' \
   'dev 16G 0 16G 0% /dev' \
-  '/dev/nvme0n1p2 535G 462G 73G 87% /' \
+  'overlay 535G 462G 73G 87% /' \
   '/dev/sda1 100G 95G 5G 95% /data' \
   '/dev/sdb1 2T 1T 1T 50% /mnt/photos' \
   '/dev/loop3 64M 64M 0 100% /snap/core' \
@@ -146,7 +146,7 @@ printf '%s\n' 'Filesystem Size Used Avail Use% Mounted on' \
 FAKEDF
 chmod +x "${fakebin}/df"
 disks="$(mod 70-motd.bash "PATH='${fakebin}'; _coolbash_motd_disk" | strip_colors)"
-assert_contains "disk : / toujours affiché" "${disks}" "Disk (/): 462G used of 535G (87%)"
+assert_contains "disk : / toujours affiché, même en overlay (conteneur)" "${disks}" "Disk (/): 462G used of 535G (87%)"
 assert_contains "disk : une autre partition à 95 % est affichée" "${disks}" "Disk (/data): 95G used of 100G (95%)"
 assert_not_contains "disk : une partition à 50 % ne l'est pas" "${disks}" "/mnt/photos"
 assert_not_contains "disk : les loop (snap) sont ignorés" "${disks}" "snap"

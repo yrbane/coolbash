@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.2 — 2026-09-29 · « La racine, même en overlay »
+### Corrigé
+- La ligne `Disk (/)` disparaissait quand `/` n'est pas un `/dev/…` (overlay d'un conteneur, CI
+  Debian). La racine est toujours affichée ; le filtre « vrai périphérique, ≥ 80 % » ne s'applique
+  qu'aux autres partitions. Le faux `df` des tests monte `/` en overlay. La 0.15.1 n'a pas été taguée.
+
 ## 0.15.1 — 2026-09-29 · « shellcheck de la CI »
 ### Corrigé
 - `make verify` échouait sur la CI (shellcheck 0.9/0.10, SC2120 sur `_coolbash_motd_reboot`, dont
