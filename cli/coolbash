@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.24.0"
+COOLBASH_VERSION="0.25.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -45,6 +45,7 @@ _coolbash_cmd_verify() { _coolbash_make verify; }
 _coolbash_cmd_test() { _coolbash_make test; }
 _coolbash_cmd_uninstall() { _coolbash_make uninstall; }
 _coolbash_cmd_font() { bash "${COOLBASH_ROOT}/cli/coolbash-font" install; }
+_coolbash_cmd_setup() { COOLBASH_PREFIX="${COOLBASH_PREFIX}" bash "${COOLBASH_ROOT}/cli/coolbash-setup" "$@"; }
 _coolbash_cmd_version() { printf '%s\n' "${COOLBASH_VERSION}"; }
 
 # FR : réglages effectifs. Exécutée DANS le shell courant par la fonction
@@ -261,7 +262,7 @@ _coolbash_cmd_theme() {
 }
 
 # FR : coolbash sync [--update] [--overrides] <hôte…> — pousse tes fichiers
-#      personnels (fortunes/, motd.txt, theme ; 90-local-overrides avec
+#      personnels (fortunes/, motd.txt, theme, config.bash ; 90-local-overrides avec
 #      --overrides, car il est souvent propre à une machine) vers ~/.coolbash
 #      d'autres machines, par rsync sur SSH. --update y lance coolbash update.
 _coolbash_cmd_sync() {
@@ -289,6 +290,7 @@ _coolbash_cmd_sync() {
   [[ -d "${COOLBASH_PREFIX}/fortunes" ]] && src+=("${COOLBASH_PREFIX}/fortunes")
   [[ -f "${COOLBASH_PREFIX}/motd.txt" ]] && src+=("${COOLBASH_PREFIX}/motd.txt")
   [[ -f "${COOLBASH_PREFIX}/theme" ]] && src+=("${COOLBASH_PREFIX}/theme")
+  [[ -f "${COOLBASH_PREFIX}/config.bash" ]] && src+=("${COOLBASH_PREFIX}/config.bash")
   for h in "${hosts[@]}"; do
     _coolbash_log "→ ${h}"
     if ((${#src[@]})); then rsync -az "${src[@]}" "${h}:.coolbash/" || rc=1; fi
@@ -547,6 +549,10 @@ _coolbash_startup_report() {
 #      Temps de démarrage affiché en shell interactif (COOLBASH_STARTUP_TIME).
 _coolbash_cmd_init() {
   local f name t0="${EPOCHREALTIME:-}" tm show=0 verbose=0
+  # FR : les réglages de `coolbash setup`, avant les modules ; chaque ligne est
+  #      `export X="${X:-…}"` : le ~/.bashrc garde la priorité.
+  # shellcheck disable=SC1091
+  [[ -r "${COOLBASH_PREFIX}/config.bash" ]] && source "${COOLBASH_PREFIX}/config.bash"
   [[ "${COOLBASH_STARTUP_TIME:-1}" != 0 && $- == *i* ]] && show=1
   [[ $show == 1 && "${COOLBASH_STARTUP_TIME:-1}" == verbose && -n "$t0" ]] && verbose=1
   for f in "${COOLBASH_MODULE_DIR}"/*.bash; do
@@ -584,7 +590,7 @@ _coolbash_cmd_init() {
     local cur="${COMP_WORDS[COMP_CWORD]}" sub="${COMP_WORDS[1]:-}" words
     COMPREPLY=()
     if ((COMP_CWORD == 1)); then
-      words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy help"
+      words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup help"
     else
       case "$sub" in
         theme) words="${COOLBASH_THEMES:-coolbash nord dracula solarized gruvbox mono}" ;;
@@ -595,7 +601,7 @@ _coolbash_cmd_init() {
             [[ -f "$f" ]] && f="${f##*/}" && words+=" ${f%.txt}"
           done
           ;;
-        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy help" ;;
+        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup help" ;;
         sync) words="--update --overrides" ;;
         tidy) words="--apply" ;;
         *) return 0 ;;
@@ -630,6 +636,7 @@ _coolbash_cmd_help_topic() {
     theme) echo "coolbash theme [nom] — sans argument, la liste des palettes (coolbash nord dracula solarized gruvbox mono) avec un aperçu ; avec, l'enregistre dans ~/.coolbash/theme et l'applique au shell courant." ;;
     sync) echo "coolbash sync [--update] [--overrides] user@host… — pousse fortunes/, motd.txt et theme vers ~/.coolbash d'autres machines (rsync sur SSH). --overrides ajoute 90-local-overrides.bash, --update y lance coolbash update." ;;
     allow | deny) echo "coolbash allow | deny — autorise (ou retire) le hook .coolbash.bash du projet courant : sourcé à l'entrée du dossier, défait à la sortie ; modifié, il redevient non autorisé." ;;
+    setup) echo "coolbash setup [--defaults] — configuration interactive : palette, icônes, emoji, segments du prompt, seuils, MOTD (lignes, thèmes de citations), temps de démarrage, mises à jour, nvm, hooks, garde-fou git, j, suggestions, fzf, port de serve, mode. Écrit ~/.coolbash/config.bash (seuls les choix hors défaut), sourcé par init avant les modules. --defaults accepte tout." ;;
     tidy) echo "coolbash tidy [--apply] — range le ~/.bashrc : retire ce qu'un module prend en charge, convertit export PATH en path_prepend/append, déplace alias et fonctions dans 90-local-overrides.bash. Sans --apply, aperçu seulement ; avec, sauvegarde d'abord." ;;
     help) echo "coolbash help [commande] — cette aide, ou le détail d'une commande." ;;
     *) return 1 ;;
@@ -666,6 +673,7 @@ Commands:
   theme       List prompt themes with a preview, or pick one: theme nord
   allow       Trust the .coolbash.bash hook of this project (deny: revoke)
   tidy        Clean up ~/.bashrc: preview, then tidy --apply (backup first)
+  setup       Interactive configuration: questions and choices → ~/.coolbash/config.bash
   sync        Push fortunes/, motd.txt and theme to other machines (rsync over SSH)
               sync [--update] [--overrides] user@host…
   help        Display this help message (help <command> for details)
@@ -713,6 +721,10 @@ case "${1:-}" in
   tidy)
     shift
     _coolbash_cmd_tidy "$@"
+    ;;
+  setup)
+    shift
+    _coolbash_cmd_setup "$@"
     ;;
   help | "")
     shift 2>/dev/null

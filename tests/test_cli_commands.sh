@@ -218,6 +218,35 @@ assert_eq "complétion : coolbash th<Tab> → theme" "theme" "$(comp coolbash th
 assert_eq "complétion : coolbash theme n<Tab> → nord" "nord" "$(comp coolbash theme n)"
 assert_contains "complétion : coolbash fortune ch<Tab> → chuck" "$(comp coolbash fortune ch)" "chuck"
 assert_eq "complétion : coolbash tidy -<Tab> → --apply" "--apply" "$(comp coolbash tidy -)"
+# setup : configuration interactive → ~/.coolbash/config.bash
+rm -f "${home}/.coolbash/config.bash"
+su="$(cli_home setup --defaults)"
+assert_contains "setup --defaults : tout par défaut, aucun fichier" "${su}" "aucun fichier"
+assert_no_path "…et config.bash n'existe pas" "${home}/.coolbash/config.bash"
+# FR : réponses : thème 2 (nord), icônes Entrée, emoji 2 (aucun), git n, tools Entrée, cloud Entrée,
+#      fish Entrée, transient Entrée, min_ms 500, bell Entrée, stamp Entrée ; MOTD o, hide « 5 9 »,
+#      fortune « 1 12 », startup 2 (verbose) ; update n, puis Entrée jusqu'au bout.
+su="$(printf '2\n\n2\nn\n\n\n\n\n500\n\n\n\n5 9\n1 12\n2\nn\n' | cli_home setup)"
+assert_contains "setup : annonce le fichier écrit" "${su}" "config.bash"
+cfg="$(cat "${home}/.coolbash/config.bash")"
+assert_contains "setup : thème nord (choix 2)" "${cfg}" 'export COOLBASH_PROMPT_THEME="${COOLBASH_PROMPT_THEME:-nord}"'
+assert_contains "setup : emoji aucun → variable vide" "${cfg}" 'export COOLBASH_PROMPT_EMOJI="${COOLBASH_PROMPT_EMOJI:-}"'
+assert_contains "setup : git désactivé (n)" "${cfg}" 'COOLBASH_PROMPT_GIT="${COOLBASH_PROMPT_GIT:-0}"'
+assert_contains "setup : durée minimale 500" "${cfg}" 'COOLBASH_PROMPT_MIN_MS:-500'
+assert_contains "setup : lignes MOTD à taire (5 9 → battery note)" "${cfg}" 'COOLBASH_MOTD_HIDE:-battery note'
+assert_contains "setup : thèmes de citations (1 12 → dev chuck)" "${cfg}" 'COOLBASH_FORTUNE:-dev chuck'
+assert_contains "setup : temps de démarrage verbose" "${cfg}" 'COOLBASH_STARTUP_TIME:-verbose'
+assert_contains "setup : vérification de mise à jour coupée" "${cfg}" 'COOLBASH_UPDATE_CHECK:-0'
+assert_eq "setup : les valeurs par défaut ne sont pas écrites (icônes nerd)" "0" "$(grep -c 'COOLBASH_PROMPT_ICONS' "${home}/.coolbash/config.bash")"
+assert_success "setup : config.bash est du bash valide" bash -n "${home}/.coolbash/config.bash"
+assert_eq "init source config.bash avant les modules" "nord" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash --norc --noprofile -c 'source "$1" init; echo "$COOLBASH_PROMPT_THEME"' _ "${home}/.coolbash/cli/coolbash" 2>/dev/null)"
+assert_eq "…mais une variable posée avant garde la priorité" "dracula" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_PROMPT_THEME=dracula bash --norc --noprofile -c 'source "$1" init; echo "$COOLBASH_PROMPT_THEME"' _ "${home}/.coolbash/cli/coolbash" 2>/dev/null)"
+assert_contains "coolbash config voit le réglage comme défini" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash --norc --noprofile -c 'source "$1" init; coolbash config' _ "${home}/.coolbash/cli/coolbash" 2>/dev/null | grep COOLBASH_PROMPT_THEME)" "défini"
+su="$(printf '\n' | cli_home setup)"
+assert_contains "setup relancé : les choix précédents sont proposés (← actuel)" "$(printf '%s' "${su}" | sed 's/\x1b\[[0-9;]*m//g')" "nord  ← actuel"
+assert_contains "setup relancé avec Entrée partout : le fichier est conservé" "$(cat "${home}/.coolbash/config.bash")" "nord"
+assert_contains "coolbash help setup" "$(cli_home help setup)" "config.bash"
+rm -f "${home}/.coolbash/config.bash"
 assert_contains "doctor vérifie la locale" "${doc}" "locale"
 : >"${home}/.bashrc"
 doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1)"

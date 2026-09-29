@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.25.0 — 2026-09-29 · « Tout se règle en répondant à des questions »
+### Ajouté
+- **`coolbash setup`** : configuration interactive. Des questions à choix numérotés, oui/non ou
+  valeur, Entrée garde le réglage actuel (marqué « ← actuel ») : palette du prompt, icônes, emoji
+  de session, segments (git, versions d'outils, contexte cloud, chemin fish, transient), seuils de
+  durée et de sonnerie, heure de départ, MOTD (activé, lignes à taire, thèmes de citations, temps
+  de démarrage), vérification des mises à jour, nvm paresseux, hooks de projet, garde-fou git,
+  suivi des `cd`, suggestions de paquet, fzf, port de `serve`, mode normal ou safe.
+- Résultat : `~/.coolbash/config.bash`, seuls les choix hors défaut, chaque ligne
+  `export X="${X:-valeur}"` — une variable posée dans le `~/.bashrc` avant la ligne source garde
+  la priorité. Sourcé par `coolbash init` avant les modules ; `coolbash config` le reflète ;
+  `coolbash sync` l'embarque ; tout au défaut → le fichier est retiré.
+- `coolbash setup --defaults` accepte tout sans poser de question ; une entrée fermée vaut Entrée.
+- `coolbash help setup`, complétion.
+- Tests : `--defaults`, un questionnaire complet répondu par un tube (thème, emoji vide, oui/non,
+  valeur, multi-sélection), priorité du `~/.bashrc`, `config` qui voit « défini », relance avec
+  les choix précédents.
+
 ## 0.24.0 — 2026-09-29 · « Rangé, restauré, complété »
 ### Ajouté
 - **`coolbash tidy [--apply]`** : range le `~/.bashrc`. Aperçu par défaut : ce qu'un module prend

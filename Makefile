@@ -23,12 +23,12 @@ install:
 	@# FR : copie puis `mv` = nouvel inode. `coolbash update` est exécuté PAR le
 	@#      fichier qu'il remplace : réécrit en place, bash reprenait sa lecture au
 	@#      milieu du nouveau contenu (« erreur de syntaxe près de ;; »).
-	@for c in cli/coolbash cli/coolbash-font; do \
+	@for c in cli/coolbash cli/coolbash-font cli/coolbash-setup; do \
 	  dest="$(PREFIX)/$$c"; \
 	  [[ "$$c" -ef "$$dest" ]] && continue; \
 	  cp "$$c" "$$dest.new" && mv -f "$$dest.new" "$$dest"; \
 	done
-	@chmod +x "$(PREFIX)/cli/coolbash" "$(PREFIX)/cli/coolbash-font"
+	@chmod +x "$(PREFIX)/cli/coolbash" "$(PREFIX)/cli/coolbash-font" "$(PREFIX)/cli/coolbash-setup"
 	@rm -f "$(PREFIX)/.update-available"
 	@# FR : citations du MOTD (un fichier par thème). Les thèmes personnels vivent
 	@#      dans $(PREFIX)/fortunes/ et ne sont pas touchés.
@@ -90,14 +90,14 @@ uninstall:
 font:
 	@COOLBASH_PREFIX="$(PREFIX)" bash cli/coolbash-font install
 
-SH_FILES := cli/coolbash cli/coolbash-font install.sh modules/*.bash tests/*.sh
+SH_FILES := cli/coolbash cli/coolbash-font cli/coolbash-setup install.sh modules/*.bash tests/*.sh
 
 verify:
 	@echo "[CoolBash] Verifying syntax..."
 	@# FR : `bash -n a b` ne vérifie que `a` (b devient $$1) — d'où la boucle.
-	@for f in cli/coolbash cli/coolbash-font install.sh modules/*.bash tests/*.sh; do bash -n "$$f" || exit 1; done
+	@for f in $(SH_FILES); do bash -n "$$f" || exit 1; done
 	@if command -v shellcheck >/dev/null 2>&1; then \
-	  shellcheck cli/coolbash cli/coolbash-font install.sh tests/*.sh && shellcheck -S warning modules/*.bash; \
+	  shellcheck cli/coolbash cli/coolbash-font cli/coolbash-setup install.sh tests/*.sh && shellcheck -S warning modules/*.bash; \
 	else \
 	  echo "  shellcheck absent : contrôle limité à 'bash -n'."; \
 	fi

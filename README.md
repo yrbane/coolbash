@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.24.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.25.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -64,6 +64,7 @@ coolbash <command>
 | `version`   | Affiche la version                            |
 | `config`    | Tous les réglages `COOLBASH_*` avec leur valeur effective (définie ou par défaut) |
 | `fortune`   | Une citation du MOTD, au hasard ou d'un thème donné : `coolbash fortune chuck` ; `fortune --add "texte" [thème]` en ajoute une à `~/.coolbash/fortunes/` |
+| `setup`     | Configuration interactive : questions à choix (palette, icônes, emoji, segments, seuils, MOTD, citations, mises à jour, nvm, hooks, garde-fou…) → `~/.coolbash/config.bash`, sourcé par `init` avant les modules ; `setup --defaults` accepte tout |
 | `tidy`      | `tidy` montre le tri du `~/.bashrc` (retiré / déplacé / conservé) ; `tidy --apply` l'applique après sauvegarde : ce qu'un module fait déjà est retiré, `export PATH` devient `path_prepend`/`path_append`, alias et fonctions vont dans `90-local-overrides` |
 | `allow` / `deny` | Autorise (ou retire) le hook `.coolbash.bash` du projet courant : il est sourcé à l'entrée du dossier et défait à la sortie ; modifié, il redevient non autorisé |
 | `theme`     | `theme` liste les palettes du prompt avec un aperçu ; `theme nord` l'enregistre (`~/.coolbash/theme`) et l'applique au shell courant |
@@ -238,7 +239,12 @@ coolbash uninstall
 
 ## ⚙️ Configuration
 
-Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou dans l'environnement) :
+Le plus simple : **`coolbash setup`**, un questionnaire à choix qui écrit `~/.coolbash/config.bash`
+(seuls les choix hors défaut, sous la forme `export X="${X:-valeur}"`). Ce fichier est sourcé par
+`coolbash init` avant les modules, jamais touché par `make install`, et embarqué par `coolbash sync`.
+Une variable posée dans le `~/.bashrc` avant la ligne `source` garde la priorité.
+
+Variables lues au chargement (via `config.bash`, avant la ligne `source` du `.bashrc`, ou dans l'environnement) :
 
 | Variable                        | Effet                                                                 |
 | ------------------------------- | --------------------------------------------------------------------- |
