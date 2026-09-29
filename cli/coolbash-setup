@@ -76,7 +76,12 @@ _skip() { # $1 = variable
   return 0
 }
 
+# FR : aperçu d'une palette (une ligne ; « full » = le prompt complet), rendu par la CLI.
+_theme_preview() { COOLBASH_PREFIX="$COOLBASH_PREFIX" bash "$CLI" theme --preview "$1" ${2:+--full} 2>/dev/null; }
+
 # FR : _choice VAR "question" "défaut" "val1|libellé 1" "val2|libellé 2" …
+#      Si PREVIEW nomme une fonction, chaque option est suivie de son aperçu,
+#      et « v N » affiche l'aperçu complet de l'option N avant de répondre.
 _choice() {
   local var="$1" q="$2" def="$3" i=0 n reply val cur="${CURRENT[$1]:-$3}" idx_cur=1
   _skip "$var" && return 0
@@ -91,13 +96,24 @@ _choice() {
   for i in "${!vals[@]}"; do
     n=$((i + 1))
     if ((n == idx_cur)); then printf '  \e[1m%d) %s\e[0m  ← actuel\n' "$n" "${labels[i]}"; else printf '  %d) %s\n' "$n" "${labels[i]}"; fi
+    if [[ -n "${PREVIEW:-}" ]]; then
+      printf '       %s\n' "$("$PREVIEW" "${vals[i]}")"
+    fi
   done
-  printf 'Choix [%s] : ' "$idx_cur"
-  if ((DEFAULTS)); then
-    reply=""
-    printf '
-'
-  else read -r reply || reply=""; fi
+  while :; do
+    if [[ -n "${PREVIEW:-}" ]]; then printf 'Choix [%s] (v N : voir la palette N en entier) : ' "$idx_cur"; else printf 'Choix [%s] : ' "$idx_cur"; fi
+    if ((DEFAULTS)); then
+      reply=""
+      printf '\n'
+    else read -r reply || reply=""; fi
+    if [[ -n "${PREVIEW:-}" && "$reply" =~ ^[vV][[:space:]]*([0-9]+)$ && "${BASH_REMATCH[1]}" -ge 1 && "${BASH_REMATCH[1]}" -le ${#vals[@]} ]]; then
+      printf '\n  — %s —\n' "${labels[BASH_REMATCH[1] - 1]}"
+      "$PREVIEW" "${vals[BASH_REMATCH[1] - 1]}" full | sed 's/^/  /'
+      printf '\n'
+      continue
+    fi
+    break
+  done
   [[ "$reply" =~ ^[0-9]+$ && "$reply" -ge 1 && "$reply" -le ${#vals[@]} ]] || reply="$idx_cur"
   val="${vals[reply - 1]}"
   if [[ "$val" == "$def" ]]; then unset 'CHOSEN[$var]'; else CHOSEN[$var]="$val"; fi
@@ -112,8 +128,7 @@ _yesno() {
 %s [%s] : ' "$q" "$hint"
   if ((DEFAULTS)); then
     reply=""
-    printf '
-'
+    printf '\n'
   else read -r reply || reply=""; fi
   case "${reply,,}" in
     o | oui | y | yes) val=1 ;;
@@ -131,8 +146,7 @@ _text() {
 %s [%s] : ' "$q" "${cur:-vide}"
   if ((DEFAULTS)); then
     reply=""
-    printf '
-'
+    printf '\n'
   else read -r reply || reply=""; fi
   [[ -z "$reply" ]] && reply="$cur"
   [[ "$reply" =~ ^${re}$ ]] || {
@@ -160,8 +174,7 @@ _multi() {
   printf 'Choix [%s] : ' "${cur:-aucun}"
   if ((DEFAULTS)); then
     reply=""
-    printf '
-'
+    printf '\n'
   else read -r reply || reply=""; fi
   if [[ -z "$reply" ]]; then
     val="$cur"
@@ -202,7 +215,7 @@ else
 fi
 
 _title "Prompt"
-_choice COOLBASH_PROMPT_THEME "Palette du prompt (truecolor) :" coolbash \
+PREVIEW=_theme_preview _choice COOLBASH_PROMPT_THEME "Palette du prompt (truecolor) — chaque ligne est le vrai prompt dans la palette :" coolbash \
   "coolbash|coolbash — verte et violette, la palette d'origine" "nord|nord" "dracula|dracula" \
   "solarized|solarized" "gruvbox|gruvbox" "mono|mono — gras et vidéo inverse, aucune couleur"
 _choice COOLBASH_PROMPT_ICONS "Icônes du prompt :" nerd \

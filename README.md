@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.26.2-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.27.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -68,7 +68,7 @@ coolbash <command>
 | `setup`     | Configuration interactive, lancée aussi à la fin de `install` et `update` (reprise de l'existant, seules les questions nouvelles) : questions à choix (palette, icônes, emoji, segments, seuils, MOTD, citations, mises à jour, nvm, hooks, garde-fou…) → `~/.coolbash/config.bash`, sourcé par `init` avant les modules ; `setup --defaults` accepte tout |
 | `tidy`      | `tidy` montre le tri du `~/.bashrc` (retiré / déplacé / conservé) ; `tidy --apply` l'applique après sauvegarde : ce qu'un module fait déjà est retiré, `export PATH` devient `path_prepend`/`path_append`, alias et fonctions vont dans `90-local-overrides` |
 | `allow` / `deny` | Autorise (ou retire) le hook `.coolbash.bash` du projet courant : il est sourcé à l'entrée du dossier et défait à la sortie ; modifié, il redevient non autorisé |
-| `theme`     | `theme` liste les palettes du prompt avec un aperçu ; `theme nord` l'enregistre (`~/.coolbash/theme`) et l'applique au shell courant |
+| `theme`     | `theme` liste les palettes du prompt avec un aperçu ; `theme nord` l'enregistre (`~/.coolbash/theme`) et l'applique au shell courant ; `theme --preview nord [--full]` rend l'aperçu seul |
 | `sync`      | `sync [--update] [--overrides] user@host…` : pousse `fortunes/`, `motd.txt` et `theme` vers `~/.coolbash` d'autres machines par rsync sur SSH ; `--overrides` ajoute `90-local-overrides`, `--update` y lance `coolbash update` |
 | `bench`     | `bench [N]` : N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module |
 | `doctor`    | Diagnostic : bash, `.bashrc`, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton `~/.bashrc` refait à la main (nvm, cargo, PATH, alias…) alors qu'un module s'en charge |
@@ -244,7 +244,8 @@ Le plus simple : **`coolbash setup`**, lancé automatiquement à la fin de `cool
 `coolbash update` quand on a un terminal (`COOLBASH_SETUP=0` pour sauter, `COOLBASH_SETUP_DEFAULTS=1`
 pour tout accepter sans question). Une configuration
 existante est **reprise** : seules les questions apparues depuis sa version sont posées, ou rien du
-tout si tout est connu. C'est un questionnaire à choix qui écrit `~/.coolbash/config.bash`
+tout si tout est connu. C'est un questionnaire à choix — la question de la palette montre le vrai prompt dans chaque thème,
+et `v 3` affiche la palette 3 en entier avant de répondre — qui écrit `~/.coolbash/config.bash`
 (seuls les choix hors défaut, sous la forme `export X="${X:-valeur}"`). Ce fichier est sourcé par
 `coolbash init` avant les modules, jamais touché par `make install`, et embarqué par `coolbash sync`.
 Une variable posée dans le `~/.bashrc` avant la ligne `source` garde la priorité.

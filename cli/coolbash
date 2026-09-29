@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.26.2"
+COOLBASH_VERSION="0.27.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -236,28 +236,43 @@ _coolbash_cmd_bench() {
 # FR : coolbash theme [nom] — sans argument : la liste avec un aperçu de chaque
 #      palette ; avec : écrit ~/.coolbash/theme, lu par 50-prompt au chargement.
 COOLBASH_THEMES="coolbash nord dracula solarized gruvbox mono"
+# FR : aperçu d'une palette = le vrai PS1 construit dans ce thème, en truecolor,
+#      sans les \[ \] ni les séquences de titre, avec des valeurs d'exemple.
+#      $1 = thème, $2 = « full » pour les deux lignes telles qu'à l'écran.
+_coolbash_theme_preview() {
+  local ps1
+  ps1="$(MOTD_DISABLE=1 COOLBASH_PROMPT_THEME="$1" COLORTERM=truecolor TERM=dumb HOME="${HOME}" \
+    bash --norc --noprofile -c 'source "$1"; source "$2"; cd "$HOME" 2>/dev/null; _coolbash_prompt_build; printf %s "$PS1"' _ \
+    "${COOLBASH_MODULE_DIR}/00-core.bash" "${COOLBASH_MODULE_DIR}/50-prompt.bash" 2>/dev/null)"
+  ps1="${ps1//\\[/}"
+  ps1="${ps1//\\]/}"
+  ps1="${ps1//\\u/seb}"
+  ps1="${ps1//\\h/machine}"
+  ps1="${ps1//\\t/12:34:56}"
+  ps1="${ps1//\\w/~\/Dev\/coolbash}"
+  ps1="${ps1//\\\$/\$}"
+  ps1="${ps1#$'\n'}"
+  if [[ "${2:-}" == full ]]; then printf '%b\n' "$ps1"; else printf '%b\n' "${ps1//$'\n'/  }"; fi
+}
+
 _coolbash_cmd_theme() {
-  local file="${COOLBASH_PREFIX}/theme" cur="" t ps1
+  local file="${COOLBASH_PREFIX}/theme" cur="" t
   read -r cur 2>/dev/null <"$file"
   cur="${COOLBASH_PROMPT_THEME:-${cur:-coolbash}}"
+  if [[ "${1:-}" == --preview ]]; then
+    [[ " $COOLBASH_THEMES " == *" ${2:-} "* ]] || {
+      _coolbash_error "thème inconnu : ${2:-} (disponibles : $COOLBASH_THEMES)"
+      return 1
+    }
+    _coolbash_theme_preview "$2" "${3:+full}"
+    return 0
+  fi
   if [[ -z "${1:-}" ]]; then
     printf 'Thèmes du prompt (actuel : %s) — coolbash theme <nom>\n\n' "$cur"
     for t in $COOLBASH_THEMES; do
-      # FR : aperçu = le vrai PS1 du thème, sans les \[ \] ni les séquences de titre.
-      ps1="$(MOTD_DISABLE=1 COOLBASH_PROMPT_THEME="$t" COLORTERM=truecolor TERM=dumb HOME="${HOME}" \
-        bash --norc --noprofile -c 'source "$1"; source "$2"; _coolbash_prompt_build; printf %s "$PS1"' _ \
-        "${COOLBASH_MODULE_DIR}/00-core.bash" "${COOLBASH_MODULE_DIR}/50-prompt.bash" 2>/dev/null)"
-      ps1="${ps1//\\[/}"
-      ps1="${ps1//\\]/}"
-      ps1="${ps1//\\u/seb}"
-      ps1="${ps1//\\h/machine}"
-      ps1="${ps1//\\t/12:34:56}"
-      ps1="${ps1//\\w/~\/Dev\/coolbash}"
-      ps1="${ps1//\\\$/\$}"
-      ps1="${ps1#$'\n'}"
       printf '  %-10s ' "$t"
       [[ "$t" == "$cur" ]] && printf '● ' || printf '  '
-      printf '%b\n' "${ps1//$'\n'/  }"
+      _coolbash_theme_preview "$t"
     done
     return 0
   fi
@@ -654,7 +669,7 @@ _coolbash_shell_function() {
       words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile help"
     else
       case "$sub" in
-        theme) words="${COOLBASH_THEMES:-coolbash nord dracula solarized gruvbox mono}" ;;
+        theme) words="--preview ${COOLBASH_THEMES:-coolbash nord dracula solarized gruvbox mono}" ;;
         fortune)
           words="--add"
           local f
@@ -723,7 +738,7 @@ _coolbash_cmd_help_topic() {
     config) echo "coolbash config — tous les réglages COOLBASH_* avec leur valeur effective (définie ou par défaut) et un mot d'explication. À définir avant la ligne source du ~/.bashrc, ou via coolbash setup." ;;
     fortune) printf '%s\n' "coolbash fortune [thème…] — une citation, au hasard ou dans les thèmes cités (dev unix sysadmin lois corporate absurde humour-noir moralistes proverbes sciences cinema chuck, et les tiens dans ~/.coolbash/fortunes/)." "coolbash fortune --add \"texte\" [thème] — ajoute une citation au thème (perso par défaut)." ;;
     bench) echo "coolbash bench [N] — N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module du plus lourd au plus léger." ;;
-    theme) echo "coolbash theme [nom] — sans argument, la liste des palettes (coolbash nord dracula solarized gruvbox mono) avec un aperçu ; avec, l'enregistre dans ~/.coolbash/theme et l'applique au shell courant." ;;
+    theme) echo "coolbash theme [nom] — sans argument, la liste des palettes (coolbash nord dracula solarized gruvbox mono) avec un aperçu ; avec, l'enregistre dans ~/.coolbash/theme et l'applique au shell courant. theme --preview <nom> [--full] : l'aperçu seul (une ligne, ou le prompt complet)." ;;
     sync) echo "coolbash sync [--update] [--overrides] user@host… — pousse fortunes/, motd.txt et theme vers ~/.coolbash d'autres machines (rsync sur SSH). --overrides ajoute 90-local-overrides.bash, --update y lance coolbash update." ;;
     allow | deny) echo "coolbash allow | deny — autorise (ou retire) le hook .coolbash.bash du projet courant : sourcé à l'entrée du dossier, défait à la sortie ; modifié, il redevient non autorisé." ;;
     setup) echo "coolbash setup [--defaults] — configuration interactive, lancée aussi à la fin de install/update (reprend la configuration existante et ne pose que les questions nouvelles) : palette, icônes, emoji, segments du prompt, seuils, MOTD (lignes, thèmes de citations), temps de démarrage, mises à jour, nvm, hooks, garde-fou git, j, suggestions, fzf, port de serve, mode. Écrit ~/.coolbash/config.bash (seuls les choix hors défaut), sourcé par init avant les modules. --defaults accepte tout." ;;

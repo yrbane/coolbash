@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.27.0 — 2026-09-29 · « Voir les couleurs avant de choisir »
+### Ajouté
+- **`coolbash setup`, question de la palette** : chaque option est suivie du vrai prompt rendu dans
+  cette palette (truecolor), et **`v N`** affiche la palette N en entier, sur ses deux lignes,
+  avant de répondre. Autant de fois qu'on veut ; un numéro ou Entrée conclut.
+- **`coolbash theme --preview <nom> [--full]`** : l'aperçu seul, une ligne ou le prompt complet.
+  `coolbash theme` s'en sert pour sa liste.
+- Tests : aperçu (contenu, couleurs, une ou deux lignes, thème inconnu) et questionnaire avec
+  `v 3` puis `2`.
+
 ## 0.26.2 — 2026-09-29 · « Les tests ne parlent plus au terminal »
 ### Corrigé
 - `make test` lancé depuis un terminal : `gsw` ouvrait fzf (l'entrée standard était un tty) et

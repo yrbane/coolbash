@@ -101,6 +101,16 @@ assert_eq "coolbash theme <inconnu> → erreur, code 1" "1" "$(
   cli_home theme fuchsia >/dev/null 2>&1
   echo $?
 )"
+tp="$(cli_home theme --preview nord)"
+assert_contains "theme --preview nord : le prompt d'exemple (utilisateur)" "${tp}" "seb"
+assert_contains "theme --preview nord : le prompt d'exemple (hôte)" "${tp}" "machine"
+assert_contains "…dans les couleurs nord" "${tp}" $'\e[38;2;163;190;140m'
+assert_eq "theme --preview : une seule ligne" "1" "$(printf '%s\n' "${tp}" | grep -c .)"
+assert_eq "theme --preview --full : les deux lignes du prompt" "2" "$(cli_home theme --preview dracula --full | grep -c .)"
+assert_eq "theme --preview inconnu → erreur" "1" "$(
+  cli_home theme --preview fuchsia >/dev/null 2>&1
+  echo $?
+)"
 cli_home theme nord >/dev/null
 assert_eq "coolbash theme nord écrit ~/.coolbash/theme" "nord" "$(cat "${home}/.coolbash/theme")"
 assert_contains "…et la liste marque le thème actuel" "$(cli_home theme)" "nord       ●"
@@ -225,6 +235,14 @@ su="$(cli_home setup --defaults)"
 assert_contains "setup --defaults : tout par défaut, seule la version est notée" "${su}" "seule la version"
 assert_eq "…config.bash ne contient que l'en-tête (avec la version)" "0" "$(grep -c '^export' "${home}/.coolbash/config.bash")"
 assert_contains "…qui permet la reprise dès la prochaine fois" "$(cli_home setup --defaults)" "reprise telle quelle"
+rm -f "${home}/.coolbash/config.bash"
+# setup : aperçu des palettes dans la question, et « v N » pour voir une palette en entier
+rm -f "${home}/.coolbash/config.bash"
+sv="$(printf 'v 3\n2\n' | cli_home setup)"
+assert_eq "setup : la question de la palette montre un aperçu par thème (6)" "6" "$(printf '%s\n' "${sv}" | grep -c '12:34:56.*seb.*machine.*~/Dev/coolbash')"
+assert_contains "setup : « v 3 » affiche la palette 3 (dracula) en entier" "${sv}" "— dracula —"
+assert_contains "…avec ses couleurs" "${sv}" $'\e[38;2;189;147;249m'
+assert_contains "…puis la réponse 2 est prise : nord" "$(cat "${home}/.coolbash/config.bash")" "COOLBASH_PROMPT_THEME:-nord"
 rm -f "${home}/.coolbash/config.bash"
 # FR : réponses : thème 2 (nord), icônes Entrée, emoji 2 (aucun), git n, tools Entrée, cloud Entrée,
 #      fish Entrée, transient Entrée, min_ms 500, bell Entrée, stamp Entrée ; MOTD o, hide « 5 9 »,
