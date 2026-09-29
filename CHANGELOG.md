@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.23.0 — 2026-09-29 · « Le prompt sait où tu déploies »
+### Ajouté
+- **Contexte Kubernetes** : le `current-context` du kubeconfig (`KUBECONFIG`, sinon
+  `~/.kube/config`), lu en pur bash, dans le prompt avec l'icône ⎈. **Profil AWS** :
+  `AWS_PROFILE`, sinon `AWS_VAULT`, avec ☁. Le segment passe en **rouge gras** quand le nom
+  contient `COOLBASH_PROMPT_PROD` (« prod »). `COOLBASH_PROMPT_CLOUD=0` cache.
+- **Rust** à côté de php et node : dans un projet `Cargo.toml`, la version de
+  `rust-toolchain.toml` (`channel`) ou de `rust-toolchain` sans lancer quoi que ce soit, sinon
+  `rustc --version` mis en cache comme les autres.
+- Tests : kubeconfig, `KUBECONFIG`, prod en rouge, motif personnalisé, AWS_PROFILE/AWS_VAULT,
+  mode basic, désactivation ; Cargo.toml avec faux rustc, toolchain fixée, canal nommé.
+
 ## 0.22.0 — 2026-09-29 · « Le poste de travail »
 ### Ajouté
 - **Module `42-workspace`.**

@@ -21,7 +21,9 @@
 #                COOLBASH_PROMPT_BELL_MS (défaut 30000, 0 = jamais),
 #                COOLBASH_PROMPT_TOOLS=0, PROMPT_DIRTRIM (défaut 3),
 #                COOLBASH_PROMPT_PATH_FISH=0 (jamais d'abréviation ~/D/coolbash),
-#                COOLBASH_PROMPT_TRANSIENT=1 (prompt réduit après l'Entrée, expérimental).
+#                COOLBASH_PROMPT_TRANSIENT=1 (prompt réduit après l'Entrée, expérimental),
+#                COOLBASH_PROMPT_CLOUD=0 (ni contexte kube ni profil AWS),
+#                COOLBASH_PROMPT_PROD (motif « prod » qui passe le segment en rouge).
 
 if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
   return 0
@@ -67,16 +69,19 @@ _coolbash_prompt_init_icons() {
       s=([user]=$'\uf007' [host]=$'\uf108' [branch]=$'\ue725' [venv]=$'\ue73c'
         [time]=$'\uf252' [path]=$'\uf07c' [root]=$'\U000f033e'
         [clock]=$'\uf017' [err]=$'\uf057' [jobs]=$'\uf013' [ro]=$'\uf023'
-        [ssh]=$'\uf1e6' [container]=$'\uf1b2' [php]=$'\ue73d' [node]=$'\ue718')
+        [ssh]=$'\uf1e6' [container]=$'\uf1b2' [php]=$'\ue73d' [node]=$'\ue718'
+        [rust]=$'\ue7a8' [kube]=$'\U000f10fe' [aws]=$'\uf270')
       ;;
     0)
       s=([user]="" [host]="" [branch]="" [venv]="" [time]="" [path]="" [root]=""
-        [clock]="" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="" [container]="" [php]="" [node]="")
+        [clock]="" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="" [container]="" [php]="" [node]=""
+        [rust]="" [kube]="" [aws]="")
       ;;
     *)
       COOLBASH_PROMPT_ICONS=basic
       s=([user]="" [host]="" [branch]="⎇" [venv]="⚗" [time]="⧗" [path]="" [root]="⚠"
-        [clock]="⏱" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="⇄" [container]="▣" [php]="" [node]="")
+        [clock]="⏱" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="⇄" [container]="▣" [php]="" [node]=""
+        [rust]="" [kube]="⎈" [aws]="☁")
       ;;
   esac
 }
@@ -389,7 +394,9 @@ _coolbash_prompt_tool_version() {
   local -n _tvr_valr_out="$2"
   local _tvr_valr_tool="$1" _tvr_valr_bin _tvr_val
   _tvr_valr_out=""
-  _tvr_valr_bin="$(command -v "$_tvr_valr_tool" 2>/dev/null)" || return 1
+  local _tvr_valr_cmd="$_tvr_valr_tool"
+  [[ "$_tvr_valr_tool" == rust ]] && _tvr_valr_cmd=rustc
+  _tvr_valr_bin="$(command -v "$_tvr_valr_cmd" 2>/dev/null)" || return 1
   [[ -n "$_tvr_valr_bin" ]] || return 1
   if [[ -z "${COOLBASH_PROMPT_TOOL_CACHE[$_tvr_valr_bin]+x}" ]]; then
     case "$_tvr_valr_tool" in
@@ -399,11 +406,40 @@ _coolbash_prompt_tool_version() {
         _tvr_val="${_tvr_val#v}"
         _tvr_val="${_tvr_val%.*}"
         ;;
+      rust)
+        # FR : « rustc 1.80.0 (abc 2024-07-21) » → 1.80
+        _tvr_val="$("$_tvr_valr_bin" --version 2>/dev/null)"
+        _tvr_val="${_tvr_val#rustc }"
+        _tvr_val="${_tvr_val%% *}"
+        _tvr_val="${_tvr_val%.*}"
+        ;;
     esac
     COOLBASH_PROMPT_TOOL_CACHE[$_tvr_valr_bin]="$_tvr_val"
   fi
   _tvr_valr_out="${COOLBASH_PROMPT_TOOL_CACHE[$_tvr_valr_bin]}"
 }
+# FR : rust-toolchain.toml (channel = "1.79.0") ou rust-toolchain (une ligne) du
+#      projet : la version voulue, sans lancer rustc. $1 = variable de sortie.
+_coolbash_prompt_rust_toolchain() {
+  local -n _rt_out="$1"
+  local _rt_line _rt_v=""
+  _rt_out=""
+  if [[ -r rust-toolchain.toml ]]; then
+    while IFS= read -r _rt_line; do
+      [[ "$_rt_line" == *channel* ]] && {
+        _rt_v="${_rt_line#*=}"
+        break
+      }
+    done <rust-toolchain.toml
+  elif [[ -r rust-toolchain ]]; then
+    read -r _rt_v <rust-toolchain
+  fi
+  _rt_v="${_rt_v//[\"\' ]/}"
+  [[ -n "$_rt_v" ]] || return 1
+  [[ "$_rt_v" =~ ^[0-9]+\.[0-9]+ ]] && _rt_v="${BASH_REMATCH[0]}"
+  _rt_out="$_rt_v"
+}
+
 # _coolbash_prompt_tools <variable de sortie>
 _coolbash_prompt_tools() {
   local -n _tout="$1"
@@ -412,12 +448,44 @@ _coolbash_prompt_tools() {
   _coolbash_safe && return 0
   local -n _tsym=COOLBASH_PROMPT_SYM
   local _tv _ttool _tfile
-  for _ttool in php node; do
-    case "$_ttool" in php) _tfile=composer.json ;; node) _tfile=package.json ;; esac
+  for _ttool in php node rust; do
+    case "$_ttool" in php) _tfile=composer.json ;; node) _tfile=package.json ;; rust) _tfile=Cargo.toml ;; esac
     [[ -f "$_tfile" ]] || continue
-    _coolbash_prompt_tool_version "$_ttool" _tv || continue
+    if [[ "$_ttool" == rust ]] && _coolbash_prompt_rust_toolchain _tv; then :; else
+      _coolbash_prompt_tool_version "$_ttool" _tv || continue
+    fi
     [[ -n "$_tv" ]] || continue
     _tout+="${_tout:+  }${_tsym[$_ttool]:-$_ttool} ${_tv}"
+  done
+}
+
+# FR : contexte cloud — Kubernetes (current-context du kubeconfig, lu en pur
+#      bash) et profil AWS (AWS_PROFILE ou AWS_VAULT). Rouge et gras quand le nom
+#      contient COOLBASH_PROMPT_PROD (« prod »). COOLBASH_PROMPT_CLOUD=0 cache.
+#      $1 = variable de sortie ; locaux préfixés _cl_ (nameref).
+_coolbash_prompt_cloud() {
+  local -n _cl_out="$1"
+  _cl_out=""
+  [[ "${COOLBASH_PROMPT_CLOUD:-1}" == 0 ]] && return 0
+  local -n _cl_s=COOLBASH_PROMPT_SYM _cl_c=COOLBASH_PROMPT_COLOR
+  local _cl_file="${KUBECONFIG:-$HOME/.kube/config}" _cl_line _cl_ctx="" _cl_aws="${AWS_PROFILE:-${AWS_VAULT:-}}" _cl_seg _cl_col _cl_kind _cl_val
+  _cl_file="${_cl_file%%:*}"
+  if [[ -r "$_cl_file" ]]; then
+    while IFS= read -r _cl_line; do
+      [[ "$_cl_line" == current-context:* ]] && {
+        _cl_ctx="${_cl_line#current-context:}"
+        _cl_ctx="${_cl_ctx//[\"\' ]/}"
+        break
+      }
+    done <"$_cl_file"
+  fi
+  for _cl_seg in "kube:$_cl_ctx" "aws:$_cl_aws"; do
+    _cl_kind="${_cl_seg%%:*}"
+    _cl_val="${_cl_seg#*:}"
+    [[ -n "$_cl_val" ]] || continue
+    _cl_col="${_cl_c[info]}"
+    [[ "$_cl_val" == *"${COOLBASH_PROMPT_PROD:-prod}"* ]] && _cl_col="${_cl_c[root]}${_cl_c[bold]}"
+    _cl_out+="${_cl_out:+  }${_cl_col}${_cl_s[$_cl_kind]:-$_cl_kind} ${_cl_val}${_cl_c[reset]}"
   done
 }
 
@@ -454,7 +522,7 @@ _coolbash_prompt_build() {
   local ec=$?
   _coolbash_prompt_elapsed
   local -n c=COOLBASH_PROMPT_COLOR s=COOLBASH_PROMPT_SYM
-  local who host chevron clock hicon hcolor ro="" git="" venv="" tools="" dur="" jobs="" err="" seg
+  local who host chevron clock hicon hcolor ro="" git="" venv="" tools="" cloud="" dur="" jobs="" err="" seg
   # FR : `${s[x]:+${s[x]} }` — icône suivie d'une espace, ou rien du tout
   #      (mode 0) : jamais d'espace orpheline. L'icône d'hôte (écran, prise,
   #      cube) déborde de sa cellule : deux espaces, sinon elle touche le nom.
@@ -497,6 +565,8 @@ _coolbash_prompt_build() {
   [[ -n "$seg" ]] && venv=" ${c[info]}${s[venv]:+${s[venv]} }${seg}${c[reset]}"
   _coolbash_prompt_tools seg
   [[ -n "$seg" ]] && tools=" ${c[info]}${seg}${c[reset]}"
+  _coolbash_prompt_cloud seg
+  [[ -n "$seg" ]] && cloud=" ${seg}"
   seg="$(_coolbash_prompt_duration)"
   [[ -n "$seg" ]] && dur=" ${c[info]}${s[time]:+${s[time]} }${seg}${c[reset]}"
   seg="$(_coolbash_prompt_jobs)"
@@ -525,7 +595,7 @@ _coolbash_prompt_build() {
     [[ "${COOLBASH_PS1_OSC7:-1}" != 0 ]] && title+="$(_coolbash_prompt_osc7)"
     title+="$(_coolbash_prompt_notify)"
   fi
-  PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}${clock}${c[reset]} ${who} at ${host}${git}${venv}${tools}${dur}${jobs}${err}"$'\n'"${c[bold]}${c[path]}${ro}${s[path]:+${s[path]} }${wpath}${c[reset]} ${chevron} "
+  PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}${clock}${c[reset]} ${who} at ${host}${git}${venv}${tools}${cloud}${dur}${jobs}${err}"$'\n'"${c[bold]}${c[path]}${ro}${s[path]:+${s[path]} }${wpath}${c[reset]} ${chevron} "
 }
 
 # --- Enregistrement dans PROMPT_COMMAND (helper commun de 00-core) -----------

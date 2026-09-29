@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.22.0"
+COOLBASH_VERSION="0.23.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -79,6 +79,8 @@ COOLBASH_PS0_TITLE|1|0 = ne pas toucher au titre du terminal
 COOLBASH_PS0_EXTRA||fragment ajouté à la fin de PS0
 COOLBASH_PS1_OSC7|1|0 = ne pas annoncer le dossier courant (OSC 7)
 COOLBASH_PROMPT_THEME|coolbash|palette du prompt : coolbash nord dracula solarized gruvbox mono (coolbash theme)
+COOLBASH_PROMPT_CLOUD|1|0 = ni contexte Kubernetes ni profil AWS dans le prompt
+COOLBASH_PROMPT_PROD|prod|motif qui passe le contexte cloud en rouge
 COOLBASH_PROMPT_PATH_FISH|1|0 = jamais de chemin abrégé façon fish (~/D/coolbash)
 COOLBASH_PROMPT_TRANSIENT|0|1 = prompt réduit à une ligne après l'Entrée (expérimental)
 COOLBASH_NVM_LAZY|1|0 = charger nvm.sh au démarrage (lent)

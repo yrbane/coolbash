@@ -255,4 +255,34 @@ assert_contains "…mais COOLBASH_PROMPT_THEME a la priorité" "$(tc COOLBASH_PR
 rm -f "${COOLBASH_TEST_TMP}/.coolbash/theme"
 assert_eq "aucun sous-shell pour les couleurs (printf -v)" "0" "$(grep -cE 'c\[[a-z_]+\]="\$\(_coolbash_prompt_(bg)?rgb' "${PROMPT}")"
 
+# --- 15. 0.23.0 : contexte cloud (kube, AWS) et toolchain Rust -----------------
+mkdir -p "${COOLBASH_TEST_TMP}/.kube"
+printf 'apiVersion: v1\ncurrent-context: dev-cluster\ncontexts: []\n' >|"${COOLBASH_TEST_TMP}/.kube/config"
+cloud() { with_prompt '_coolbash_prompt_cloud v; printf %s "$v"'; }
+assert_contains "kube : current-context de ~/.kube/config" "$(cloud)" $'\U000f10fe dev-cluster'
+assert_eq "…en couleur info, pas en rouge" "0" "$(cloud | grep -c '31m')"
+printf 'current-context: "prod-eu"\n' >|"${COOLBASH_TEST_TMP}/kc2"
+assert_contains "KUBECONFIG a priorité, guillemets retirés" "$(KUBECONFIG="${COOLBASH_TEST_TMP}/kc2" cloud)" "prod-eu"
+assert_contains "…et « prod » passe en rouge gras" "$(KUBECONFIG="${COOLBASH_TEST_TMP}/kc2" cloud)" '\e[31m\]\[\e[1m\]'
+assert_contains "COOLBASH_PROMPT_PROD : motif personnalisé" "$(COOLBASH_PROMPT_PROD=dev cloud)" '\e[31m'
+assert_contains "AWS_PROFILE : profil affiché (icône nerd)" "$(AWS_PROFILE=perso cloud)" $'\uf270 perso'
+assert_contains "AWS_VAULT : pris en compte à défaut" "$(AWS_PROFILE='' AWS_VAULT=admin cloud)" "admin"
+assert_eq "COOLBASH_PROMPT_CLOUD=0 : rien" "" "$(AWS_PROFILE=perso COOLBASH_PROMPT_CLOUD=0 cloud)"
+basic="$(AWS_PROFILE=p COOLBASH_PROMPT_ICONS=basic cloud)"
+assert_contains "mode basic : ⎈ pour kube" "${basic}" "⎈ dev-cluster"
+assert_contains "mode basic : ☁ pour AWS" "${basic}" "☁ p"
+assert_contains "le segment cloud est dans PS1" "$(AWS_PROFILE=perso ps1_of)" "perso"
+rm -f "${COOLBASH_TEST_TMP}/.kube/config"
+printf '#!/bin/sh\nprintf "rustc 1.80.0 (abc 2024-07-21)\\n"\n' >"${bin}/rustc"
+chmod +x "${bin}/rustc"
+rm -f "${COOLBASH_TEST_TMP}/proj/composer.json" "${COOLBASH_TEST_TMP}/proj/package.json"
+: >"${COOLBASH_TEST_TMP}/proj/Cargo.toml"
+assert_eq "Cargo.toml : version de rustc, majeure.mineure" $'\ue7a8 1.80' "$(tools_seg)"
+printf '[toolchain]\nchannel = "1.75.0"\n' >"${COOLBASH_TEST_TMP}/proj/rust-toolchain.toml"
+assert_eq "rust-toolchain.toml : la version du projet, sans lancer rustc" $'\ue7a8 1.75' "$(tools_seg)"
+rm -f "${COOLBASH_TEST_TMP}/proj/rust-toolchain.toml"
+printf 'nightly\n' >"${COOLBASH_TEST_TMP}/proj/rust-toolchain"
+assert_eq "rust-toolchain : un canal nommé" $'\ue7a8 nightly' "$(tools_seg)"
+rm -f "${COOLBASH_TEST_TMP}/proj/rust-toolchain" "${COOLBASH_TEST_TMP}/proj/Cargo.toml"
+
 t_done
