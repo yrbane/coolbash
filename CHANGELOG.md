@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.26.0 — 2026-09-29 · « Un ~/.bashrc autonome, configuré à chaque mise à jour »
+### Ajouté
+- **`coolbash compile [--write | fichier]`** : un `~/.bashrc` autonome. En-tête avec marqueur
+  `# COOLBASH-COMPILED <version>`, `config.bash`, les fonctions de la CLI nécessaires
+  (`declare -f`), puis chaque module inliné dans une fonction `_coolbash_mod_<nom>` — ses
+  `return` (mode safe) restent locaux — avec `COOLBASH_DISABLE` et le temps par module
+  respectés, la fonction `coolbash` et sa complétion, la vérification de mise à jour, le temps
+  de démarrage. `bash -n` valide le résultat avant de l'installer ; `--write` sauvegarde le
+  `~/.bashrc` s'il ne l'était pas.
+- **Mode du `~/.bashrc` dans `coolbash setup`** : `source` (défaut, une ligne) ou `compiled`
+  (`COOLBASH_INSTALL_MODE`). En `compiled`, setup compile ; le retour à `source` réécrit une
+  ligne et garde l'ancien fichier à côté.
+- **`setup` à la fin de `install` et `update`** : questions si on a un terminal
+  (`COOLBASH_SETUP=0` pour sauter), sinon reprise silencieuse — et le `~/.bashrc` compilé est
+  régénéré dans les deux cas. Une mise à jour ne casse donc jamais un `.bashrc` autonome.
+- **Reprise de la configuration** : `config.bash` porte sa version ; setup propose de la reprendre
+  et ne pose que les questions apparues depuis (table des versions d'apparition de chaque
+  réglage), ou dit qu'il n'y a rien de nouveau. `--defaults` et une entrée sans terminal
+  reprennent toujours.
+- `doctor` reconnaît un `.bashrc` compilé, vérifie sa version et propose la recompilation ;
+  `tidy` refuse d'y toucher ; `help compile`, complétion.
+- Tests : compilation (marqueur, un module = une fonction, bash valide, chargement interactif avec
+  prompt et fonctions, mode safe sans interruption, `config.bash` inliné, `--write` et sa
+  sauvegarde), doctor et tidy en mode compilé, setup en mode compiled puis retour au mode source,
+  reprise d'une configuration 0.19.0 (palette non redemandée, hooks demandés, version mise à
+  jour), `make install` sans terminal qui régénère le `.bashrc` compilé.
+
 ## 0.25.0 — 2026-09-29 · « Tout se règle en répondant à des questions »
 ### Ajouté
 - **`coolbash setup`** : configuration interactive. Des questions à choix numérotés, oui/non ou

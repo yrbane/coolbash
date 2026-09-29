@@ -51,6 +51,13 @@ install:
 	@# FR : la police des icônes est un confort — son échec (pas de réseau, pas
 	@#      de xz…) ne doit jamais faire échouer l'installation.
 	@COOLBASH_PREFIX="$(PREFIX)" bash cli/coolbash-font install || true
+	@# FR : configuration à la fin — questions si on a un terminal (COOLBASH_SETUP=0
+	@#      pour sauter), sinon reprise silencieuse de la configuration existante ;
+	@#      un ~/.bashrc en mode compiled est régénéré dans les deux cas.
+	@if [[ "$${COOLBASH_SETUP:-1}" != 0 ]]; then \
+	  if [[ -t 0 && -t 1 ]]; then COOLBASH_PREFIX="$(PREFIX)" COOLBASH_BASHRC="$(BASHRC)" bash "$(PREFIX)/cli/coolbash-setup" || true; \
+	  else COOLBASH_PREFIX="$(PREFIX)" COOLBASH_BASHRC="$(BASHRC)" bash "$(PREFIX)/cli/coolbash-setup" --defaults >/dev/null || true; fi; \
+	fi
 	@echo "[CoolBash] Installation complete ✅"
 
 update:

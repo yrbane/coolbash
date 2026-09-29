@@ -95,6 +95,16 @@ assert_success "make install PREFIX=<clone> ne s'écrase pas lui-même" \
 assert_no_path "…et ne laisse pas de fichier .repo dans le clone" "${CLONE}/.repo"
 assert_file "…et le clone est intact" "${CLONE}/Makefile"
 
+# --- install en mode compiled : ~/.bashrc régénéré sans question (pas de tty) ----
+printf '# CoolBash 0.26.0 — réglages\nexport COOLBASH_INSTALL_MODE="${COOLBASH_INSTALL_MODE:-compiled}"\n' >|"${PREFIX}/config.bash"
+assert_success "make install avec config compiled (sans terminal) réussit" mk install
+assert_contains "…et ~/.bashrc est le fichier compilé" "$(head -4 "${BASHRC}")" "# COOLBASH-COMPILED"
+assert_eq "…qui se charge sans erreur" "ok" "$(MOTD_DISABLE=1 HOME="${HOME}" COOLBASH_STARTUP_TIME=0 bash --norc --noprofile -ic "source '${BASHRC}' && echo ok" 2>/dev/null | tail -1)"
+printf 'source "%s/cli/coolbash" init\n' "${PREFIX}" >|"${BASHRC}"
+set -- "${BASHRC}".avant-coolbash-*
+printf '# mon bashrc\nexport FOO=1\n# coolbash rocks (commentaire à préserver)\n' >|"$1"
+rm -f "${PREFIX}/config.bash"
+
 # --- uninstall ---------------------------------------------------------------
 assert_success "make uninstall réussit" mk uninstall
 assert_contains "uninstall : le .bashrc d'avant CoolBash est restauré" "$(cat "${BASHRC}")" "# mon bashrc"

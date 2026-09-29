@@ -242,11 +242,78 @@ assert_success "setup : config.bash est du bash valide" bash -n "${home}/.coolba
 assert_eq "init source config.bash avant les modules" "nord" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash --norc --noprofile -c 'source "$1" init; echo "$COOLBASH_PROMPT_THEME"' _ "${home}/.coolbash/cli/coolbash" 2>/dev/null)"
 assert_eq "…mais une variable posée avant garde la priorité" "dracula" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_PROMPT_THEME=dracula bash --norc --noprofile -c 'source "$1" init; echo "$COOLBASH_PROMPT_THEME"' _ "${home}/.coolbash/cli/coolbash" 2>/dev/null)"
 assert_contains "coolbash config voit le réglage comme défini" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash --norc --noprofile -c 'source "$1" init; coolbash config' _ "${home}/.coolbash/cli/coolbash" 2>/dev/null | grep COOLBASH_PROMPT_THEME)" "défini"
-su="$(printf '\n' | cli_home setup)"
-assert_contains "setup relancé : les choix précédents sont proposés (← actuel)" "$(printf '%s' "${su}" | sed 's/\x1b\[[0-9;]*m//g')" "nord  ← actuel"
+su="$(printf '2\n' | cli_home setup)"
+assert_contains "setup relancé (tout revoir) : les choix précédents sont proposés (← actuel)" "$(printf '%s' "${su}" | sed 's/\x1b\[[0-9;]*m//g')" "nord  ← actuel"
 assert_contains "setup relancé avec Entrée partout : le fichier est conservé" "$(cat "${home}/.coolbash/config.bash")" "nord"
 assert_contains "coolbash help setup" "$(cli_home help setup)" "config.bash"
 rm -f "${home}/.coolbash/config.bash"
+# compile : un ~/.bashrc autonome
+cb="$(cli_home compile)"
+assert_contains "compile : marqueur de version" "${cb}" "# COOLBASH-COMPILED $(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" version)"
+assert_eq "compile : chaque module inliné dans une fonction" "$(
+  set -- "${home}"/.coolbash/modules/*.bash
+  echo $#
+)" "$(printf '%s\n' "${cb}" | grep -c '^_coolbash_mod_')"
+assert_contains "compile : la fonction coolbash et la complétion sont embarquées" "${cb}" "_coolbash_shell_function ()"
+assert_contains "compile : le temps de démarrage aussi" "${cb}" "_coolbash_startup_report"
+printf '%s\n' "${cb}" >|"${home}/compiled.bash"
+assert_success "compile : le résultat est du bash valide" bash -n "${home}/compiled.bash"
+run_compiled() {
+  local code="${*: -1}"
+  env "${@:1:$#-1}" MOTD_DISABLE=1 HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash --norc --noprofile -ic "source '${home}/compiled.bash'; ${code}" 2>/dev/null
+}
+rc_out="$(run_compiled 'COOLBASH_STARTUP_TIME=0' '_coolbash_prompt_build; echo "PS1=$PS1"; type -t mkcd j gsw todo copy coolbash | tr "\n" " "; echo; echo "compiled=$COOLBASH_COMPILED"')"
+assert_eq "compilé : le prompt CoolBash se construit (user at host)" "1" "$(printf '%s\n' "${rc_out}" | tr -d '\n' | grep -c 'PS1=.* at ')"
+assert_contains "compilé : toutes les fonctions des modules" "${rc_out}" "function function function function function function"
+assert_contains "compilé : COOLBASH_COMPILED=1" "${rc_out}" "compiled=1"
+assert_eq "compilé en mode safe : le return d'un module n'interrompt pas le fichier (prompt chargé, j absent)" "function" "$(run_compiled COOLBASH_MODE=safe COOLBASH_STARTUP_TIME=0 'type -t j _coolbash_prompt_build | tr "\n" " "' | sed 's/ *$//')"
+printf 'export COOLBASH_PROMPT_THEME="${COOLBASH_PROMPT_THEME:-nord}"\n' >|"${home}/.coolbash/config.bash"
+assert_contains "compile : config.bash est inliné" "$(cli_home compile)" 'COOLBASH_PROMPT_THEME:-nord'
+rm -f "${home}/.coolbash/config.bash"
+printf '# mon bashrc\nsource "$HOME/.coolbash/cli/coolbash" init\n' >|"${home}/.bashrc"
+rm -f "${home}"/.bashrc.avant-coolbash-*
+cli_home compile --write >/dev/null
+assert_contains "compile --write : ~/.bashrc devient le fichier compilé" "$(head -4 "${home}/.bashrc")" "# COOLBASH-COMPILED"
+assert_eq "compile --write : sauvegarde avant-coolbash créée" "1" "$(
+  set -- "${home}"/.bashrc.avant-coolbash-*
+  [[ -f "$1" ]] && echo $#
+)"
+assert_contains "doctor : reconnaît un .bashrc compilé à jour" "$(cli_home doctor)" "autonome (compilé"
+assert_eq "tidy : refuse un .bashrc compilé" "1" "$(
+  cli_home tidy >/dev/null 2>&1
+  echo $?
+)"
+sed -i 's/^# COOLBASH-COMPILED .*/# COOLBASH-COMPILED 0.1.0/' "${home}/.bashrc"
+assert_contains "doctor : un compilé d'une autre version demande une recompilation" "$(cli_home doctor)" "recompile"
+# setup : mode compiled → compile --write ; retour au mode source → une ligne
+# FR : 24 questions avant celle du mode (la 25e) — pas de configuration existante ici.
+su="$({
+  printf '\n%.0s' {1..24}
+  printf '2\n'
+} | cli_home setup)"
+assert_contains "setup : mode compiled → ~/.bashrc compilé" "$(head -4 "${home}/.bashrc")" "# COOLBASH-COMPILED $(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" version)"
+assert_contains "setup : COOLBASH_INSTALL_MODE=compiled dans config.bash" "$(cat "${home}/.coolbash/config.bash")" "COOLBASH_INSTALL_MODE:-compiled"
+# reprise : seules les questions nouvelles — config d'une vieille version
+printf '# CoolBash 0.19.0 — réglages\nexport COOLBASH_PROMPT_THEME="${COOLBASH_PROMPT_THEME:-nord}"\n' >|"${home}/.coolbash/config.bash"
+su="$(printf '1\n\n\n\n\n\n\n\n\n' | cli_home setup)"
+assert_contains "setup : propose de reprendre la configuration existante" "${su}" "Une configuration existe (CoolBash 0.19.0"
+assert_not_contains "setup reprise : les questions déjà connues en 0.19.0 ne sont pas reposées (palette)" "${su}" "Palette du prompt"
+assert_contains "setup reprise : les questions apparues depuis le sont (hooks, 0.22.0)" "${su}" "Hooks de projet"
+assert_contains "setup reprise : le réglage repris est conservé" "$(cat "${home}/.coolbash/config.bash")" "COOLBASH_PROMPT_THEME:-nord"
+assert_contains "setup reprise : la version du fichier est mise à jour" "$(head -1 "${home}/.coolbash/config.bash")" "# CoolBash $(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" version)"
+su="$(cli_home setup --defaults)"
+assert_contains "setup --defaults sur une config à jour : reprise telle quelle" "${su}" "reprise telle quelle"
+assert_contains "setup : retour au mode source → une ligne source" "$(
+  # FR : une configuration existe → « 2 » (tout revoir), 24 Entrée, puis « 1 » (source).
+  {
+    printf '2\n'
+    printf '\n%.0s' {1..24}
+    printf '1\n'
+  } | cli_home setup 2>&1
+  cat "${home}/.bashrc"
+)" 'source "'"${home}"'/.coolbash/cli/coolbash" init'
+rm -f "${home}/.coolbash/config.bash" "${home}"/.bashrc.compile-* "${home}"/.bashrc.avant-coolbash-*
+printf 'source "$HOME/.coolbash/cli/coolbash" init\n' >|"${home}/.bashrc"
 assert_contains "doctor vérifie la locale" "${doc}" "locale"
 : >"${home}/.bashrc"
 doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1)"

@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.25.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.26.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -64,7 +64,8 @@ coolbash <command>
 | `version`   | Affiche la version                            |
 | `config`    | Tous les réglages `COOLBASH_*` avec leur valeur effective (définie ou par défaut) |
 | `fortune`   | Une citation du MOTD, au hasard ou d'un thème donné : `coolbash fortune chuck` ; `fortune --add "texte" [thème]` en ajoute une à `~/.coolbash/fortunes/` |
-| `setup`     | Configuration interactive : questions à choix (palette, icônes, emoji, segments, seuils, MOTD, citations, mises à jour, nvm, hooks, garde-fou…) → `~/.coolbash/config.bash`, sourcé par `init` avant les modules ; `setup --defaults` accepte tout |
+| `compile`   | `compile [--write \| fichier]` : un `~/.bashrc` autonome — réglages et modules inlinés, aucune lecture de `~/.coolbash` au chargement ; `--write` remplace `~/.bashrc` (sauvegardé). Régénéré par `install`/`update` en mode `compiled` |
+| `setup`     | Configuration interactive, lancée aussi à la fin de `install` et `update` (reprise de l'existant, seules les questions nouvelles) : questions à choix (palette, icônes, emoji, segments, seuils, MOTD, citations, mises à jour, nvm, hooks, garde-fou…) → `~/.coolbash/config.bash`, sourcé par `init` avant les modules ; `setup --defaults` accepte tout |
 | `tidy`      | `tidy` montre le tri du `~/.bashrc` (retiré / déplacé / conservé) ; `tidy --apply` l'applique après sauvegarde : ce qu'un module fait déjà est retiré, `export PATH` devient `path_prepend`/`path_append`, alias et fonctions vont dans `90-local-overrides` |
 | `allow` / `deny` | Autorise (ou retire) le hook `.coolbash.bash` du projet courant : il est sourcé à l'entrée du dossier et défait à la sortie ; modifié, il redevient non autorisé |
 | `theme`     | `theme` liste les palettes du prompt avec un aperçu ; `theme nord` l'enregistre (`~/.coolbash/theme`) et l'applique au shell courant |
@@ -239,7 +240,10 @@ coolbash uninstall
 
 ## ⚙️ Configuration
 
-Le plus simple : **`coolbash setup`**, un questionnaire à choix qui écrit `~/.coolbash/config.bash`
+Le plus simple : **`coolbash setup`**, lancé automatiquement à la fin de `coolbash install` et
+`coolbash update` quand on a un terminal (`COOLBASH_SETUP=0` pour sauter). Une configuration
+existante est **reprise** : seules les questions apparues depuis sa version sont posées, ou rien du
+tout si tout est connu. C'est un questionnaire à choix qui écrit `~/.coolbash/config.bash`
 (seuls les choix hors défaut, sous la forme `export X="${X:-valeur}"`). Ce fichier est sourcé par
 `coolbash init` avant les modules, jamais touché par `make install`, et embarqué par `coolbash sync`.
 Une variable posée dans le `~/.bashrc` avant la ligne `source` garde la priorité.
@@ -330,6 +334,19 @@ bash : zéro processus, là où le programme `fortune` coûtait 28 ms. Douze th�
   `"chuck chuck dev"` favorise Chuck.
 - Tes propres thèmes : un fichier `~/.coolbash/fortunes/<thème>.txt`, jamais touché par `make install`.
 - `coolbash fortune [thème…]` en affiche une, hors MOTD. Sans aucun fichier, le programme `fortune` est utilisé s'il existe.
+
+### 📦 Un `~/.bashrc` autonome (mode `compiled`)
+
+`coolbash setup` demande comment CoolBash est chargé :
+
+- **`source`** (défaut) : une ligne `source ~/.coolbash/cli/coolbash init`. Les modules sont lus à
+  chaque shell ; une mise à jour est active tout de suite.
+- **`compiled`** : `coolbash compile --write` génère un `~/.bashrc` **autonome** — `config.bash`,
+  puis chaque module inliné dans une fonction (ses `return` restent locaux), la fonction
+  `coolbash`, la vérification de mise à jour et le temps de démarrage. Le shell n'a plus rien à lire
+  dans `~/.coolbash` au chargement ; les données (citations, `dirs`, `todo`) y restent. Le fichier
+  est régénéré à chaque `install`/`update`, et se copie tel quel sur un serveur. `doctor` vérifie
+  qu'il est de la version installée ; `tidy` n'y touche pas.
 
 ### 🧹 Vider son `~/.bashrc`
 
