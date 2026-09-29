@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.27.1 — 2026-09-29 · « Un help qui a de la gueule »
+### Modifié
+- **`coolbash help`** : logo en lettres pleines ombrées, dégradé cyan → violet ligne par ligne
+  (truecolor ou 256 couleurs), version, mode du `~/.bashrc` et thème courant, puis les commandes
+  par sections — Installation, Configuration, Au quotidien, Diagnostic — en français, et la liste
+  des fonctions du shell. Couleurs seulement sur un terminal, jamais avec `NO_COLOR`.
+- Tests : usage en français, logo présent, aucune séquence de couleur hors terminal ou avec
+  `NO_COLOR`, logo coloré sous un tty (`script`).
+
 ## 0.27.0 — 2026-09-29 · « Voir les couleurs avant de choisir »
 ### Ajouté
 - **`coolbash setup`, question de la palette** : chaque option est suivie du vrai prompt rendu dans

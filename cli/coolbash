@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.27.0"
+COOLBASH_VERSION="0.27.1"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -749,6 +749,32 @@ _coolbash_cmd_help_topic() {
   esac
 }
 
+# FR : couleurs de l'aide seulement sur un terminal, jamais avec NO_COLOR.
+_coolbash_help_colors() { [[ -t 1 && -z "${NO_COLOR:-}" ]]; }
+
+# FR : le logo en lettres pleines ombrées (style des en-têtes de modules), en
+#      dégradé cyan → violet ligne par ligne (256 couleurs, truecolor si dispo).
+_coolbash_logo() {
+  local -a rows=(
+    ' ██████╗  ██████╗  ██████╗ ██╗     ██████╗  █████╗ ███████╗██╗  ██╗'
+    '██╔════╝ ██╔═══██╗██╔═══██╗██║     ██╔══██╗██╔══██╗██╔════╝██║  ██║'
+    '██║      ██║   ██║██║   ██║██║     ██████╔╝███████║███████╗███████║'
+    '██║      ██║   ██║██║   ██║██║     ██╔══██╗██╔══██║╚════██║██╔══██║'
+    '╚██████╗ ╚██████╔╝╚██████╔╝███████╗██████╔╝██║  ██║███████║██║  ██║'
+    ' ╚═════╝  ╚═════╝  ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝'
+  )
+  local -a c256=(51 45 39 33 99 135)
+  local -a ctc=("0;220;255" "40;190;255" "90;150;255" "140;110;255" "180;90;255" "220;80;230")
+  local i
+  for i in "${!rows[@]}"; do
+    if _coolbash_help_colors; then
+      if [[ "${COLORTERM:-}" =~ (24bit|truecolor) ]]; then printf '  \e[38;2;%sm%s\e[0m\n' "${ctc[i]}" "${rows[i]}"; else printf '  \e[38;5;%sm%s\e[0m\n' "${c256[i]}" "${rows[i]}"; fi
+    else
+      printf '  %s\n' "${rows[i]}"
+    fi
+  done
+}
+
 _coolbash_cmd_help() {
   if [[ -n "${1:-}" ]]; then
     _coolbash_cmd_help_topic "$1" || {
@@ -757,35 +783,45 @@ _coolbash_cmd_help() {
     }
     return 0
   fi
-  cat <<HELP
-CoolBash v${COOLBASH_VERSION} — Modern Bash configuration manager 😎
-
-Usage: coolbash <command>
-
-Commands:
-  install     Install CoolBash into ~/.coolbash
-  update      Update from GitHub (git clone required)
-  font        Install the Nerd Font used by the prompt icons
-  verify      Check syntax of all modules
-  test        Run the test suite
-  uninstall   Remove CoolBash
-  init        Load all modules into current shell
-  version     Print CoolBash version
-  doctor      Check installation, locale and optional tools
-  config      Show every COOLBASH_* setting with its current value
-  fortune     Print one MOTD quote (optional themes: dev chuck …)
-              fortune --add "text" [theme]  Add a quote to ~/.coolbash/fortunes/
-  bench       Time N interactive shell startups, then the cost per module
-  theme       List prompt themes with a preview, or pick one: theme nord
-  allow       Trust the .coolbash.bash hook of this project (deny: revoke)
-  tidy        Clean up ~/.bashrc: preview, then tidy --apply (backup first)
-  setup       Interactive configuration: questions and choices → ~/.coolbash/config.bash
-  compile     Standalone ~/.bashrc (settings + modules inlined): compile [--write | file]
-  sync        Push fortunes/, motd.txt and theme to other machines (rsync over SSH)
-              sync [--update] [--overrides] user@host…
-  help        Display this help message (help <command> for details)
-
-HELP
+  local B="" D="" T="" R="" mode theme=""
+  if _coolbash_help_colors; then
+    B=$'\e[1m' D=$'\e[2m' T=$'\e[1;36m' R=$'\e[0m'
+  fi
+  read -r theme 2>/dev/null <"${COOLBASH_PREFIX}/theme"
+  theme="${COOLBASH_PROMPT_THEME:-${theme:-coolbash}}"
+  mode="source"
+  grep -q '^# COOLBASH-COMPILED ' "${COOLBASH_BASHRC:-${HOME}/.bashrc}" 2>/dev/null && mode="compiled"
+  # FR : _row commande description ; _sec titre de section.
+  _row() { printf '   %s%-11s%s %s\n' "$B" "$1" "$R" "$2"; }
+  _sec() { printf '\n %s▸ %s%s\n' "$T" "$1" "$R"; }
+  printf '\n'
+  _coolbash_logo
+  printf '\n  %sCoolBash %s%s — un bash moderne, rapide et documenté  %s(mode %s · thème %s)%s\n' "$B" "$COOLBASH_VERSION" "$R" "$D" "$mode" "$theme" "$R"
+  printf '\n  %sUsage :%s coolbash <commande> [options]      %scoolbash help <commande> pour le détail%s\n' "$B" "$R" "$D" "$R"
+  _sec "Installation"
+  _row install "Installe dans ~/.coolbash, la police, la ligne source (sauvegarde du .bashrc)"
+  _row update "git pull, tests, install ; annonce « x.y.z → a.b.c » ou l'échec"
+  _row uninstall "Retire tout et restaure le .bashrc d'avant CoolBash"
+  _row font "Installe la Nerd Font des icônes du prompt"
+  _row compile "Un ~/.bashrc autonome : compile [--write | fichier]"
+  _row tidy "Range le ~/.bashrc : aperçu, puis tidy --apply (sauvegarde)"
+  _sec "Configuration"
+  _row setup "Questionnaire interactif → ~/.coolbash/config.bash (aussi après install/update)"
+  _row config "Tous les réglages COOLBASH_* avec leur valeur effective"
+  _row theme "Palettes du prompt avec aperçu ; theme nord ; theme --preview nord"
+  _row "allow/deny" "Autorise (retire) le hook .coolbash.bash du projet courant"
+  _sec "Au quotidien"
+  _row fortune "Une citation ; fortune <thème> ; fortune --add \"texte\" [thème]"
+  _row bench "N démarrages de shell : moyenne, min, max, coût par module"
+  _row sync "Pousse fortunes/, motd.txt, theme, config.bash vers d'autres machines (rsync)"
+  _sec "Diagnostic"
+  _row doctor "bash, .bashrc, modules, citations, locale, outils, police, redondances"
+  _row verify "bash -n + shellcheck + shfmt (make lint)"
+  _row test "La suite de tests"
+  _row version "La version installée"
+  _row help "Cette aide ; help <commande> pour le détail"
+  printf '\n  %sDans le shell :%s j bd h hstats · gsw gwip gunwip gfix gopen · todo remind retry · copy paste copypath · backup whoport serve cheat please\n\n' "$B" "$R"
+  unset -f _row _sec
 }
 
 # -----------------------------------------------------------------------------

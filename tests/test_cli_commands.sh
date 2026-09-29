@@ -10,8 +10,14 @@ CLI="${COOLBASH_TEST_ROOT}/cli/coolbash"
 
 # --- help --------------------------------------------------------------------
 assert_success "coolbash help renvoie 0" bash "${CLI}" help
-assert_contains "coolbash help affiche l'usage" "$(bash "${CLI}" help)" "Usage: coolbash <command>"
-assert_contains "coolbash sans argument affiche l'usage" "$(bash "${CLI}")" "Usage: coolbash <command>"
+assert_contains "coolbash help affiche l'usage" "$(bash "${CLI}" help)" "Usage : coolbash <commande>"
+assert_contains "coolbash help affiche le logo" "$(bash "${CLI}" help)" "██████╗"
+assert_eq "coolbash help hors terminal : aucune séquence de couleur" "0" "$(bash "${CLI}" help | grep -c $'\e\[')"
+if command -v script >/dev/null 2>&1; then
+  assert_eq "coolbash help sous un tty avec NO_COLOR : aucune couleur" "0" "$(NO_COLOR=1 script -qec "bash '${CLI}' help" /dev/null </dev/null 2>/dev/null | grep -c $'\e\[')"
+  assert_eq "coolbash help sous un tty : le logo est coloré" "1" "$(script -qec "bash '${CLI}' help" /dev/null </dev/null 2>/dev/null | grep -c $'\e\[38;[25];.*██████╗' | awk '{print ($1>=1)?1:0}')"
+fi
+assert_contains "coolbash sans argument affiche l'usage" "$(bash "${CLI}")" "Usage : coolbash <commande>"
 assert_failure "une commande inconnue renvoie un code d'erreur" bash "${CLI}" plop
 assert_contains "une commande inconnue est nommée dans l'erreur" "$(bash "${CLI}" plop 2>&1)" "Unknown command: plop"
 
@@ -45,7 +51,7 @@ assert_eq "init sans répertoire de modules reste silencieux" "rc=0" "${res}"
 
 # --- init : la fonction shell `coolbash` est disponible ----------------------
 res="$(COOLBASH_MODULE_DIR="${mods}" bash --norc --noprofile -c 'source "$1" init; coolbash help' _ "${CLI}")"
-assert_contains "après init, la fonction coolbash relaie vers la CLI" "${res}" "Usage: coolbash <command>"
+assert_contains "après init, la fonction coolbash relaie vers la CLI" "${res}" "Usage : coolbash <commande>"
 
 # --- commandes de gestion hors d'un clone → erreur explicite -----------------
 fake="${COOLBASH_TEST_TMP}/fake/cli"
