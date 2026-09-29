@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.27.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.28.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -56,6 +56,7 @@ coolbash <command>
 | ----------- | --------------------------------------------- |
 | `install`   | Installe CoolBash dans `~/.coolbash`, et la Nerd Font des icônes si aucune n'est présente |
 | `update`    | `git pull`, puis tests, puis install (clone git requis) ; annonce `0.8.1 → 0.9.0`, « déjà à jour », ou l'échec |
+| `deps`      | Les outils optionnels absents (cowsay, lolcat, fzf, rsync, tldr, delta, shellcheck, shfmt, presse-papiers, notifications…) avec le paquet pour pacman, apt, dnf, zypper, apk ou brew, et la commande à lancer ; `deps --install` l'exécute |
 | `font`      | Installe (ou réessaie d'installer) la Nerd Font des icônes du prompt |
 | `verify`    | Vérifie la syntaxe (+ shellcheck si présent)  |
 | `test`      | Lance la suite de tests                       |

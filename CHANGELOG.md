@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.28.0 — 2026-09-29 · « Ce qui manque, en une commande »
+### Ajouté
+- **`coolbash deps [--install]`** : les outils optionnels présents et absents, avec le paquet
+  correspondant pour le gestionnaire détecté (pacman, apt, dnf, zypper, apk, brew) et la commande
+  à lancer ; `--install` l'exécute. Le presse-papiers (wl-clipboard sous Wayland, xclip sous X11)
+  et les notifications ne sont proposés qu'avec une session graphique. Sous Arch avec yay,
+  `c-lolcat` est suggéré ; la police et Neo-cowsay sont rappelés.
+- `coolbash doctor` renvoie vers `deps` ; `help deps`, complétion.
+- Tests : faux pacman et apt-get dans un PATH réduit, `--install` via un faux sudo, Wayland,
+  gestionnaire inconnu.
+
 ## 0.27.1 — 2026-09-29 · « Un help qui a de la gueule »
 ### Modifié
 - **`coolbash help`** : logo en lettres pleines ombrées, dégradé cyan → violet ligne par ligne

@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.27.1"
+COOLBASH_VERSION="0.28.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -148,6 +148,7 @@ _coolbash_cmd_doctor() {
   _coolbash_opt dircolors "couleurs ls"
   _coolbash_opt shellcheck "make lint"
   _coolbash_opt shfmt "make lint / make fmt (style)"
+  printf '               → coolbash deps : tout ce qui manque, et la commande pour l\x27installer\n'
   if command -v delta >/dev/null 2>&1 && ! git config --global --get core.pager >/dev/null 2>&1; then
     printf '               → delta est installé : git config --global core.pager delta\n'
   fi
@@ -592,6 +593,102 @@ _coolbash_cmd_compile() {
   _coolbash_log "compilé : ${out} (CoolBash ${COOLBASH_VERSION}, $(grep -c '' "$out") lignes) — recharge : source ${out}"
 }
 
+# FR : coolbash deps [--install] — les outils optionnels absents et la commande
+#      du gestionnaire de paquets pour les installer (pacman, apt, dnf, zypper,
+#      apk, brew). --install l'exécute. Le presse-papiers et les notifications ne
+#      sont proposés qu'avec une session graphique ; « - » = pas de paquet ici.
+#      Table : commande|rôle|pacman|apt|dnf|zypper|apk|brew
+_coolbash_deps_table() {
+  cat <<'DEPS'
+git|segment git du prompt, gsw, gwip…|git|git|git|git|git|git
+cowsay|MOTD (la vache)|cowsay|cowsay|cowsay|cowsay|cowsay|cowsay
+lolcat|MOTD (couleurs)|lolcat|lolcat|lolcat|-|lolcat|lolcat
+fzf|Ctrl-R, Ctrl-T, Alt-C, gsw|fzf|fzf|fzf|fzf|fzf|fzf
+rsync|coolbash sync|rsync|rsync|rsync|rsync|rsync|rsync
+python3|serve (serveur HTTP)|python|python3|python3|python3|python3|python
+ss|whoport|iproute2|iproute2|iproute|iproute2|iproute2|-
+tldr|cheat (exemples)|tldr|tldr|tldr|tldr|tldr|tldr
+delta|pager git (doctor le propose)|git-delta|git-delta|git-delta|git-delta|git-delta|git-delta
+fc-list|détection de la Nerd Font|fontconfig|fontconfig|fontconfig|fontconfig|fontconfig|-
+xz|installation de la police|xz|xz-utils|xz|xz|xz|xz
+shellcheck|make lint (développement)|shellcheck|shellcheck|ShellCheck|ShellCheck|shellcheck|shellcheck
+shfmt|make lint / fmt (développement)|shfmt|shfmt|shfmt|shfmt|shfmt|shfmt
+notify-send|remind (notification bureau)|libnotify|libnotify-bin|libnotify|libnotify-tools|libnotify|-
+wl-copy|copy / paste (Wayland)|wl-clipboard|wl-clipboard|wl-clipboard|wl-clipboard|wl-clipboard|-
+xclip|copy / paste (X11)|xclip|xclip|xclip|xclip|xclip|-
+DEPS
+}
+_coolbash_cmd_deps() {
+  local install=0 pm="" col cmd role pkg line n=0 gui=0
+  local -a pkgs=() missing=()
+  [[ "${1:-}" == --install ]] && install=1
+  if command -v pacman >/dev/null 2>&1; then
+    pm=pacman col=3 cmd="sudo pacman -S --needed"
+  elif command -v apt-get >/dev/null 2>&1; then
+    pm=apt col=4 cmd="sudo apt install -y"
+  elif command -v dnf >/dev/null 2>&1; then
+    pm=dnf col=5 cmd="sudo dnf install -y"
+  elif command -v zypper >/dev/null 2>&1; then
+    pm=zypper col=6 cmd="sudo zypper install -y"
+  elif command -v apk >/dev/null 2>&1; then
+    pm=apk col=7 cmd="sudo apk add"
+  elif command -v brew >/dev/null 2>&1; then
+    pm=brew col=8 cmd="brew install"
+  fi
+  [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && gui=1
+  printf 'CoolBash %s — dépendances optionnelles%s\n\n' "$COOLBASH_VERSION" "${pm:+ (gestionnaire : $pm)}"
+  while IFS= read -r line; do
+    IFS='|' read -r tool role _ <<<"$line"
+    case "$tool" in
+      notify-send) ((gui)) || continue ;;
+      wl-copy) [[ -n "${WAYLAND_DISPLAY:-}" ]] || continue ;;
+      xclip) [[ -n "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]] || continue ;;
+    esac
+    if command -v "$tool" >/dev/null 2>&1; then
+      printf '  \e[32m✔\e[0m %-12s %s\n' "$tool" "$role"
+      continue
+    fi
+    n=$((n + 1))
+    missing+=("$tool")
+    if [[ -n "$pm" ]]; then
+      pkg="$(printf '%s' "$line" | cut -d'|' -f"$col")"
+      if [[ "$pkg" == - ]]; then
+        printf '  \e[33m–\e[0m %-12s %s  (pas de paquet %s)\n' "$tool" "$role" "$pm"
+      else
+        printf '  \e[31m✘\e[0m %-12s %s  → %s\n' "$tool" "$role" "$pkg"
+        [[ " ${pkgs[*]} " == *" $pkg "* ]] || pkgs+=("$pkg")
+      fi
+    else
+      printf '  \e[31m✘\e[0m %-12s %s\n' "$tool" "$role"
+    fi
+  done < <(_coolbash_deps_table)
+  printf '\n'
+  if ((n == 0)); then
+    _coolbash_log "tout est là."
+    return 0
+  fi
+  [[ -n "$pm" ]] || {
+    _coolbash_error "gestionnaire de paquets non reconnu : installe à la main : ${missing[*]}"
+    return 1
+  }
+  if ((${#pkgs[@]} == 0)); then
+    _coolbash_log "rien à installer par ${pm} pour ce qui manque."
+    return 0
+  fi
+  printf '  %s %s\n' "$cmd" "${pkgs[*]}"
+  if [[ "$pm" == pacman ]] && command -v yay >/dev/null 2>&1; then
+    printf '  %sAUR :%s yay -S c-lolcat  (lolcat en C, 120 ms de moins par shell)\n' $'\e[2m' $'\e[0m'
+  fi
+  printf '  %sPolice :%s coolbash font · %sNeo-cowsay (Go, 3 ms) :%s https://github.com/Code-Hex/Neo-cowsay/releases\n' $'\e[2m' $'\e[0m' $'\e[2m' $'\e[0m'
+  if ((install)); then
+    printf '\n'
+    # shellcheck disable=SC2086
+    $cmd "${pkgs[@]}"
+  else
+    printf '\n  coolbash deps --install pour lancer cette commande.\n'
+  fi
+}
+
 # FR : COOLBASH_DISABLE="70-motd 33" — modules à ne pas charger (nom complet,
 #      numéro seul ou nom sans numéro).
 _coolbash_disabled() {
@@ -666,7 +763,7 @@ _coolbash_shell_function() {
     local cur="${COMP_WORDS[COMP_CWORD]}" sub="${COMP_WORDS[1]:-}" words
     COMPREPLY=()
     if ((COMP_CWORD == 1)); then
-      words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile help"
+      words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps help"
     else
       case "$sub" in
         theme) words="--preview ${COOLBASH_THEMES:-coolbash nord dracula solarized gruvbox mono}" ;;
@@ -677,10 +774,11 @@ _coolbash_shell_function() {
             [[ -f "$f" ]] && f="${f##*/}" && words+=" ${f%.txt}"
           done
           ;;
-        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile help" ;;
+        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps help" ;;
         sync) words="--update --overrides" ;;
         tidy) words="--apply" ;;
         compile) words="--write" ;;
+        deps) words="--install" ;;
         *) return 0 ;;
       esac
     fi
@@ -728,6 +826,7 @@ _coolbash_cmd_help_topic() {
   case "$1" in
     install) echo "coolbash install — installe (ou réinstalle) CoolBash dans ~/.coolbash et ajoute la ligne source au ~/.bashrc (sauvegardé la première fois). Installe la Nerd Font sauf COOLBASH_FONT=0." ;;
     update) echo "coolbash update — git pull du clone, suite de tests, puis install. Annonce « x.y.z → a.b.c », « déjà à jour », ou l'échec (rien n'est installé si les tests échouent)." ;;
+    deps) echo "coolbash deps [--install] — les outils optionnels absents (cowsay, lolcat, fzf, rsync, tldr, delta, shellcheck, shfmt, presse-papiers, notifications…) avec le paquet correspondant pour pacman, apt, dnf, zypper, apk ou brew, et la commande à lancer ; --install l'exécute." ;;
     font) echo "coolbash font — installe (ou réessaie) la JetBrainsMono Nerd Font utilisée par les icônes du prompt. À sélectionner ensuite dans le profil du terminal." ;;
     verify | lint) echo "coolbash verify — bash -n, shellcheck et shfmt sur tout le dépôt (make lint)." ;;
     test) echo "coolbash test — la suite de tests complète (make test)." ;;
@@ -803,6 +902,7 @@ _coolbash_cmd_help() {
   _row update "git pull, tests, install ; annonce « x.y.z → a.b.c » ou l'échec"
   _row uninstall "Retire tout et restaure le .bashrc d'avant CoolBash"
   _row font "Installe la Nerd Font des icônes du prompt"
+  _row deps "Les outils optionnels absents et la commande pour les installer ; deps --install"
   _row compile "Un ~/.bashrc autonome : compile [--write | fichier]"
   _row tidy "Range le ~/.bashrc : aperçu, puis tidy --apply (sauvegarde)"
   _sec "Configuration"
@@ -830,6 +930,10 @@ case "${1:-}" in
   install) _coolbash_cmd_install ;;
   update) _coolbash_cmd_update ;;
   font) _coolbash_cmd_font ;;
+  deps)
+    shift
+    _coolbash_cmd_deps "$@"
+    ;;
   verify) _coolbash_cmd_verify ;;
   test) _coolbash_cmd_test ;;
   uninstall) _coolbash_cmd_uninstall ;;

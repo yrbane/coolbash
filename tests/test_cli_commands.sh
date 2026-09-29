@@ -99,6 +99,34 @@ assert_eq "coolbash bench affiche des ms" "1" "$(printf '%s\n' "${bn}" | grep -c
 assert_contains "coolbash bench détaille les modules" "${bn}" "50-prompt"
 assert_contains "coolbash help mentionne bench" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" help)" "bench"
 cli_home() { HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" "$@" 2>&1; }
+# deps : faux gestionnaires de paquets, PATH réduit aux outils de base
+fd="${COOLBASH_TEST_TMP}/fdeps"
+mkdir -p "${fd}/bin"
+for b in bash grep sed cat mkdir mv cp ls head tail sort tr wc cut env dirname basename cksum tee; do ln -sf "$(command -v "$b")" "${fd}/bin/$b" 2>/dev/null; done
+printf '#!/bin/bash\necho "sudo:$*"\n' >|"${fd}/bin/sudo"
+printf '#!/bin/bash\necho "pacman:$*"\n' >|"${fd}/bin/pacman"
+chmod +x "${fd}/bin/sudo" "${fd}/bin/pacman"
+dp="$(env -i PATH="${fd}/bin" HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps 2>&1 | sed 's/\x1b\[[0-9;]*m//g')"
+assert_contains "deps : reconnaît pacman" "${dp}" "gestionnaire : pacman"
+assert_contains "deps : cowsay manque, paquet cowsay" "${dp}" "cowsay"
+assert_contains "deps : la commande à lancer" "${dp}" "sudo pacman -S --needed"
+assert_contains "deps : shellcheck dans la commande" "${dp}" "shellcheck"
+assert_not_contains "deps : sans session graphique, pas de wl-clipboard" "${dp}" "wl-clipboard"
+assert_contains "deps : sans --install, on ne lance rien" "${dp}" "deps --install pour lancer"
+dpi="$(env -i PATH="${fd}/bin" HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps --install 2>&1)"
+assert_contains "deps --install : lance la commande via sudo" "${dpi}" "sudo:pacman -S --needed"
+assert_contains "deps sous Wayland : wl-clipboard proposé" "$(env -i PATH="${fd}/bin" WAYLAND_DISPLAY=w HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps 2>&1)" "wl-clipboard"
+rm -f "${fd}/bin/pacman"
+printf '#!/bin/bash\necho "apt-get:$*"\n' >|"${fd}/bin/apt-get"
+chmod +x "${fd}/bin/apt-get"
+assert_contains "deps : sous apt, xz-utils et libnotify-bin" "$(env -i PATH="${fd}/bin" DISPLAY=:0 HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps 2>&1)" "sudo apt install -y"
+rm -f "${fd}/bin/apt-get"
+assert_eq "deps : sans gestionnaire connu → liste et code 1" "1" "$(
+  env -i PATH="${fd}/bin" HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps >/dev/null 2>&1
+  echo $?
+)"
+assert_contains "doctor renvoie vers coolbash deps" "$(cli_home doctor)" "coolbash deps"
+assert_contains "coolbash help mentionne deps" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" help)" "deps"
 # theme
 th="$(cli_home theme)"
 for t in coolbash nord dracula solarized gruvbox mono; do assert_contains "coolbash theme liste ${t}" "${th}" "${t}"; done
