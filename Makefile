@@ -39,7 +39,15 @@ install:
 	done
 	@[[ "$(ROOT)" -ef "$(PREFIX)" ]] || echo "$(ROOT)" >| "$(PREFIX)/.repo"
 	@touch "$(BASHRC)"
-	@grep -qF 'cli/coolbash' "$(BASHRC)" || echo '$(SOURCE_LINE)' >> "$(BASHRC)"
+	@# FR : première installation sur un .bashrc non vide → copie « avant CoolBash »
+	@#      (une seule, jamais écrasée) ; `make uninstall` la restaure.
+	@if ! grep -qF 'cli/coolbash' "$(BASHRC)"; then \
+	  if [[ -s "$(BASHRC)" ]] && ! ls "$(BASHRC)".avant-coolbash-* >/dev/null 2>&1; then \
+	    cp -a "$(BASHRC)" "$(BASHRC).avant-coolbash-$$(date +%F)"; \
+	    echo "[CoolBash] Sauvegarde : $(BASHRC).avant-coolbash-$$(date +%F)"; \
+	  fi; \
+	  echo '$(SOURCE_LINE)' >> "$(BASHRC)"; \
+	fi
 	@# FR : la police des icônes est un confort — son échec (pas de réseau, pas
 	@#      de xz…) ne doit jamais faire échouer l'installation.
 	@COOLBASH_PREFIX="$(PREFIX)" bash cli/coolbash-font install || true
@@ -67,7 +75,16 @@ uninstall:
 	@echo "[CoolBash] Removing CoolBash..."
 	@bash cli/coolbash-font remove || true
 	@rm -rf "$(PREFIX)"
-	@[[ -f "$(BASHRC)" ]] && sed -i '\#cli/coolbash"* init#d' "$(BASHRC)" || true
+	@# FR : le .bashrc d'avant CoolBash est restauré s'il a été sauvegardé (le
+	@#      courant est gardé à côté) ; sinon on retire seulement la ligne source.
+	@backup="$$(ls -t "$(BASHRC)".avant-coolbash-* 2>/dev/null | head -1)"; \
+	if [[ -n "$$backup" && -f "$(BASHRC)" ]]; then \
+	  cp -a "$(BASHRC)" "$(BASHRC).coolbash-retire-$$(date +%F)"; \
+	  cp -a "$$backup" "$(BASHRC)"; \
+	  echo "[CoolBash] $(BASHRC) restauré depuis $$backup (l'ancien est dans $(BASHRC).coolbash-retire-$$(date +%F))"; \
+	elif [[ -f "$(BASHRC)" ]]; then \
+	  sed -i '\#cli/coolbash"* init#d' "$(BASHRC)"; \
+	fi
 	@echo "[CoolBash] Uninstalled successfully."
 
 font:

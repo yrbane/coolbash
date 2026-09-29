@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.23.0"
+COOLBASH_VERSION="0.24.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -330,6 +330,25 @@ _coolbash_update_check() {
 # FR : ce que le ~/.bashrc refait à la main alors qu'un module s'en charge :
 #      nvm, cargo, pnpm, Android, foundry (35-toolchains), historique (10-history),
 #      prompt (50-prompt) ; alias et fonctions → 90-local-overrides.
+# FR : pourquoi une ligne du ~/.bashrc est redondante avec CoolBash ($1 = ligne,
+#      $2 = variable de sortie ; vide = ligne à garder ou à déplacer telle quelle).
+_coolbash_bashrc_why() {
+  local -n _bw_out="$2"
+  _bw_out=""
+  case "$1" in
+    *nvm.sh* | *NVM_DIR* | *bash_completion\"*nvm*) _bw_out="nvm : 35-toolchains le charge paresseusement (≈ 700 ms gagnés)" ;;
+    *cargo/env* | *cargo/bin*) _bw_out="cargo : 35-toolchains ajoute ~/.cargo/bin s'il existe" ;;
+    *PNPM_HOME*) _bw_out="pnpm : 35-toolchains" ;;
+    *ANDROID_HOME* | *platform-tools*) _bw_out="Android SDK : 35-toolchains" ;;
+    *foundry/bin*) _bw_out="foundry : 35-toolchains" ;;
+    *HISTSIZE* | *HISTFILESIZE* | *HISTCONTROL* | *histappend*) _bw_out="historique : 10-history" ;;
+    PS1=* | *PROMPT_COMMAND*) _bw_out="prompt : 50-prompt (COOLBASH_PS0_EXTRA pour un fragment personnel)" ;;
+    alias\ * | function\ * | *"() {"*) _bw_out="alias/fonction : à ranger dans ~/.coolbash/modules/90-local-overrides.bash" ;;
+    *export\ PATH=* | PATH=*) _bw_out="PATH : path_prepend/path_append dans 90-local-overrides (sans doublon)" ;;
+  esac
+}
+
+# FR : ce que le ~/.bashrc refait à la main alors qu'un module s'en charge.
 _coolbash_doctor_bashrc() {
   local file="$1" line ln=0 hits=0 why
   [[ -r "$file" ]] || return 0
@@ -338,24 +357,98 @@ _coolbash_doctor_bashrc() {
     ln=$((ln + 1))
     [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
     [[ "$line" == *cli/coolbash* ]] && continue
-    why=""
-    case "$line" in
-      *nvm.sh* | *NVM_DIR* | *bash_completion\"*nvm*) why="nvm : 35-toolchains le charge paresseusement (≈ 700 ms gagnés)" ;;
-      *cargo/env* | *cargo/bin*) why="cargo : 35-toolchains ajoute ~/.cargo/bin s'il existe" ;;
-      *PNPM_HOME*) why="pnpm : 35-toolchains" ;;
-      *ANDROID_HOME* | *platform-tools*) why="Android SDK : 35-toolchains" ;;
-      *foundry/bin*) why="foundry : 35-toolchains" ;;
-      *HISTSIZE* | *HISTFILESIZE* | *HISTCONTROL* | *histappend*) why="historique : 10-history" ;;
-      PS1=* | *PROMPT_COMMAND*) why="prompt : 50-prompt (COOLBASH_PS0_EXTRA pour un fragment personnel)" ;;
-      alias\ * | function\ * | *"() {"*) why="alias/fonction : à ranger dans ~/.coolbash/modules/90-local-overrides.bash" ;;
-      *export\ PATH=*) why="PATH : path_prepend/path_append dans 90-local-overrides (sans doublon)" ;;
-    esac
+    _coolbash_bashrc_why "$line" why
     [[ -n "$why" ]] || continue
     hits=$((hits + 1))
     printf '  \e[33m–\e[0m ligne %-4s %s\n               → %s\n' "$ln" "${line:0:60}" "$why"
   done <"$file"
-  ((hits == 0)) && printf '  \e[32m✔\e[0m rien à déplacer : tout passe par CoolBash\n'
+  if ((hits == 0)); then
+    printf '  \e[32m✔\e[0m rien à déplacer : tout passe par CoolBash\n'
+  else
+    printf '               → coolbash tidy fait le tri (aperçu), coolbash tidy --apply l\x27applique\n'
+  fi
   return 0
+}
+
+# FR : coolbash tidy [--apply] — range le ~/.bashrc : les lignes qu'un module
+#      prend en charge sont retirées, `export PATH=…` devient path_prepend/append,
+#      alias, fonctions et le reste vont dans 90-local-overrides.bash (en ordre,
+#      sous un en-tête daté) ; il ne reste que les commentaires et la ligne
+#      source. Sans --apply : l'aperçu seulement. --apply sauvegarde d'abord
+#      dans ~/.bashrc.avant-coolbash-<date>.
+_coolbash_cmd_tidy() {
+  local apply=0 bashrc="${COOLBASH_BASHRC:-${HOME}/.bashrc}" ov="${COOLBASH_MODULE_DIR}/90-local-overrides.bash"
+  local line why keep=() move=() drop=() conv found_source=0 dir
+  [[ "${1:-}" == --apply ]] && apply=1
+  [[ -r "$bashrc" ]] || {
+    _coolbash_error "pas de ${bashrc}"
+    return 1
+  }
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" =~ ^[[:space:]]*(#|$) ]]; then
+      keep+=("$line")
+      continue
+    fi
+    if [[ "$line" == *cli/coolbash* ]]; then
+      keep+=("$line")
+      found_source=1
+      continue
+    fi
+    _coolbash_bashrc_why "$line" why
+    case "$why" in
+      PATH*)
+        # FR : export PATH="X:$PATH" → path_prepend "X" ; PATH="$PATH:X" → path_append "X".
+        conv="${line#*PATH=}"
+        conv="${conv#\"}"
+        conv="${conv%\"}"
+        if [[ "$conv" == *:\$PATH || "$conv" == *:\$\{PATH\} ]]; then
+          dir="${conv%:*}"
+          move+=("path_prepend \"${dir}\"")
+        elif [[ "$conv" == \$PATH:* || "$conv" == \$\{PATH\}:* ]]; then
+          dir="${conv#*:}"
+          move+=("path_append \"${dir}\"")
+        else
+          move+=("$line")
+        fi
+        ;;
+      alias* | "") move+=("$line") ;;
+      *) drop+=("$line  # ${why%% :*}") ;;
+    esac
+  done <"$bashrc"
+  ((found_source)) || keep+=("source \"${COOLBASH_PREFIX}/cli/coolbash\" init")
+  if ((${#move[@]} == 0 && ${#drop[@]} == 0)); then
+    _coolbash_log "${bashrc} est déjà rangé : rien à faire"
+    return 0
+  fi
+  printf 'coolbash tidy — %s\n\n' "$bashrc"
+  if ((${#drop[@]})); then
+    printf '\e[33mRetirées\e[0m (un module s\x27en charge) :\n'
+    printf '  – %s\n' "${drop[@]}"
+  fi
+  if ((${#move[@]})); then
+    printf '\n\e[36mDéplacées\e[0m vers %s :\n' "$ov"
+    printf '  + %s\n' "${move[@]}"
+  fi
+  printf '\n\e[32mConservé\e[0m dans %s : %d ligne(s) (commentaires et la ligne source)\n' "$bashrc" "${#keep[@]}"
+  if ((! apply)); then
+    printf '\nAperçu seulement — coolbash tidy --apply pour l\x27appliquer (sauvegarde automatique).\n'
+    return 0
+  fi
+  local backup
+  backup="${bashrc}.avant-coolbash-$(printf '%(%Y-%m-%d-%H%M%S)T' -1)"
+  command cp -a -- "$bashrc" "$backup" || return 1
+  mkdir -p "${ov%/*}" || return 1
+  {
+    [[ -s "$ov" ]] && cat "$ov"
+    printf '\n# --- coolbash tidy %s : déplacé depuis %s ---\n' "$(printf '%(%Y-%m-%d)T' -1)" "$bashrc"
+    if ((${#drop[@]})); then
+      printf '# Retirées (un module s\x27en charge) :\n'
+      printf '#   %s\n' "${drop[@]}"
+    fi
+    ((${#move[@]})) && printf '%s\n' "${move[@]}"
+  } >|"${ov}.new" && mv -f "${ov}.new" "$ov" || return 1
+  printf '%s\n' "${keep[@]}" >|"${bashrc}.new" && mv -f "${bashrc}.new" "$bashrc" || return 1
+  _coolbash_log "rangé — sauvegarde : ${backup} ; recharge : source ~/.bashrc"
 }
 
 # FR : coolbash allow [chemin] / deny [chemin] — autoriser (ou retirer) le hook
@@ -486,6 +579,31 @@ _coolbash_cmd_init() {
       *) bash "${COOLBASH_ROOT}/cli/coolbash" "$@" ;;
     esac
   }
+  # FR : complétion de `coolbash` : sous-commandes, thèmes, thèmes de citations.
+  _coolbash_complete() {
+    local cur="${COMP_WORDS[COMP_CWORD]}" sub="${COMP_WORDS[1]:-}" words
+    COMPREPLY=()
+    if ((COMP_CWORD == 1)); then
+      words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy help"
+    else
+      case "$sub" in
+        theme) words="${COOLBASH_THEMES:-coolbash nord dracula solarized gruvbox mono}" ;;
+        fortune)
+          words="--add"
+          local f
+          for f in "${COOLBASH_ROOT}"/share/fortunes/*.txt "${COOLBASH_PREFIX}"/fortunes/*.txt; do
+            [[ -f "$f" ]] && f="${f##*/}" && words+=" ${f%.txt}"
+          done
+          ;;
+        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy help" ;;
+        sync) words="--update --overrides" ;;
+        tidy) words="--apply" ;;
+        *) return 0 ;;
+      esac
+    fi
+    mapfile -t COMPREPLY < <(compgen -W "$words" -- "$cur")
+  }
+  complete -F _coolbash_complete coolbash
   # FR : vérification de mise à jour, détachée (double fork : pas de job affiché).
   if [[ $- == *i* ]] && _coolbash_update_due; then
     printf '%s\n' "$EPOCHSECONDS" >|"${COOLBASH_PREFIX}/.update-check" 2>/dev/null
@@ -494,7 +612,38 @@ _coolbash_cmd_init() {
   return 0
 }
 
+# FR : coolbash help <commande> — l'aide détaillée d'une sous-commande.
+_coolbash_cmd_help_topic() {
+  case "$1" in
+    install) echo "coolbash install — installe (ou réinstalle) CoolBash dans ~/.coolbash et ajoute la ligne source au ~/.bashrc (sauvegardé la première fois). Installe la Nerd Font sauf COOLBASH_FONT=0." ;;
+    update) echo "coolbash update — git pull du clone, suite de tests, puis install. Annonce « x.y.z → a.b.c », « déjà à jour », ou l'échec (rien n'est installé si les tests échouent)." ;;
+    font) echo "coolbash font — installe (ou réessaie) la JetBrainsMono Nerd Font utilisée par les icônes du prompt. À sélectionner ensuite dans le profil du terminal." ;;
+    verify | lint) echo "coolbash verify — bash -n, shellcheck et shfmt sur tout le dépôt (make lint)." ;;
+    test) echo "coolbash test — la suite de tests complète (make test)." ;;
+    uninstall) echo "coolbash uninstall — supprime ~/.coolbash et la police installée, puis restaure le ~/.bashrc d'avant CoolBash s'il a été sauvegardé (sinon retire juste la ligne source)." ;;
+    init) echo "coolbash init — charge les modules dans le shell courant (c'est ce que fait la ligne source du ~/.bashrc)." ;;
+    version) echo "coolbash version — la version installée." ;;
+    doctor) echo "coolbash doctor — diagnostic : bash, ~/.bashrc, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton ~/.bashrc refait à la main." ;;
+    config) echo "coolbash config — tous les réglages COOLBASH_* avec leur valeur effective (définie ou par défaut) et un mot d'explication. À définir avant la ligne source du ~/.bashrc, ou via coolbash setup." ;;
+    fortune) printf '%s\n' "coolbash fortune [thème…] — une citation, au hasard ou dans les thèmes cités (dev unix sysadmin lois corporate absurde humour-noir moralistes proverbes sciences cinema chuck, et les tiens dans ~/.coolbash/fortunes/)." "coolbash fortune --add \"texte\" [thème] — ajoute une citation au thème (perso par défaut)." ;;
+    bench) echo "coolbash bench [N] — N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module du plus lourd au plus léger." ;;
+    theme) echo "coolbash theme [nom] — sans argument, la liste des palettes (coolbash nord dracula solarized gruvbox mono) avec un aperçu ; avec, l'enregistre dans ~/.coolbash/theme et l'applique au shell courant." ;;
+    sync) echo "coolbash sync [--update] [--overrides] user@host… — pousse fortunes/, motd.txt et theme vers ~/.coolbash d'autres machines (rsync sur SSH). --overrides ajoute 90-local-overrides.bash, --update y lance coolbash update." ;;
+    allow | deny) echo "coolbash allow | deny — autorise (ou retire) le hook .coolbash.bash du projet courant : sourcé à l'entrée du dossier, défait à la sortie ; modifié, il redevient non autorisé." ;;
+    tidy) echo "coolbash tidy [--apply] — range le ~/.bashrc : retire ce qu'un module prend en charge, convertit export PATH en path_prepend/append, déplace alias et fonctions dans 90-local-overrides.bash. Sans --apply, aperçu seulement ; avec, sauvegarde d'abord." ;;
+    help) echo "coolbash help [commande] — cette aide, ou le détail d'une commande." ;;
+    *) return 1 ;;
+  esac
+}
+
 _coolbash_cmd_help() {
+  if [[ -n "${1:-}" ]]; then
+    _coolbash_cmd_help_topic "$1" || {
+      _coolbash_error "commande inconnue : $1"
+      return 1
+    }
+    return 0
+  fi
   cat <<HELP
 CoolBash v${COOLBASH_VERSION} — Modern Bash configuration manager 😎
 
@@ -516,9 +665,10 @@ Commands:
   bench       Time N interactive shell startups, then the cost per module
   theme       List prompt themes with a preview, or pick one: theme nord
   allow       Trust the .coolbash.bash hook of this project (deny: revoke)
+  tidy        Clean up ~/.bashrc: preview, then tidy --apply (backup first)
   sync        Push fortunes/, motd.txt and theme to other machines (rsync over SSH)
               sync [--update] [--overrides] user@host…
-  help        Display this help message
+  help        Display this help message (help <command> for details)
 
 HELP
 }
@@ -560,7 +710,14 @@ case "${1:-}" in
     shift
     _coolbash_cmd_sync "$@"
     ;;
-  help | "") _coolbash_cmd_help ;;
+  tidy)
+    shift
+    _coolbash_cmd_tidy "$@"
+    ;;
+  help | "")
+    shift 2>/dev/null
+    _coolbash_cmd_help "$@"
+    ;;
   *)
     _coolbash_error "Unknown command: $1"
     _coolbash_cmd_help >&2

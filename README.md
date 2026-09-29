@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.23.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.24.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -59,17 +59,18 @@ coolbash <command>
 | `font`      | Installe (ou réessaie d'installer) la Nerd Font des icônes du prompt |
 | `verify`    | Vérifie la syntaxe (+ shellcheck si présent)  |
 | `test`      | Lance la suite de tests                       |
-| `uninstall` | Supprime complètement CoolBash, y compris la police qu'il a installée |
+| `uninstall` | Supprime complètement CoolBash, y compris la police qu'il a installée, et restaure le `~/.bashrc` d'avant CoolBash (sauvegardé à la première installation) |
 | `init`      | Charge tous les modules dans le shell courant |
 | `version`   | Affiche la version                            |
 | `config`    | Tous les réglages `COOLBASH_*` avec leur valeur effective (définie ou par défaut) |
 | `fortune`   | Une citation du MOTD, au hasard ou d'un thème donné : `coolbash fortune chuck` ; `fortune --add "texte" [thème]` en ajoute une à `~/.coolbash/fortunes/` |
+| `tidy`      | `tidy` montre le tri du `~/.bashrc` (retiré / déplacé / conservé) ; `tidy --apply` l'applique après sauvegarde : ce qu'un module fait déjà est retiré, `export PATH` devient `path_prepend`/`path_append`, alias et fonctions vont dans `90-local-overrides` |
 | `allow` / `deny` | Autorise (ou retire) le hook `.coolbash.bash` du projet courant : il est sourcé à l'entrée du dossier et défait à la sortie ; modifié, il redevient non autorisé |
 | `theme`     | `theme` liste les palettes du prompt avec un aperçu ; `theme nord` l'enregistre (`~/.coolbash/theme`) et l'applique au shell courant |
 | `sync`      | `sync [--update] [--overrides] user@host…` : pousse `fortunes/`, `motd.txt` et `theme` vers `~/.coolbash` d'autres machines par rsync sur SSH ; `--overrides` ajoute `90-local-overrides`, `--update` y lance `coolbash update` |
 | `bench`     | `bench [N]` : N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module |
 | `doctor`    | Diagnostic : bash, `.bashrc`, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton `~/.bashrc` refait à la main (nvm, cargo, PATH, alias…) alors qu'un module s'en charge |
-| `help`      | Affiche l’aide de la CLI                      |
+| `help`      | Affiche l’aide de la CLI ; `help <commande>` le détail. La complétion Tab de `coolbash` connaît les sous-commandes, les thèmes et les thèmes de citations |
 
 La fonction shell `coolbash` est disponible dès que `~/.bashrc` a chargé CoolBash.
 Les commandes `install`/`update`/`verify`/`test`/`uninstall` délèguent au `Makefile` du clone git,
@@ -197,8 +198,9 @@ make fmt                # applique shfmt (options dans .editorconfig)
 
 La CI épingle **shellcheck 0.11.0** et **shfmt 3.14.1** : les mêmes versions localement évitent
 les avertissements propres à une version. Trois jobs : Ubuntu, Debian 13 sous un utilisateur
-normal, et **installation à froid** (Debian nue, `install.sh`, premier shell : le MOTD, le temps
-de démarrage et le prompt sont capturés et vérifiés).
+normal, **installation à froid** (Debian nue, `install.sh`, premier shell : le MOTD, le temps
+de démarrage et le prompt sont capturés et vérifiés), et **macOS** (pas de `/proc`, `df` BSD :
+lint complet et fumée — install, init, prompt, MOTD, doctor).
 
 | Fichier                       | Ce qui est vérifié                                                                 |
 | ----------------------------- | ---------------------------------------------------------------------------------- |

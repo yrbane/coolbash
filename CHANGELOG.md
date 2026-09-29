@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.24.0 — 2026-09-29 · « Rangé, restauré, complété »
+### Ajouté
+- **`coolbash tidy [--apply]`** : range le `~/.bashrc`. Aperçu par défaut : ce qu'un module prend
+  en charge (nvm, cargo, pnpm, Android, foundry, historique, prompt) est retiré et noté en
+  commentaire ; `export PATH="X:$PATH"` devient `path_prepend "X"` (et `path_append` pour la
+  fin) ; alias, fonctions et le reste vont, dans l'ordre, dans `90-local-overrides.bash` sous un
+  en-tête daté ; il ne reste que les commentaires et la ligne source. `--apply` sauvegarde d'abord
+  dans `~/.bashrc.avant-coolbash-<date>`. `doctor` y renvoie.
+- **`make install` sauvegarde** le `~/.bashrc` non vide la première fois
+  (`~/.bashrc.avant-coolbash-<date>`, jamais écrasé) et **`make uninstall` le restaure**, en
+  gardant le fichier retiré à côté (`.bashrc.coolbash-retire-<date>`).
+- **`coolbash help <commande>`** : le détail de chaque sous-commande.
+- **Complétion Tab de `coolbash`** : sous-commandes, thèmes, thèmes de citations, options.
+- **CI macOS** : bash 5 de Homebrew, lint complet, puis fumée — install, init, prompt, MOTD sans
+  `/proc` (les replis sont enfin exercés), doctor, fortune.
+- Tests : `tidy` (aperçu intact, `--apply` : bashrc réduit, overrides valides, sauvegarde, lignes
+  retirées commentées, idempotence), sauvegarde à l'installation et restauration à la
+  désinstallation, `help <commande>`, complétion.
+
 ## 0.23.0 — 2026-09-29 · « Le prompt sait où tu déploies »
 ### Ajouté
 - **Contexte Kubernetes** : le `current-context` du kubeconfig (`KUBECONFIG`, sinon

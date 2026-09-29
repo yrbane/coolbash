@@ -27,6 +27,16 @@ mkdir -p "${sentinel}"
 assert_success "make lint (bash -n + shellcheck + shfmt) passe sur le dépôt" make -s -C "${COOLBASH_TEST_ROOT}" lint
 assert_success ".editorconfig fixe l'indentation à 2 espaces pour shfmt" grep -qx 'indent_size = 2' "${COOLBASH_TEST_ROOT}/.editorconfig"
 assert_success "make install réussit" mk install
+assert_eq "make install : le .bashrc non vide est sauvegardé une fois (avant-coolbash)" "1" "$(
+  set -- "${HOME}"/.bashrc.avant-coolbash-*
+  [[ -f "$1" ]] && echo $#
+)"
+assert_eq "…avec son contenu d'origine" "# mon bashrc
+export FOO=1
+# coolbash rocks (commentaire à préserver)" "$(
+  set -- "${HOME}"/.bashrc.avant-coolbash-*
+  cat "$1"
+)"
 assert_file "la CLI est installée" "${PREFIX}/cli/coolbash"
 assert_success "la CLI installée est exécutable" test -x "${PREFIX}/cli/coolbash"
 assert_file "les modules sont installés" "${PREFIX}/modules/00-core.bash"
@@ -87,6 +97,11 @@ assert_file "…et le clone est intact" "${CLONE}/Makefile"
 
 # --- uninstall ---------------------------------------------------------------
 assert_success "make uninstall réussit" mk uninstall
+assert_contains "uninstall : le .bashrc d'avant CoolBash est restauré" "$(cat "${BASHRC}")" "# mon bashrc"
+assert_eq "uninstall : le .bashrc retiré est gardé à côté (coolbash-retire)" "1" "$(
+  set -- "${HOME}"/.bashrc.coolbash-retire-*
+  [[ -f "$1" ]] && echo $#
+)"
 assert_no_path "le répertoire d'installation est supprimé" "${PREFIX}"
 assert_no_path "uninstall retire la police du HOME qu'il voit — d'où le HOME jetable" "${sentinel}"
 assert_eq "la ligne source est retirée du bashrc" "0" "$(grep -c 'cli/coolbash' "${BASHRC}")"

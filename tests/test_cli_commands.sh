@@ -171,8 +171,53 @@ assert_contains "doctor : repère cargo" "${doc}" "cargo : 35-toolchains"
 assert_contains "doctor : repère un alias → 90-local-overrides" "${doc}" "90-local-overrides"
 assert_contains "doctor : repère export PATH → path_prepend" "${doc}" "path_prepend"
 assert_eq "doctor : la ligne source de CoolBash et les commentaires ne sont pas signalés (5 lignes sur 7)" "5" "$(printf '%s\n' "${doc}" | sed 's/\x1b\[[0-9;]*m//g' | grep -c '– ligne')"
+assert_contains "doctor : renvoie vers coolbash tidy" "${doc}" "coolbash tidy"
+# tidy : aperçu, puis --apply avec sauvegarde
+cat >|"${home}/.bashrc" <<'BRC'
+# mon bashrc
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+alias ll='ls -la'
+export PATH="/opt/bin:$PATH"
+PATH="$PATH:/opt/tail"
+mafonction() { echo coucou; }
+source "$HOME/.coolbash/cli/coolbash" init
+BRC
+ty="$(cli_home tidy)"
+assert_contains "tidy : aperçu — lignes retirées (nvm)" "${ty}" "Retirées"
+assert_contains "tidy : aperçu — export PATH devient path_prepend" "${ty}" 'path_prepend "/opt/bin"'
+assert_contains "tidy : aperçu — PATH=\$PATH:X devient path_append" "${ty}" 'path_append "/opt/tail"'
+assert_contains "tidy : aperçu — l'alias est déplacé" "${ty}" "alias ll="
+assert_eq "tidy : aperçu — le fichier n'est pas touché" "8" "$(wc -l <"${home}/.bashrc")"
+cli_home tidy --apply >/dev/null
+assert_eq "tidy --apply : il reste le commentaire et la ligne source" "# mon bashrc
+source \"\$HOME/.coolbash/cli/coolbash\" init" "$(cat "${home}/.bashrc")"
+assert_eq "tidy --apply : une sauvegarde avant-coolbash" "1" "$(
+  set -- "${home}"/.bashrc.avant-coolbash-*
+  [[ -f "$1" ]] && echo $#
+)"
+ovf="${home}/.coolbash/modules/90-local-overrides.bash"
+assert_contains "tidy --apply : l'alias est dans 90-local-overrides" "$(cat "${ovf}")" "alias ll='ls -la'"
+assert_contains "tidy --apply : la fonction aussi" "$(cat "${ovf}")" "mafonction() { echo coucou; }"
+assert_contains "tidy --apply : path_prepend à la place d'export PATH" "$(cat "${ovf}")" 'path_prepend "/opt/bin"'
+assert_contains "tidy --apply : les lignes retirées sont notées en commentaire" "$(cat "${ovf}")" "# Retirées"
+assert_eq "tidy --apply : nvm.sh n'est plus nulle part hors commentaire" "0" "$(grep -c '^[^#]*nvm.sh' "${home}/.bashrc" "${ovf}" | awk -F: '{s+=$2} END {print s}')"
+assert_success "tidy --apply : le 90-local-overrides produit est du bash valide" bash -n "${ovf}"
+assert_contains "tidy : déjà rangé → rien à faire" "$(cli_home tidy)" "rien à faire"
+rm -f "${home}"/.bashrc.avant-coolbash-*
 printf 'source "$HOME/.coolbash/cli/coolbash" init\n' >|"${home}/.bashrc"
 assert_contains "doctor : .bashrc propre → rien à déplacer" "$(cli_home doctor)" "rien à déplacer"
+# help <commande> et complétion
+assert_contains "coolbash help fortune : le détail (--add)" "$(cli_home help fortune)" "--add"
+assert_eq "coolbash help inconnue → erreur, code 1" "1" "$(
+  cli_home help zzz >/dev/null 2>&1
+  echo $?
+)"
+comp() { HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash --norc --noprofile -c 'source "$1" init; COMP_WORDS=("${@:2}"); COMP_CWORD=$(( $# - 2 )); _coolbash_complete; printf "%s\n" "${COMPREPLY[@]}"' _ "${home}/.coolbash/cli/coolbash" "$@" 2>/dev/null; }
+assert_eq "complétion : coolbash th<Tab> → theme" "theme" "$(comp coolbash th)"
+assert_eq "complétion : coolbash theme n<Tab> → nord" "nord" "$(comp coolbash theme n)"
+assert_contains "complétion : coolbash fortune ch<Tab> → chuck" "$(comp coolbash fortune ch)" "chuck"
+assert_eq "complétion : coolbash tidy -<Tab> → --apply" "--apply" "$(comp coolbash tidy -)"
 assert_contains "doctor vérifie la locale" "${doc}" "locale"
 : >"${home}/.bashrc"
 doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1)"

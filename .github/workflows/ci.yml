@@ -86,3 +86,28 @@ jobs:
         run: |
           su tester -c 'cd && bash .coolbash/cli/coolbash doctor' || true
           su tester -c 'cd && bash .coolbash/cli/coolbash version'
+
+  # FR : macOS — pas de /proc, df BSD, bash 3.2 en /bin/bash : ce job exerce les
+  #      replis. Lint complet, puis fumée : install, init, prompt, doctor, MOTD.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash 5, shellcheck, shfmt (Homebrew)
+        run: |
+          brew install bash shellcheck shfmt
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+      - name: Lint
+        run: |
+          bash --version | head -1
+          make lint SHELL="$(brew --prefix)/bin/bash"
+      - name: Fumée — install, init, prompt, doctor, MOTD sans /proc
+        run: |
+          COOLBASH_FONT=0 make install SHELL="$(brew --prefix)/bin/bash"
+          bash -c 'source ~/.coolbash/cli/coolbash init; type -t mkcd j gsw todo copy >/dev/null && echo "fonctions OK"'
+          bash -ic '_coolbash_prompt_build; printf "PS1=%s\n" "$PS1"' 2>/dev/null | grep -q 'PS1=.* at ' && echo "prompt OK"
+          bash -c 'MOTD_DISABLE= HOME="$HOME" ; source ~/.coolbash/cli/coolbash init; _coolbash_motd_sysinfo; _coolbash_motd_disk; echo "MOTD OK"'
+          bash ~/.coolbash/cli/coolbash doctor || true
+          bash ~/.coolbash/cli/coolbash fortune dev
+          bash ~/.coolbash/cli/coolbash version
+
