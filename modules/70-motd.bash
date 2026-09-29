@@ -110,6 +110,7 @@ _coolbash_motd_sysinfo() {
   _coolbash_motd_hidden failed || _coolbash_motd_failed
   _coolbash_motd_hidden update || _coolbash_motd_update
   _coolbash_motd_hidden note || _coolbash_motd_note
+  _coolbash_motd_hidden todo || _coolbash_motd_todo
 }
 
 # FR : COOLBASH_MOTD_HIDE="battery load" — lignes à ne pas afficher.
@@ -224,6 +225,21 @@ _coolbash_motd_update() {
   read -r v 2>/dev/null <"${COOLBASH_PREFIX:-$HOME/.coolbash}/.update-available" || return 0
   [[ -n "$v" && "$v" != "${COOLBASH_VERSION:-}" ]] || return 0
   printf '\e[33m⇡ CoolBash %s disponible\e[0m (installée : %s) → coolbash update\n' "$v" "${COOLBASH_VERSION:-?}"
+}
+
+# FR : tâches ouvertes (todo add …), cinq au plus.
+_coolbash_motd_todo() {
+  local lines=() i
+  [[ -s "${COOLBASH_PREFIX:-$HOME/.coolbash}/todo.txt" ]] || return 0
+  mapfile -t lines <"${COOLBASH_PREFIX:-$HOME/.coolbash}/todo.txt"
+  printf '\n\e[1mÀ faire\e[0m (todo) :\n'
+  for i in "${!lines[@]}"; do
+    ((i >= 5)) && {
+      printf '  … et %d autre(s)\n' $((${#lines[@]} - 5))
+      break
+    }
+    printf '  \e[1m%2d\e[0m  %s\n' "$((i + 1))" "${lines[i]}"
+  done
 }
 
 # FR : pense-bête personnel — ~/.coolbash/motd.txt, affiché tel quel.

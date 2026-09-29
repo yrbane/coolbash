@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.21.0"
+COOLBASH_VERSION="0.22.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -87,10 +87,11 @@ COOLBASH_FZF|1|0 = pas de raccourcis fzf (Ctrl-R)
 COOLBASH_FZF_KEYBINDINGS||fichier key-bindings.bash à utiliser
 COOLBASH_MOTD|1|0 = pas de MOTD (MOTD_DISABLE=1 aussi)
 COOLBASH_FORTUNE|(tous)|thèmes de citations du MOTD, ex. "dev chuck"
-COOLBASH_MOTD_HIDE||lignes du MOTD à taire : date disk mem load battery reboot failed update note
+COOLBASH_MOTD_HIDE||lignes du MOTD à taire : date disk mem load battery reboot failed update note todo
 COOLBASH_UPDATE_CHECK|1|0 = ne jamais vérifier les mises à jour (git fetch quotidien en arrière-plan)
 COOLBASH_UPDATE_CHECK_S|86400|intervalle entre deux vérifications, en secondes
 COOLBASH_SERVE_PORT|8000|premier port essayé par serve
+COOLBASH_HOOKS|1|0 = ignorer les hooks .coolbash.bash des projets
 COOLBASH_GIT_GUARD|1|0 = git push --force sur main/master sans confirmation
 COOLBASH_J|1|0 = ne pas noter les cd (j <motif> : saut de dossier par fréquence)
 COOLBASH_CNF|1|0 = pas de suggestion de paquet pour une commande introuvable
@@ -355,6 +356,47 @@ _coolbash_doctor_bashrc() {
   return 0
 }
 
+# FR : coolbash allow [chemin] / deny [chemin] — autoriser (ou retirer) le hook
+#      .coolbash.bash du dossier courant (ou d'un parent). L'empreinte cksum est
+#      enregistrée : un hook modifié redevient non autorisé.
+_coolbash_hook_path() { # $1 = dossier de départ → stdout
+  local d="$1"
+  while [[ -n "$d" ]]; do
+    [[ -f "$d/.coolbash.bash" ]] && {
+      printf '%s' "$d/.coolbash.bash"
+      return 0
+    }
+    d="${d%/*}"
+  done
+  return 1
+}
+_coolbash_cmd_allow() {
+  local hook file="${COOLBASH_PREFIX}/allowed" fp
+  hook="$(_coolbash_hook_path "$(cd "${1:-.}" 2>/dev/null && pwd)")" || {
+    _coolbash_error "aucun .coolbash.bash ici ni dans un dossier parent"
+    return 1
+  }
+  fp="$(cksum <"$hook" | cut -d' ' -f1-2)"
+  mkdir -p "${COOLBASH_PREFIX}" || return 1
+  {
+    [[ -r "$file" ]] && grep -v -- "^${hook}	" "$file"
+    printf '%s\t%s\n' "$hook" "$fp"
+  } >|"${file}.new" && mv -f "${file}.new" "$file" || return 1
+  _coolbash_log "autorisé : ${hook} (chargé au prochain prompt, défait en quittant le dossier)"
+}
+_coolbash_cmd_deny() {
+  local hook file="${COOLBASH_PREFIX}/allowed"
+  hook="$(_coolbash_hook_path "$(cd "${1:-.}" 2>/dev/null && pwd)")" || {
+    _coolbash_error "aucun .coolbash.bash ici ni dans un dossier parent"
+    return 1
+  }
+  [[ -r "$file" ]] && {
+    grep -v -- "^${hook}	" "$file" >|"${file}.new"
+    mv -f "${file}.new" "$file"
+  }
+  _coolbash_log "retiré : ${hook}"
+}
+
 # FR : COOLBASH_DISABLE="70-motd 33" — modules à ne pas charger (nom complet,
 #      numéro seul ou nom sans numéro).
 _coolbash_disabled() {
@@ -471,6 +513,7 @@ Commands:
               fortune --add "text" [theme]  Add a quote to ~/.coolbash/fortunes/
   bench       Time N interactive shell startups, then the cost per module
   theme       List prompt themes with a preview, or pick one: theme nord
+  allow       Trust the .coolbash.bash hook of this project (deny: revoke)
   sync        Push fortunes/, motd.txt and theme to other machines (rsync over SSH)
               sync [--update] [--overrides] user@host…
   help        Display this help message
@@ -502,6 +545,14 @@ case "${1:-}" in
   theme)
     shift
     _coolbash_cmd_theme "$@"
+    ;;
+  allow)
+    shift
+    _coolbash_cmd_allow "$@"
+    ;;
+  deny)
+    shift
+    _coolbash_cmd_deny "$@"
     ;;
   sync)
     shift

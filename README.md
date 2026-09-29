@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.21.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.22.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -64,6 +64,7 @@ coolbash <command>
 | `version`   | Affiche la version                            |
 | `config`    | Tous les réglages `COOLBASH_*` avec leur valeur effective (définie ou par défaut) |
 | `fortune`   | Une citation du MOTD, au hasard ou d'un thème donné : `coolbash fortune chuck` ; `fortune --add "texte" [thème]` en ajoute une à `~/.coolbash/fortunes/` |
+| `allow` / `deny` | Autorise (ou retire) le hook `.coolbash.bash` du projet courant : il est sourcé à l'entrée du dossier et défait à la sortie ; modifié, il redevient non autorisé |
 | `theme`     | `theme` liste les palettes du prompt avec un aperçu ; `theme nord` l'enregistre (`~/.coolbash/theme`) et l'applique au shell courant |
 | `sync`      | `sync [--update] [--overrides] user@host…` : pousse `fortunes/`, `motd.txt` et `theme` vers `~/.coolbash` d'autres machines par rsync sur SSH ; `--overrides` ajoute `90-local-overrides`, `--update` y lance `coolbash update` |
 | `bench`     | `bench [N]` : N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module |
@@ -95,6 +96,7 @@ coolbash/
 │   ├─ 35-toolchains.bash
 │   ├─ 40-functions.bash
 │   ├─ 41-navigation.bash
+│   ├─ 42-workspace.bash
 │   ├─ 50-prompt.bash
 │   ├─ 60-completion.bash
 │   ├─ 70-motd.bash
@@ -127,6 +129,7 @@ coolbash/
 | `34-python-venv.bash`     | Helpers pour venv Python                            |
 | `35-toolchains.bash`      | SDK du HOME dans le `PATH` (cargo, pnpm, Android, foundry), nvm paresseux |
 | `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`, `backup`, `whoport`, `serve`, `cheat`…) |
+| `42-workspace.bash`       | Hooks de projet (`.coolbash.bash` après `coolbash allow`), `todo`, `remind`, `retry`, presse-papiers (`copy`, `paste`, `copypath`) |
 | `41-navigation.bash`      | `j` (saut de dossier par fréquence, pur bash), `bd`, `h`, `hstats`, paquet suggéré pour une commande introuvable |
 | `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji, icônes)  |
 | `60-completion.bash`      | Completions Bash/Git/fzf                            |
@@ -245,11 +248,12 @@ Variables lues au chargement (à placer avant la ligne `source` du `.bashrc`, ou
 | `COOLBASH_PROMPT_EMOJI`         | Emoji de session imposé (vide = aucun)                                |
 | `COOLBASH_PROMPT_ICONS`         | Icônes du prompt : `nerd` (Nerd Font, défaut), `basic` (Unicode standard, défaut en mode `safe`), `0` (aucune, défaut si `TERM=linux`) |
 | `COOLBASH_NVM_LAZY=0`           | Charger `nvm.sh` au démarrage (≈ 0,7 s par shell) au lieu du chargement paresseux |
+| `COOLBASH_HOOKS=0`              | Ignorer les hooks `.coolbash.bash` des projets                         |
 | `COOLBASH_GIT_GUARD=0`          | `git push --force` sur main/master sans confirmation                  |
 | `COOLBASH_J=0`                  | Ne pas noter les `cd` (désactive `j`)                                  |
 | `COOLBASH_CNF=0`                | Pas de suggestion de paquet pour une commande introuvable              |
 | `COOLBASH_SERVE_PORT`           | Premier port essayé par `serve` (défaut `8000`)                        |
-| `COOLBASH_MOTD_HIDE`            | Lignes du MOTD à taire, ex. `"battery load"` (mots : `date disk mem load battery reboot failed update note`) |
+| `COOLBASH_MOTD_HIDE`            | Lignes du MOTD à taire, ex. `"battery load"` (mots : `date disk mem load battery reboot failed update note todo`) |
 | `COOLBASH_FORTUNE`              | Thèmes de citations du MOTD, ex. `"dev chuck"` (défaut : tous, un thème répété pèse plus lourd) |
 | `COOLBASH_STARTUP_TIME`         | Temps de démarrage affiché à l'ouverture : `1` (défaut), `0` = muet, `verbose` = temps de chaque module. Le total est l'âge du processus (tout le `~/.bashrc` compris), la part CoolBash à côté |
 | `COOLBASH_FZF=0`                | Pas de raccourcis fzf (`Ctrl-R`, `Ctrl-T`, `Alt-C`), chargés sinon en shell interactif |
@@ -288,6 +292,7 @@ n'apparaît que si elle a quelque chose à dire.
 | `Failed units:`  | `systemctl --failed`, seulement si > 0   | rouge                                |
 | `⇡ CoolBash x.y.z disponible` | `.update-available`, écrit par la vérification quotidienne | jaune          |
 | note             | `~/.coolbash/motd.txt`, ton pense-bête   | cyan                                 |
+| À faire          | `todo.txt`, cinq tâches ouvertes au plus | —                                    |
 
 `COOLBASH_MOTD_HIDE="battery load"` tait les lignes citées.
 
@@ -350,6 +355,10 @@ Fonctions volontairement exposées dans le shell (tout le reste est préfixé `_
 | `bd`                           | `41-navigation`       | `bd Dev` : remonte jusqu'au dossier parent nommé (exact, sinon préfixe) |
 | `h`, `hstats`                  | `41-navigation`       | `h motif` cherche dans l'historique daté ; `hstats [N]` tes commandes les plus fréquentes avec leur part |
 | `command_not_found_handle`     | `41-navigation`       | Commande introuvable : le paquet qui la fournit (`pacman -F`, `apt-file`), sinon des noms proches. Shell interactif seulement |
+| `todo`                         | `42-workspace`        | `todo add "…"`, `todo done N`, `todo rm N`, `todo` : tâches dans `~/.coolbash/todo.txt`, les ouvertes reprises dans le MOTD |
+| `remind`                       | `42-workspace`        | `remind 15m "sortir le pain"` : notification bureau (notify-send) et ligne sur le terminal, en tâche de fond |
+| `retry`                        | `42-workspace`        | `retry 5 cmd…` : relance jusqu'au succès, délai 1, 2, 4… s |
+| `copy`, `paste`, `copypath`    | `42-workspace`        | Presse-papiers : wl-copy, xclip, xsel, pbcopy selon la session ; OSC 52 en SSH ou sans outil |
 | `cheat`                        | `40-functions`        | `cheat tar` : exemples par `tldr` si présent, sinon la section EXAMPLES du man, sinon `--help` |
 | `man`                          | `40-functions`        | `man` colorisé                              |
 | `mkcd`, `extract`, `up`, `timer` | `40-functions`      | Créer+entrer, extraire une archive (`extract -d` : dans un dossier à son nom), remonter de N répertoires, chronométrer |

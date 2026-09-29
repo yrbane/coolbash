@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.22.0 — 2026-09-29 · « Le poste de travail »
+### Ajouté
+- **Module `42-workspace`.**
+- **Hooks de projet** : un fichier `.coolbash.bash` à la racine d'un projet est sourcé à l'entrée
+  du dossier (ou d'un sous-dossier) et défait à la sortie, si le projet définit
+  `coolbash_hook_unload`. Rien ne se charge sans **`coolbash allow`** : l'empreinte du fichier est
+  enregistrée dans `~/.coolbash/allowed`, un hook modifié redevient non autorisé, avec un
+  avertissement une fois par session. `coolbash deny` retire. `COOLBASH_HOOKS=0` ignore tout.
+- **`todo`** : `todo add "…"`, `todo done N` (archivée dans `todo.done` avec la date), `todo rm N`,
+  `todo` liste. Les tâches ouvertes apparaissent dans le MOTD, cinq au plus.
+- **`remind 15m "texte"`** (`30s`, `2h`, ou des secondes) : à l'échéance, `notify-send` s'il
+  existe, et la ligne sur le terminal d'origine avec sonnerie et OSC 777. Détaché, aucun job.
+- **`retry N cmd…`** : relance jusqu'au succès, délai 1, 2, 4… s (plafond 60), code de la
+  dernière tentative.
+- **`copy`, `paste`, `copypath`** : presse-papiers selon la session — wl-copy (Wayland), xclip ou
+  xsel (X11), pbcopy (macOS) ; en SSH ou sans outil, OSC 52 pour que le terminal qui affiche
+  reçoive le texte. `copypath [fichier]` copie le chemin absolu.
+- Tests : `tests/test_workspace.sh` (hook non autorisé / autorisé / modifié / retiré, todo,
+  remind avec un faux notify-send, retry sur une commande capricieuse, presse-papiers avec de
+  faux wl-copy/wl-paste et OSC 52).
+
 ## 0.21.0 — 2026-09-29 · « Git au quotidien »
 ### Ajouté
 - **`gwip` / `gunwip`** : commit « WIP [skip ci]: date » de tout l'état courant, hooks ignorés ;
