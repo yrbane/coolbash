@@ -105,6 +105,15 @@ set -- "${BASHRC}".avant-coolbash-*
 printf '# mon bashrc\nexport FOO=1\n# coolbash rocks (commentaire à préserver)\n' >|"$1"
 rm -f "${PREFIX}/config.bash"
 
+# --- install depuis un terminal : setup n'interroge pas pendant les tests -----------
+if command -v script >/dev/null 2>&1; then
+  tty_out="$(timeout 120 script -qec "make -s -C '${CLONE}' install PREFIX='${PREFIX}' BASHRC='${BASHRC}'" /dev/null 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g')"
+  assert_not_contains "make install sous un tty : aucune question posée (COOLBASH_SETUP_DEFAULTS=1)" "${tty_out}" "Choix ["
+  assert_contains "…et l'installation va au bout" "${tty_out}" "Installation complete"
+else
+  t_skip "make install sous un tty (script absent)"
+fi
+
 # --- uninstall ---------------------------------------------------------------
 assert_success "make uninstall réussit" mk uninstall
 assert_contains "uninstall : le .bashrc d'avant CoolBash est restauré" "$(cat "${BASHRC}")" "# mon bashrc"

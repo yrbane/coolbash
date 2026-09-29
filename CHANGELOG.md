@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.26.2 — 2026-09-29 · « Les tests ne parlent plus au terminal »
+### Corrigé
+- `make test` lancé depuis un terminal : `gsw` ouvrait fzf (l'entrée standard était un tty) et
+  demandait de choisir entre `feature/login` et `feature/logout` au milieu de la suite ; trois
+  assertions échouaient ensuite. Le lanceur ferme désormais l'entrée standard pour toute la suite.
+- Même cause possible pour `coolbash setup`, lancé par le `make install` des tests : la suite
+  exporte `COOLBASH_SETUP_DEFAULTS=1`, que le Makefile respecte (aucune question, même sous un
+  terminal). Un test rejoue `make install` sous un vrai tty (`script`) et vérifie qu'aucune
+  question n'est posée.
+
 ## 0.26.1 — 2026-09-29 · « La version est notée même sans réglage »
 ### Corrigé
 - `setup` écrit `config.bash` même quand tout est au défaut (en-tête seul, avec la version) :

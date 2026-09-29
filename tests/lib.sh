@@ -23,6 +23,8 @@ unset NVM_DIR NVM_BIN NVM_INC PNPM_HOME ANDROID_HOME
 export COOLBASH_FONT=0
 # FR : jamais de git fetch en arrière-plan pendant les tests (les shells interactifs de bench le déclencheraient).
 export COOLBASH_UPDATE_CHECK=0
+# FR : le setup lancé par make install ne pose jamais de question pendant les tests.
+export COOLBASH_SETUP_DEFAULTS=1
 # FR : sans locale UTF-8 (conteneur Debian nu, `su -c`), bash laisse les
 #      `$'\uXXXX'` des tests tels quels et toutes les assertions d'icônes
 #      échouent alors que le module est correct. Vu en CI Debian 13.

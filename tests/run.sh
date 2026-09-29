@@ -4,6 +4,9 @@
 #  Usage : bash tests/run.sh [motif]   ex. bash tests/run.sh cli
 # =============================================================================
 set -u
+# FR : l'entrée standard n'est jamais un terminal pendant les tests : lancés
+#      depuis un terminal, gsw ouvrirait fzf et setup poserait ses questions.
+exec </dev/null
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 pattern="${1:-}"

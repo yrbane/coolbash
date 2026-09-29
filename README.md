@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.26.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.26.2-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -241,7 +241,8 @@ coolbash uninstall
 ## ⚙️ Configuration
 
 Le plus simple : **`coolbash setup`**, lancé automatiquement à la fin de `coolbash install` et
-`coolbash update` quand on a un terminal (`COOLBASH_SETUP=0` pour sauter). Une configuration
+`coolbash update` quand on a un terminal (`COOLBASH_SETUP=0` pour sauter, `COOLBASH_SETUP_DEFAULTS=1`
+pour tout accepter sans question). Une configuration
 existante est **reprise** : seules les questions apparues depuis sa version sont posées, ou rien du
 tout si tout est connu. C'est un questionnaire à choix qui écrit `~/.coolbash/config.bash`
 (seuls les choix hors défaut, sous la forme `export X="${X:-valeur}"`). Ce fichier est sourcé par
