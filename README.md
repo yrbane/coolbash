@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.26.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.26.1-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  

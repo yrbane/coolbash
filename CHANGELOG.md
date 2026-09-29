@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.26.1 — 2026-09-29 · « La version est notée même sans réglage »
+### Corrigé
+- `setup` écrit `config.bash` même quand tout est au défaut (en-tête seul, avec la version) :
+  sans cela, chaque `install`/`update` avec un terminal reposait toutes les questions au lieu de
+  reprendre et ne demander que les nouvelles.
+
 ## 0.26.0 — 2026-09-29 · « Un ~/.bashrc autonome, configuré à chaque mise à jour »
 ### Ajouté
 - **`coolbash compile [--write | fichier]`** : un `~/.bashrc` autonome. En-tête avec marqueur

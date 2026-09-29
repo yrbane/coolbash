@@ -245,24 +245,22 @@ _choice COOLBASH_INSTALL_MODE "Comment CoolBash est chargé :" source \
 
 # --- récapitulatif et écriture -----------------------------------------------------
 _title "Récapitulatif"
+# FR : même tout au défaut, le fichier est écrit (en-tête seul) : il porte la
+#      version, et la prochaine mise à jour ne reposera que les questions nouvelles.
 if ((${#CHOSEN[@]} == 0)); then
-  _say "Tout est au réglage par défaut : aucun fichier de configuration n'est nécessaire."
-  if [[ -f "$CONFIG" ]]; then
-    rm -f "$CONFIG"
-    _say "L'ancien ${CONFIG} a été retiré."
-  fi
+  _say "Tout est au réglage par défaut : rien à écrire, seule la version est notée."
 else
   for var in "${!CHOSEN[@]}"; do printf '  %-28s = %s\n' "$var" "${CHOSEN[$var]:-(vide)}"; done | sort
-  mkdir -p "${COOLBASH_PREFIX}" || exit 1
-  {
-    printf '# CoolBash %s — réglages choisis par `coolbash setup` le %s.\n' "$VERSION" "$(printf '%(%Y-%m-%d %H:%M)T' -1)"
-    printf '# Sourcé avant les modules. Une variable posée dans le ~/.bashrc avant la ligne\n'
-    printf '# source garde la priorité (${X:-…}). `coolbash setup` pour changer, `coolbash config`\n'
-    printf '# pour tout voir.\n'
-    for var in "${!CHOSEN[@]}"; do printf 'export %s="${%s:-%s}"\n' "$var" "$var" "${CHOSEN[$var]}"; done | sort
-  } >|"${CONFIG}.new" && mv -f "${CONFIG}.new" "$CONFIG" || exit 1
-  printf '\n\e[32m[CoolBash]\e[0m écrit : %s\n' "$CONFIG"
 fi
+mkdir -p "${COOLBASH_PREFIX}" || exit 1
+{
+  printf '# CoolBash %s — réglages choisis par `coolbash setup` le %s.\n' "$VERSION" "$(printf '%(%Y-%m-%d %H:%M)T' -1)"
+  printf '# Sourcé avant les modules. Une variable posée dans le ~/.bashrc avant la ligne\n'
+  printf '# source garde la priorité (${X:-…}). `coolbash setup` pour changer, `coolbash config`\n'
+  printf '# pour tout voir.\n'
+  for var in "${!CHOSEN[@]}"; do printf 'export %s="${%s:-%s}"\n' "$var" "$var" "${CHOSEN[$var]}"; done | sort
+} >|"${CONFIG}.new" && mv -f "${CONFIG}.new" "$CONFIG" || exit 1
+printf '\n\e[32m[CoolBash]\e[0m écrit : %s\n' "$CONFIG"
 
 # --- ~/.bashrc : compilé ou une ligne source --------------------------------------------
 BASHRC="${COOLBASH_BASHRC:-${HOME}/.bashrc}"

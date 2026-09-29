@@ -114,6 +114,7 @@ chmod +x "${fbs}/rsync" "${fbs}/ssh"
 printf 'note\n' >|"${home}/.coolbash/motd.txt"
 mkdir -p "${home}/.coolbash/fortunes"
 printf 'nord\n' >|"${home}/.coolbash/theme"
+rm -f "${home}/.coolbash/config.bash" # FR : écrit par le setup --defaults de make install ; sync l'embarquerait
 sy="$(PATH="${fbs}:${PATH}" cli_home sync arthur@debian)"
 assert_contains "sync : rsync des fortunes, motd.txt et theme vers hôte:.coolbash/" "${sy}" "rsync -az ${home}/.coolbash/fortunes ${home}/.coolbash/motd.txt ${home}/.coolbash/theme arthur@debian:.coolbash/"
 assert_not_contains "sync : pas de 90-local-overrides sans --overrides" "${sy}" "90-local-overrides"
@@ -221,8 +222,10 @@ assert_eq "complétion : coolbash tidy -<Tab> → --apply" "--apply" "$(comp coo
 # setup : configuration interactive → ~/.coolbash/config.bash
 rm -f "${home}/.coolbash/config.bash"
 su="$(cli_home setup --defaults)"
-assert_contains "setup --defaults : tout par défaut, aucun fichier" "${su}" "aucun fichier"
-assert_no_path "…et config.bash n'existe pas" "${home}/.coolbash/config.bash"
+assert_contains "setup --defaults : tout par défaut, seule la version est notée" "${su}" "seule la version"
+assert_eq "…config.bash ne contient que l'en-tête (avec la version)" "0" "$(grep -c '^export' "${home}/.coolbash/config.bash")"
+assert_contains "…qui permet la reprise dès la prochaine fois" "$(cli_home setup --defaults)" "reprise telle quelle"
+rm -f "${home}/.coolbash/config.bash"
 # FR : réponses : thème 2 (nord), icônes Entrée, emoji 2 (aucun), git n, tools Entrée, cloud Entrée,
 #      fish Entrée, transient Entrée, min_ms 500, bell Entrée, stamp Entrée ; MOTD o, hide « 5 9 »,
 #      fortune « 1 12 », startup 2 (verbose) ; update n, puis Entrée jusqu'au bout.
