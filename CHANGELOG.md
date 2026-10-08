@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.30.1 — 2026-10-08 · « Un test sans job control »
+### Corrigé
+- Le test du job stoppé (`⚙ 2 ⏸1`) dépendait du job control, absent sans tty (CI) : `jobs` est
+  doublé par une fonction, le résultat est déterministe partout.
+
 ## 0.30.0 — 2026-10-08 · « Marques de prompt, secrets à l'écart »
 ### Ajouté
 - **OSC 133** (intégration shell) : le prompt émet les marques A/B/C/D — kitty, foot, wezterm,

@@ -303,6 +303,8 @@ assert_eq "deux niveaux : 3, en basic" "⧉ 3" "$(SHLVL=4 COOLBASH_SHLVL_BASE=3 
 assert_eq "la référence est posée (et exportée) par le premier shell" "1" "$(env -u COOLBASH_SHLVL_BASE SHLVL=7 bash --norc --noprofile -c 'source "$1"; source "$2"; [[ "$COOLBASH_SHLVL_BASE" == 8 ]] && bash -c "[[ -n \$COOLBASH_SHLVL_BASE ]] && echo 1"' _ "${CORE}" "${PROMPT}")"
 assert_eq "COOLBASH_PROMPT_SHLVL=0 : rien" "" "$(SHLVL=4 COOLBASH_SHLVL_BASE=3 COOLBASH_PROMPT_SHLVL=0 with_prompt '_coolbash_prompt_shlvl')"
 assert_contains "le niveau est dans PS1" "$(SHLVL=3 COOLBASH_SHLVL_BASE=3 ps1_of)" $'\uf0e8 2'
-assert_eq "jobs : un job stoppé est compté à part (⚙ 2 ⏸1)" $'\uf013 2 ⏸1' "$(with_prompt 'set -m; sleep 5 & sleep 5 & kill -STOP %2; sleep 0.2; jobs >/dev/null; _coolbash_prompt_jobs; kill -9 %1 %2 2>/dev/null; wait 2>/dev/null')"
+# FR : sans tty (CI, run.sh) il n'y a pas de job control : `jobs` est doublé par une fonction.
+assert_eq "jobs : un job stoppé est compté à part (⚙ 2 ⏸1)" $'\uf013 2 ⏸1' "$(with_prompt 'jobs() { if [[ "$1" == -sp ]]; then echo 111; else printf "111\n222\n"; fi; }; _coolbash_prompt_jobs')"
+assert_eq "jobs : aucun stoppé, pas de ⏸" $'\uf013 1' "$(with_prompt 'jobs() { [[ "$1" == -sp ]] || echo 111; }; _coolbash_prompt_jobs')"
 
 t_done
