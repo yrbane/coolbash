@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.28.1 — 2026-10-08 · « tealdeer, pas tldr »
+### Corrigé
+- `coolbash deps` proposait `tldr` sur Debian, où le paquet n'existe plus depuis la 13 : le client
+  s'appelle **`tealdeer`** (apt, dnf, zypper, apk ; `tldr` reste juste pour pacman et brew).
+- Avec **pacman et apt, chaque paquet est vérifié dans les dépôts locaux** (`pacman -Si`,
+  `apt-cache show`) avant d'entrer dans la commande ; un nom inconnu (`git-delta` sur Debian 12)
+  est signalé « pas dans tes dépôts » au lieu de faire échouer toute l'installation.
+- Tests : faux `pacman -Si` et `apt-cache show` qui ignorent un paquet.
+
 ## 0.28.0 — 2026-09-29 · « Ce qui manque, en une commande »
 ### Ajouté
 - **`coolbash deps [--install]`** : les outils optionnels présents et absents, avec le paquet
