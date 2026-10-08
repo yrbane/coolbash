@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.32.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.33.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -194,6 +194,21 @@ Installer depuis le clone et recharger :
 make install
 source ~/.bashrc
 ```
+
+### 📦 Paquets
+
+`make pkg-deb` construit `dist/coolbash_X.Y.Z_all.deb` (avec `dpkg-deb`, sinon `ar` + `tar` : un
+`.deb` n'est rien d'autre) ; `make pkg-arch` construit `dist/arch/coolbash-X.Y.Z-1-any.pkg.tar.zst`
+avec `makepkg` (`packaging/arch/PKGBUILD.in`) ; `make dist` l'archive source. Les deux paquets
+posent `/usr/share/coolbash` et `/usr/bin/coolbash` ; chaque utilisateur lance ensuite
+`coolbash install` (copie dans `~/.coolbash`, ligne source). La mise à jour vient alors du
+gestionnaire de paquets, suivie d'un `coolbash install` — `coolbash update` le rappelle. La CI
+construit et installe les deux paquets (`dpkg -i`, `pacman -U`) et les joint à chaque release.
+
+### 🪝 Hooks git
+
+`make hooks` pose `pre-commit` (`make lint`) et `pre-push` (`make test`) dans `.git/hooks` : rien
+ne part rouge. `--no-verify` pour passer outre.
 
 ### 🧪 Tests
 

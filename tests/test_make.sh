@@ -205,4 +205,48 @@ mkdir -p "${COOLBASH_TEST_TMP}/ihome2/.coolbash"
 assert_failure "install.sh : refuse un ~/.coolbash qui n'est pas un clone git" env HOME="${COOLBASH_TEST_TMP}/ihome2" COOLBASH_REPO_URL="${src}" bash "${COOLBASH_TEST_ROOT}/install.sh"
 assert_file "…sans y toucher" "${COOLBASH_TEST_TMP}/ihome2/.coolbash/perso"
 
+# --- 0.33.0 : paquets (dist, pkg-deb, pkg-arch) et hooks git -----------------------------
+pk="${COOLBASH_TEST_TMP}/pk"
+make_fake_clone "${pk}"
+pkver="$(sed -n 's/^COOLBASH_VERSION="\(.*\)"/\1/p' "${pk}/cli/coolbash")"
+assert_success "make dist produit l'archive source" make -s -C "${pk}" dist
+assert_file "…dist/coolbash-<version>.tar.gz" "${pk}/dist/coolbash-${pkver}.tar.gz"
+assert_contains "…préfixée coolbash-<version>/, avec les modules" "$(tar -tzf "${pk}/dist/coolbash-${pkver}.tar.gz")" "coolbash-${pkver}/modules/00-core.bash"
+assert_success "make pkg-deb produit le .deb (dpkg-deb, sinon ar + tar)" make -s -C "${pk}" pkg-deb
+deb="${pk}/dist/coolbash_${pkver}_all.deb"
+assert_file "…dist/coolbash_<version>_all.deb" "${deb}"
+assert_eq "…un vrai .deb : debian-binary, control.tar.gz, data.tar.gz" "debian-binary control.tar.gz data.tar.gz" "$(ar t "${deb}" | tr '\n' ' ' | sed 's/ $//')"
+assert_contains "…control porte la version" "$(ar p "${deb}" control.tar.gz | tar -xzO ./control)" "Version: ${pkver}"
+assert_contains "…les fichiers vont dans /usr/share/coolbash et /usr/bin/coolbash" "$(ar p "${deb}" data.tar.gz | tar -tz)" "./usr/bin/coolbash"
+assert_contains "…avec le CHANGELOG et les citations" "$(ar p "${deb}" data.tar.gz | tar -tz)" "./usr/share/coolbash/share/fortunes/dev.txt"
+assert_eq "…le wrapper est exécutable" "1" "$(ar p "${deb}" data.tar.gz | tar -tzv ./usr/bin/coolbash | grep -c '^-rwxr-xr-x')"
+if command -v makepkg >/dev/null 2>&1 && [[ $EUID -ne 0 ]]; then
+  assert_success "make pkg-arch produit le paquet Arch (makepkg)" make -s -C "${pk}" pkg-arch
+  assert_eq "…dist/arch/coolbash-<version>-1-any.pkg.tar.*" "1" "$(compgen -G "${pk}/dist/arch/coolbash-${pkver}-1-any.pkg.tar.*" | wc -l)"
+  assert_contains "…avec /usr/share/coolbash et /usr/bin/coolbash" "$(tar -tf "${pk}"/dist/arch/coolbash-"${pkver}"-1-any.pkg.tar.* 2>/dev/null)" "usr/bin/coolbash"
+else
+  t_skip "makepkg absent (ou root) : paquet Arch non construit ici"
+fi
+# FR : installé par paquet = un Makefile sans .git : update renvoie vers le gestionnaire.
+assert_contains "coolbash update sur une installation par paquet : message explicite" "$(COOLBASH_PREFIX="${pk}/.cb" COOLBASH_REPO="${pk}" bash "${pk}/cli/coolbash" update 2>&1)" "installé par paquet"
+assert_success "make clean retire dist/" make -s -C "${pk}" clean
+assert_no_path "…dist/ absent" "${pk}/dist"
+# hooks
+git -C "${pk}" init -q -b main
+git -C "${pk}" config user.email t@t
+git -C "${pk}" config user.name t
+assert_success "make hooks pose les hooks git" make -s -C "${pk}" hooks
+assert_eq "…pre-commit et pre-push, exécutables" "2" "$(
+  n=0
+  for h in pre-commit pre-push; do [[ -x "${pk}/.git/hooks/$h" ]] && n=$((n + 1)); done
+  echo "$n"
+)"
+printf 'if then fi (\n' >|"${pk}/modules/zz-casse.bash"
+git -C "${pk}" add -A
+assert_failure "pre-commit : un module en erreur de syntaxe bloque le commit" git -C "${pk}" commit -qm "casse"
+rm -f "${pk}/modules/zz-casse.bash"
+git -C "${pk}" add -A
+assert_success "…et le commit passe une fois corrigé (lint vert)" git -C "${pk}" commit -qm "ok"
+assert_failure "make hooks hors d'un dépôt git échoue" make -s -C "${COOLBASH_TEST_TMP}/upd/clone/.." hooks
+
 t_done

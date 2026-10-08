@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# FR : CoolBash installé par paquet (pacman, apt) : les fichiers sont dans
+#      /usr/share/coolbash. `coolbash install` les copie dans ~/.coolbash et
+#      ajoute la ligne source au ~/.bashrc ; la mise à jour vient ensuite du
+#      gestionnaire de paquets, suivie d'un nouveau `coolbash install`.
+exec bash /usr/share/coolbash/cli/coolbash "$@"

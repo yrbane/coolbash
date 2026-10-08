@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.32.0"
+COOLBASH_VERSION="0.33.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -40,7 +40,18 @@ _coolbash_make() {
 # -----------------------------------------------------------------------------
 #  Commandes
 _coolbash_cmd_install() { _coolbash_make install; }
-_coolbash_cmd_update() { _coolbash_make update; }
+# FR : installé par paquet (pacman, apt) : /usr/share/coolbash n'est pas un clone
+#      git — la mise à jour vient du gestionnaire de paquets, puis coolbash install.
+_coolbash_cmd_update() {
+  local repo
+  repo="${COOLBASH_REPO:-$(cat "${COOLBASH_PREFIX}/.repo" 2>/dev/null)}"
+  repo="${repo:-${COOLBASH_ROOT}}"
+  if [[ -f "${repo}/Makefile" && ! -d "${repo}/.git" ]]; then
+    _coolbash_error "${repo} n'est pas un clone git : CoolBash est installé par paquet — mets-le à jour avec ton gestionnaire de paquets (pacman -Syu, apt upgrade), puis : coolbash install"
+    return 1
+  fi
+  _coolbash_make update
+}
 _coolbash_cmd_verify() { _coolbash_make verify; }
 _coolbash_cmd_test() { _coolbash_make test; }
 _coolbash_cmd_uninstall() { _coolbash_make uninstall; }
@@ -1099,7 +1110,7 @@ _coolbash_cmd_init() {
 _coolbash_cmd_help_topic() {
   case "$1" in
     install) echo "coolbash install — installe (ou réinstalle) CoolBash dans ~/.coolbash et ajoute la ligne source au ~/.bashrc (sauvegardé la première fois). Installe la Nerd Font sauf COOLBASH_FONT=0." ;;
-    update) echo "coolbash update — git pull du clone, suite de tests, puis install. Annonce « x.y.z → a.b.c », « déjà à jour », ou l'échec (rien n'est installé si les tests échouent)." ;;
+    update) echo "coolbash update — git pull du clone, suite de tests, nouveautés depuis l'ancienne version, puis install. Annonce « x.y.z → a.b.c », « déjà à jour », ou l'échec (rien n'est installé si les tests échouent). Installé par paquet (pacman, apt) : la mise à jour vient du gestionnaire de paquets, puis coolbash install." ;;
     deps) echo "coolbash deps [--install] — les outils optionnels absents (cowsay, lolcat, fzf, rsync, tldr, delta, shellcheck, shfmt, presse-papiers, notifications…) avec le paquet correspondant pour pacman, apt, dnf, zypper, apk ou brew, et la commande à lancer ; --install l'exécute." ;;
     font) echo "coolbash font — installe (ou réessaie) la JetBrainsMono Nerd Font utilisée par les icônes du prompt. À sélectionner ensuite dans le profil du terminal." ;;
     verify | lint) echo "coolbash verify — bash -n, shellcheck et shfmt sur tout le dépôt (make lint)." ;;

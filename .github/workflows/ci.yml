@@ -87,6 +87,48 @@ jobs:
           su tester -c 'cd && bash .coolbash/cli/coolbash doctor' || true
           su tester -c 'cd && bash .coolbash/cli/coolbash version'
 
+  # FR : les paquets — le .deb est construit et installé (dpkg -i), puis un
+  #      utilisateur fait `coolbash install` depuis /usr/share/coolbash ; le paquet
+  #      Arch est construit par makepkg dans un conteneur archlinux et installé par
+  #      pacman -U. Les deux sont des artefacts du run (joints à la release).
+  paquet-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: make pkg-deb, dpkg -i, coolbash install
+        run: |
+          make pkg-deb
+          sudo dpkg -i dist/coolbash_*_all.deb
+          dpkg -L coolbash | grep -q /usr/bin/coolbash
+          coolbash version
+          COOLBASH_SETUP=0 COOLBASH_FONT=0 coolbash install
+          test -x ~/.coolbash/cli/coolbash && grep -q cli/coolbash ~/.bashrc
+          coolbash update 2>&1 | grep -q 'installé par paquet'
+          bash -ic 'coolbash version' 2>/dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coolbash-deb
+          path: dist/*.deb
+  paquet-arch:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Installer base-devel
+        run: pacman -Sy --noconfirm --needed base-devel git
+      - uses: actions/checkout@v4
+      - name: make pkg-arch (makepkg sous un utilisateur), pacman -U
+        run: |
+          useradd -m builder
+          chown -R builder:builder .
+          su builder -c 'make pkg-arch'
+          pacman -U --noconfirm dist/arch/coolbash-*.pkg.tar.*
+          pacman -Qi coolbash | head -3
+          su builder -c 'coolbash version && COOLBASH_SETUP=0 COOLBASH_FONT=0 coolbash install && test -x ~/.coolbash/cli/coolbash'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coolbash-arch
+          path: dist/arch/*.pkg.tar.*
+
   # FR : macOS — pas de /proc, df BSD, bash 3.2 en /bin/bash : ce job exerce les
   #      replis. Lint complet, puis fumée : install, init, prompt, doctor, MOTD.
   macos:

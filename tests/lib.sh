@@ -92,7 +92,8 @@ make_fake_clone() {
   mkdir -p "${dest}"
   cp -r "${COOLBASH_TEST_ROOT}/Makefile" "${COOLBASH_TEST_ROOT}/install.sh" "${COOLBASH_TEST_ROOT}/cli" \
     "${COOLBASH_TEST_ROOT}/modules" "${COOLBASH_TEST_ROOT}/tests" "${COOLBASH_TEST_ROOT}/share" \
-    "${COOLBASH_TEST_ROOT}/.editorconfig" "${COOLBASH_TEST_ROOT}/CHANGELOG.md" "${dest}/"
+    "${COOLBASH_TEST_ROOT}/.editorconfig" "${COOLBASH_TEST_ROOT}/CHANGELOG.md" \
+    "${COOLBASH_TEST_ROOT}/packaging" "${COOLBASH_TEST_ROOT}/scripts" "${dest}/"
 }
 
 t_done() {

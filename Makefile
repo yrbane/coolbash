@@ -6,7 +6,11 @@ ROOT   := $(abspath .)
 #      forme `source $HOME/.coolbash/cli/coolbash init`).
 SOURCE_LINE = source "$(PREFIX)/cli/coolbash" init
 
-.PHONY: install update uninstall verify lint fmt test font
+.PHONY: install update uninstall verify lint fmt test font dist stage pkg-deb pkg-arch pkg hooks clean
+VERSION := $(shell sed -n 's/^COOLBASH_VERSION="\(.*\)"/\1/p' cli/coolbash)
+DIST    := dist
+# FR : ce qui entre dans un paquet (README et LICENSE s'ils sont là).
+PKG_FILES := cli modules share Makefile install.sh CHANGELOG.md packaging $(wildcard README.md LICENSE)
 
 install:
 	@echo "[CoolBash] Installing to $(PREFIX)..."
@@ -107,7 +111,63 @@ uninstall:
 font:
 	@COOLBASH_PREFIX="$(PREFIX)" bash cli/coolbash-font install
 
-SH_FILES := cli/coolbash cli/coolbash-font cli/coolbash-setup install.sh modules/*.bash tests/*.sh
+SH_FILES := cli/coolbash cli/coolbash-font cli/coolbash-setup install.sh modules/*.bash tests/*.sh scripts/hooks/* packaging/coolbash-wrapper
+
+# --- paquets ------------------------------------------------------------------------
+# FR : `make dist` → dist/coolbash-X.Y.Z.tar.gz (l'archive source) ; `make pkg-deb` →
+#      dist/coolbash_X.Y.Z_all.deb (dpkg-deb, sinon ar + tar : un .deb n'est que
+#      cela) ; `make pkg-arch` → dist/arch/coolbash-X.Y.Z-1-any.pkg.tar.zst (makepkg,
+#      depuis packaging/arch/PKGBUILD.in). Les deux installent /usr/share/coolbash
+#      et /usr/bin/coolbash ; chaque utilisateur fait ensuite `coolbash install`.
+dist:
+	@mkdir -p "$(DIST)"
+	@tar -czf "$(DIST)/coolbash-$(VERSION).tar.gz" --transform 's,^,coolbash-$(VERSION)/,' --owner=0 --group=0 $(PKG_FILES)
+	@echo "[CoolBash] $(DIST)/coolbash-$(VERSION).tar.gz"
+
+stage:
+	@rm -rf "$(DIST)/root"
+	@mkdir -p "$(DIST)/root/usr/share/coolbash" "$(DIST)/root/usr/bin" "$(DIST)/root/usr/share/doc/coolbash"
+	@cp -r cli modules share Makefile install.sh CHANGELOG.md "$(DIST)/root/usr/share/coolbash/"
+	@[[ -f README.md ]] && cp README.md "$(DIST)/root/usr/share/doc/coolbash/" || true
+	@[[ -f LICENSE ]] && cp LICENSE "$(DIST)/root/usr/share/doc/coolbash/copyright" || true
+	@install -m 755 packaging/coolbash-wrapper "$(DIST)/root/usr/bin/coolbash"
+	@find "$(DIST)/root" -type d -exec chmod 755 {} +
+	@find "$(DIST)/root" -type f ! -perm -u+x -exec chmod 644 {} +
+
+pkg-deb: stage
+	@mkdir -p "$(DIST)/root/DEBIAN"
+	@sed 's/@VERSION@/$(VERSION)/' packaging/deb/control.in >| "$(DIST)/root/DEBIAN/control"
+	@deb="$(DIST)/coolbash_$(VERSION)_all.deb"; \
+	if command -v dpkg-deb >/dev/null 2>&1; then \
+	  dpkg-deb --build --root-owner-group "$(DIST)/root" "$$deb" >/dev/null; \
+	else \
+	  tmp="$(DIST)/deb-build"; rm -rf "$$tmp"; mkdir -p "$$tmp"; \
+	  tar -C "$(DIST)/root" --owner=0 --group=0 -czf "$$tmp/data.tar.gz" ./usr; \
+	  tar -C "$(DIST)/root/DEBIAN" --owner=0 --group=0 -czf "$$tmp/control.tar.gz" ./control; \
+	  printf '2.0\n' >| "$$tmp/debian-binary"; \
+	  rm -f "$$deb"; (cd "$$tmp" && ar rcs "../../$$deb" debian-binary control.tar.gz data.tar.gz); \
+	  rm -rf "$$tmp"; \
+	fi; \
+	echo "[CoolBash] $$deb"
+
+pkg-arch: dist
+	@command -v makepkg >/dev/null 2>&1 || { echo "makepkg absent (Arch Linux seulement)" >&2; exit 1; }
+	@mkdir -p "$(DIST)/arch"
+	@sed 's/@VERSION@/$(VERSION)/' packaging/arch/PKGBUILD.in >| "$(DIST)/arch/PKGBUILD"
+	@cp "$(DIST)/coolbash-$(VERSION).tar.gz" "$(DIST)/arch/"
+	@cd "$(DIST)/arch" && makepkg -f --noconfirm >/dev/null && echo "[CoolBash] $(DIST)/arch/$$(ls coolbash-$(VERSION)-*.pkg.tar.* | head -1)"
+
+pkg: pkg-deb pkg-arch
+
+# FR : `make hooks` — pre-commit = lint, pre-push = tests : rien ne part rouge.
+hooks:
+	@[[ -d .git ]] || { echo "pas un dépôt git" >&2; exit 1; }
+	@mkdir -p .git/hooks
+	@for h in pre-commit pre-push; do ln -sf "../../scripts/hooks/$$h" ".git/hooks/$$h"; done
+	@echo "[CoolBash] hooks posés : pre-commit (make lint), pre-push (make test)"
+
+clean:
+	@rm -rf "$(DIST)"
 
 verify:
 	@echo "[CoolBash] Verifying syntax..."

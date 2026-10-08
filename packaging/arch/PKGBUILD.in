@@ -1,0 +1,26 @@
+# Maintainer: Seb (SINCE&CO) — https://github.com/yrbane/coolbash
+# FR : généré par `make pkg-arch` depuis packaging/arch/PKGBUILD.in (@VERSION@
+#      remplacé) ; la source est l'archive produite par `make dist`, posée à côté.
+pkgname=coolbash
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="Un bash moderne, rapide et documenté : prompt, MOTD, modules, CLI"
+arch=('any')
+url="https://github.com/yrbane/coolbash"
+license=('MIT')
+depends=('bash>=4.4')
+optdepends=('git: segment git du prompt, gsw, gwip'
+  'cowsay: MOTD (la vache)' 'lolcat: MOTD (couleurs)'
+  'fzf: Ctrl-R, Ctrl-T, Alt-C' 'chafa: img (images en caractères)'
+  'tldr: cheat' 'rsync: coolbash sync' 'tmux: session en SSH')
+source=("coolbash-${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+  cd "${srcdir}/coolbash-${pkgver}"
+  install -d "${pkgdir}/usr/share/coolbash" "${pkgdir}/usr/bin"
+  cp -r cli modules share Makefile install.sh CHANGELOG.md "${pkgdir}/usr/share/coolbash/"
+  [[ -f README.md ]] && install -Dm644 README.md "${pkgdir}/usr/share/doc/coolbash/README.md"
+  [[ -f LICENSE ]] && install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/coolbash/LICENSE"
+  install -m755 packaging/coolbash-wrapper "${pkgdir}/usr/bin/coolbash"
+}

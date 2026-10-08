@@ -1,0 +1,13 @@
+Package: coolbash
+Version: @VERSION@
+Section: shells
+Priority: optional
+Architecture: all
+Depends: bash (>= 4.4)
+Recommends: git, fzf, cowsay, chafa, tealdeer
+Maintainer: yrbane <yrbane@users.noreply.github.com>
+Homepage: https://github.com/yrbane/coolbash
+Description: Un bash moderne, rapide et documenté
+ Prompt dynamique (git, durée, code retour), MOTD en pur bash, modules
+ (navigation, git, workspace, images), CLI coolbash. Après l'installation du
+ paquet, chaque utilisateur lance « coolbash install ».

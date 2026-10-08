@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# FR : hook git posé par `make hooks` — rien ne se commite rouge : lint
+#      (bash -n, shellcheck, shfmt). Contourner : git commit --no-verify.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+exec make lint

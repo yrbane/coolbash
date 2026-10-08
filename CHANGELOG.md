@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.33.0 — 2026-10-08 · « En paquets »
+### Ajouté
+- **Paquets** : `make pkg-deb` → `coolbash_X.Y.Z_all.deb` (`dpkg-deb`, sinon `ar` + `tar`),
+  `make pkg-arch` → `coolbash-X.Y.Z-1-any.pkg.tar.zst` (`makepkg`, `packaging/arch/PKGBUILD.in`),
+  `make dist` → l'archive source. Les paquets installent `/usr/share/coolbash` et
+  `/usr/bin/coolbash` ; chaque utilisateur fait ensuite `coolbash install`. `coolbash update`
+  reconnaît une installation par paquet et renvoie vers le gestionnaire.
+- **CI** : deux jobs construisent et installent les paquets (`dpkg -i` sur Ubuntu, `pacman -U`
+  dans un conteneur Arch), puis `coolbash install` ; les paquets sont des artefacts, joints aux
+  releases.
+- **`make hooks`** : `pre-commit` = `make lint`, `pre-push` = `make test` ; `make clean`.
+
 ## 0.32.0 — 2026-10-08 · « Ce qui a changé, ce qui se répare »
 ### Ajouté
 - **`coolbash changelog`** : sans argument, la section de la version installée ; `--since X.Y.Z`
