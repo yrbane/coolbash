@@ -12,7 +12,10 @@
 #     - PS0 : heure de départ en gris + commande dans le titre du terminal.
 #     - Icônes : Nerd Font par défaut, repli « basic » (Unicode standard) ou 0.
 #     - Hôte : icône et couleur selon le contexte (local, SSH, conteneur).
-#     - Terminal : OSC 7 (dossier courant) et notification après une commande longue.
+#     - Terminal : OSC 7 (dossier courant), OSC 133 (marques de prompt : saut de
+#       prompt en prompt, sélection de la sortie d'une commande) et notification
+#       après une commande longue.
+#     - Niveau de shell (sous-shell, please, nix-shell) et jobs, stoppés à part.
 #     - Outils : version php/node si composer.json/package.json (cache par binaire).
 #     Réglages : COOLBASH_PROMPT_MIN_MS (défaut 1000), COOLBASH_PROMPT_GIT=0,
 #                COOLBASH_PROMPT_GIT_UNTRACKED=0, COOLBASH_PS0_STAMP=0,
@@ -23,7 +26,9 @@
 #                COOLBASH_PROMPT_PATH_FISH=0 (jamais d'abréviation ~/D/coolbash),
 #                COOLBASH_PROMPT_TRANSIENT=1 (prompt réduit après l'Entrée, expérimental),
 #                COOLBASH_PROMPT_CLOUD=0 (ni contexte kube ni profil AWS),
-#                COOLBASH_PROMPT_PROD (motif « prod » qui passe le segment en rouge).
+#                COOLBASH_PROMPT_PROD (motif « prod » qui passe le segment en rouge),
+#                COOLBASH_PROMPT_OSC133=0 (pas de marques de prompt),
+#                COOLBASH_PROMPT_SHLVL=0 (pas de niveau de shell).
 
 if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
   return 0
@@ -65,23 +70,23 @@ _coolbash_prompt_init_icons() {
       # FR : nf-fa-user, nf-fa-desktop, nf-dev-git_branch, nf-dev-python,
       #      nf-fa-hourglass_half, nf-fa-folder_open, nf-md-lock, nf-fa-clock_o,
       #      nf-fa-times_circle, nf-fa-cog, nf-fa-lock, nf-fa-plug, nf-fa-cube,
-      #      nf-dev-php, nf-dev-nodejs_small.
+      #      nf-dev-php, nf-dev-nodejs_small, nf-fa-sitemap (niveau de shell).
       s=([user]=$'\uf007' [host]=$'\uf108' [branch]=$'\ue725' [venv]=$'\ue73c'
         [time]=$'\uf252' [path]=$'\uf07c' [root]=$'\U000f033e'
         [clock]=$'\uf017' [err]=$'\uf057' [jobs]=$'\uf013' [ro]=$'\uf023'
         [ssh]=$'\uf1e6' [container]=$'\uf1b2' [php]=$'\ue73d' [node]=$'\ue718'
-        [rust]=$'\ue7a8' [kube]=$'\U000f10fe' [aws]=$'\uf270')
+        [rust]=$'\ue7a8' [kube]=$'\U000f10fe' [aws]=$'\uf270' [shlvl]=$'\uf0e8')
       ;;
     0)
       s=([user]="" [host]="" [branch]="" [venv]="" [time]="" [path]="" [root]=""
         [clock]="" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="" [container]="" [php]="" [node]=""
-        [rust]="" [kube]="" [aws]="")
+        [rust]="" [kube]="" [aws]="" [shlvl]="⧉")
       ;;
     *)
       COOLBASH_PROMPT_ICONS=basic
       s=([user]="" [host]="" [branch]="⎇" [venv]="⚗" [time]="⧗" [path]="" [root]="⚠"
         [clock]="⏱" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="⇄" [container]="▣" [php]="" [node]=""
-        [rust]="" [kube]="⎈" [aws]="☁")
+        [rust]="" [kube]="⎈" [aws]="☁" [shlvl]="⧉")
       ;;
   esac
 }
@@ -280,6 +285,8 @@ _coolbash_prompt_ps0_build() {
     # shellcheck disable=SC2016
     ps0+='$(_coolbash_prompt_ps0_title)'
   fi
+  # FR : OSC 133 C = « la sortie de la commande commence ici ».
+  _coolbash_prompt_osc133_wanted && ps0+='\e]133;C\a'
   [[ "${COOLBASH_PS0_STAMP:-1}" != 0 ]] && ps0+='\e[2m  ⏱ \t\e[0m\n'
   PS0="${ps0}${COOLBASH_PS0_EXTRA:-}"
 }
@@ -289,6 +296,23 @@ _coolbash_prompt_term_has_title() {
     xterm* | rxvt* | tmux* | screen* | alacritty* | foot* | kitty* | wezterm* | contour*) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+# FR : OSC 133 (intégration shell : kitty, foot, wezterm, ghostty, VTE récents,
+#      iTerm2) : A = début du prompt, B = fin du prompt (la saisie commence),
+#      C = début de la sortie, D;code = fin de commande. Le terminal sait alors
+#      sauter de prompt en prompt (kitty : ctrl+shift+z/x, foot : ctrl+shift+z),
+#      sélectionner la sortie d'une commande d'un clic, ou colorer la marge
+#      selon le code retour. Pas émis si le terminal injecte déjà la sienne
+#      (kitty avec shell_integration, VTE avec vte.sh), ni sur un terminal sans
+#      titre (console, dumb). COOLBASH_PROMPT_OSC133=0 désactive.
+_coolbash_prompt_osc133_wanted() {
+  [[ "${COOLBASH_PROMPT_OSC133:-1}" != 0 ]] || return 1
+  if [[ -n "${KITTY_SHELL_INTEGRATION:-}" && "${KITTY_SHELL_INTEGRATION}" != *disabled* && "${KITTY_SHELL_INTEGRATION}" != *no-prompt-mark* ]]; then
+    return 1
+  fi
+  [[ "${PROMPT_COMMAND[*]}" == *__vte_prompt_command* ]] && return 1
+  _coolbash_prompt_term_has_title
 }
 _coolbash_prompt_ps0_build
 
@@ -374,11 +398,30 @@ _coolbash_prompt_venv() {
 }
 
 # FR : `jobs -p` dans une substitution voit bien les jobs du shell courant.
+#      Les jobs stoppés (Ctrl-Z) sont comptés à part : « ⚙ 2 ⏸1 » — c'est
+#      celui qu'on oublie et qui bloque la fermeture du terminal.
 _coolbash_prompt_jobs() {
-  local -a j
+  local -a j s
   # shellcheck disable=SC2207
   j=($(jobs -p))
-  ((${#j[@]})) && printf '%s %d' "${COOLBASH_PROMPT_SYM[jobs]:-⚙}" "${#j[@]}"
+  ((${#j[@]})) || return 0
+  # shellcheck disable=SC2207
+  s=($(jobs -sp))
+  printf '%s %d' "${COOLBASH_PROMPT_SYM[jobs]:-⚙}" "${#j[@]}"
+  ((${#s[@]})) && printf ' ⏸%d' "${#s[@]}"
+  return 0
+}
+
+# FR : niveau de shell — dans un sous-shell (bash lancé à la main, please,
+#      nix-shell, :terminal de vim), on l'oublie vite et on ferme le mauvais.
+#      Référence : le SHLVL du premier shell CoolBash de la lignée (exporté) ;
+#      le segment n'apparaît qu'au-delà : « ⧉ 2 » = un niveau sous le premier.
+#      COOLBASH_PROMPT_SHLVL=0 désactive.
+[[ -n "${COOLBASH_SHLVL_BASE:-}" ]] || export COOLBASH_SHLVL_BASE="${SHLVL:-1}"
+_coolbash_prompt_shlvl() {
+  [[ "${COOLBASH_PROMPT_SHLVL:-1}" == 0 ]] && return 0
+  local d=$((${SHLVL:-1} - ${COOLBASH_SHLVL_BASE:-1}))
+  ((d > 0)) && printf '%s %d' "${COOLBASH_PROMPT_SYM[shlvl]:-⧉}" "$((d + 1))"
   return 0
 }
 
@@ -522,7 +565,7 @@ _coolbash_prompt_build() {
   local ec=$?
   _coolbash_prompt_elapsed
   local -n c=COOLBASH_PROMPT_COLOR s=COOLBASH_PROMPT_SYM
-  local who host chevron clock hicon hcolor ro="" git="" venv="" tools="" cloud="" dur="" jobs="" err="" seg
+  local who host chevron clock hicon hcolor ro="" git="" venv="" tools="" cloud="" dur="" jobs="" lvl="" err="" seg mark_a="" mark_b=""
   # FR : `${s[x]:+${s[x]} }` — icône suivie d'une espace, ou rien du tout
   #      (mode 0) : jamais d'espace orpheline. L'icône d'hôte (écran, prise,
   #      cube) déborde de sa cellule : deux espaces, sinon elle touche le nom.
@@ -571,8 +614,15 @@ _coolbash_prompt_build() {
   [[ -n "$seg" ]] && dur=" ${c[info]}${s[time]:+${s[time]} }${seg}${c[reset]}"
   seg="$(_coolbash_prompt_jobs)"
   [[ -n "$seg" ]] && jobs=" ${c[info]}${seg}${c[reset]}"
+  seg="$(_coolbash_prompt_shlvl)"
+  [[ -n "$seg" ]] && lvl=" ${c[info]}${seg}${c[reset]}"
   seg="$(_coolbash_prompt_status "$ec")"
   [[ -n "$seg" ]] && err=" ${c[err]} ${seg} ${c[reset]}"
+  # FR : OSC 133 — D;code ferme la commande précédente, A ouvre le prompt, B le clôt.
+  if _coolbash_prompt_osc133_wanted; then
+    mark_a='\[\e]133;D;'"${ec}"'\a\e]133;A\a\]'
+    mark_b='\[\e]133;B\a\]'
+  fi
   # FR : titre remis par PS1, sauf si la distribution le fait déjà dans
   #      PROMPT_COMMAND (Arch : /etc/bash.bashrc écrit \033]0;…).
   local title=""
@@ -595,7 +645,7 @@ _coolbash_prompt_build() {
     [[ "${COOLBASH_PS1_OSC7:-1}" != 0 ]] && title+="$(_coolbash_prompt_osc7)"
     title+="$(_coolbash_prompt_notify)"
   fi
-  PS1="${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}${clock}${c[reset]} ${who} at ${host}${git}${venv}${tools}${cloud}${dur}${jobs}${err}"$'\n'"${c[bold]}${c[path]}${ro}${s[path]:+${s[path]} }${wpath}${c[reset]} ${chevron} "
+  PS1="${mark_a}${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}${clock}${c[reset]} ${who} at ${host}${git}${venv}${tools}${cloud}${dur}${jobs}${lvl}${err}"$'\n'"${c[bold]}${c[path]}${ro}${s[path]:+${s[path]} }${wpath}${c[reset]} ${chevron} ${mark_b}"
 }
 
 # --- Enregistrement dans PROMPT_COMMAND (helper commun de 00-core) -----------

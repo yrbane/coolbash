@@ -39,6 +39,7 @@ declare -A SINCE=(
   [COOLBASH_PROMPT_THEME]=0.19.0 [COOLBASH_UPDATE_CHECK]=0.19.0
   [COOLBASH_J]=0.20.0 [COOLBASH_CNF]=0.20.0 [COOLBASH_GIT_GUARD]=0.21.0
   [COOLBASH_HOOKS]=0.22.0 [COOLBASH_PROMPT_CLOUD]=0.23.0 [COOLBASH_INSTALL_MODE]=0.26.0
+  [COOLBASH_PROMPT_OSC133]=0.30.0 [COOLBASH_HIST_SECRETS]=0.30.0
 )
 
 # FR : relit le config.bash actuel : sa version et les valeurs déjà choisies.
@@ -231,6 +232,7 @@ _yesno COOLBASH_PROMPT_TRANSIENT "Prompt transient (réduit à une ligne après 
 _text COOLBASH_PROMPT_MIN_MS "Durée d'une commande affichée à partir de (ms) :" 1000 '[0-9]+'
 _text COOLBASH_PROMPT_BELL_MS "Sonnerie + notification + titre après une commande de plus de (ms, 0 = jamais) :" 30000 '[0-9]+'
 _yesno COOLBASH_PS0_STAMP "Heure de départ en gris sous chaque commande ?" 1
+_yesno COOLBASH_PROMPT_OSC133 "Marques de prompt OSC 133 (saut de prompt en prompt, sélection de la sortie : kitty, foot, wezterm, ghostty) ?" 1
 
 _title "Message d'accueil (MOTD)"
 _yesno COOLBASH_MOTD "Afficher le MOTD à l'ouverture d'un terminal ?" 1
@@ -247,6 +249,7 @@ _yesno COOLBASH_GIT_GUARD "Demander confirmation avant git push --force sur main
 _yesno COOLBASH_J "Noter les cd pour « j » (saut de dossier par fréquence) ?" 1
 _yesno COOLBASH_CNF "Suggérer le paquet quand une commande est introuvable ?" 1
 _yesno COOLBASH_FZF "Raccourcis fzf (Ctrl-R, Ctrl-T, Alt-C) s'il est installé ?" 1
+_yesno COOLBASH_HIST_SECRETS "Tenir les secrets hors de l'historique (password=, token=, api_key=, Bearer…) ?" 1
 _text COOLBASH_SERVE_PORT "Premier port essayé par serve :" 8000 '[0-9]{2,5}'
 _choice COOLBASH_MODE "Mode du shell :" normal \
   "normal|normal — tout CoolBash" "safe|safe — shell minimal (le défaut de root) : ni MOTD, ni git dans le prompt, ni completion différée"

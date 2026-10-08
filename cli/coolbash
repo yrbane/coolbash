@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.29.1"
+COOLBASH_VERSION="0.30.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -84,6 +84,10 @@ COOLBASH_PROMPT_CLOUD|1|0 = ni contexte Kubernetes ni profil AWS dans le prompt
 COOLBASH_PROMPT_PROD|prod|motif qui passe le contexte cloud en rouge
 COOLBASH_PROMPT_PATH_FISH|1|0 = jamais de chemin abrégé façon fish (~/D/coolbash)
 COOLBASH_PROMPT_TRANSIENT|0|1 = prompt réduit à une ligne après l'Entrée (expérimental)
+COOLBASH_PROMPT_OSC133|1|0 = pas de marques de prompt OSC 133 (saut de prompt en prompt dans kitty, foot, wezterm…)
+COOLBASH_PROMPT_SHLVL|1|0 = pas de niveau de shell (⧉ 2) dans un sous-shell
+COOLBASH_HIST_SECRETS|1|0 = enregistrer aussi les lignes avec password=, token=, api_key=, Bearer…
+COOLBASH_QUIET|0|1 = mode présentation : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage (coolbash quiet)
 COOLBASH_NVM_LAZY|1|0 = charger nvm.sh au démarrage (lent)
 COOLBASH_STARTUP_TIME|1|temps de démarrage affiché : 0 = non, verbose = par module
 COOLBASH_FZF|1|0 = pas de raccourcis fzf (Ctrl-R)
@@ -551,7 +555,8 @@ _coolbash_compile_emit() {
   fi
   printf '\n# ===== fonctions de la CLI =====\n'
   declare -f _coolbash_log _coolbash_error _coolbash_disabled _coolbash_shell_age_ms _coolbash_startup_report \
-    _coolbash_update_due _coolbash_update_check _coolbash_cmd_config _coolbash_shell_function
+    _coolbash_update_due _coolbash_update_check _coolbash_cmd_config _coolbash_shell_function _coolbash_quiet_apply
+  printf '\n_coolbash_quiet_apply\n'
   printf '\n_coolbash_t0="${EPOCHREALTIME:-}"\n_coolbash_verbose=0\n'
   printf '[[ "${COOLBASH_STARTUP_TIME:-1}" == verbose && -n "$_coolbash_t0" ]] && _coolbash_verbose=1\n'
   for f in "${COOLBASH_MODULE_DIR}"/*.bash; do
@@ -712,6 +717,37 @@ _coolbash_cmd_deps() {
   fi
 }
 
+# FR : mode « présentation » (coolbash quiet) : le fichier ~/.coolbash/quiet ou
+#      COOLBASH_QUIET=1 — ni MOTD, ni temps de démarrage, ni emoji, ni heure sous
+#      la commande, ni prompt transient : un terminal net pour une démo, une
+#      capture ou un enregistrement. Appliqué par init avant les modules.
+_coolbash_quiet_apply() {
+  [[ "${COOLBASH_QUIET:-0}" == 1 || -e "${COOLBASH_PREFIX}/quiet" ]] || return 0
+  # shellcheck disable=SC2034  # FR : lues par les modules sourcés ensuite
+  COOLBASH_QUIET=1 COOLBASH_MOTD=0 COOLBASH_STARTUP_TIME=0 COOLBASH_PROMPT_EMOJI="" COOLBASH_PS0_STAMP=0 COOLBASH_PROMPT_TRANSIENT=0
+  return 0
+}
+# FR : coolbash quiet [on|off|status] — écrit ou retire ~/.coolbash/quiet ; la
+#      fonction shell applique le changement au shell courant.
+_coolbash_cmd_quiet() {
+  local f="${COOLBASH_PREFIX}/quiet"
+  case "${1:-on}" in
+    on)
+      mkdir -p "${COOLBASH_PREFIX}" && : >|"$f" || return 1
+      _coolbash_log "mode présentation : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage — coolbash quiet off pour revenir"
+      ;;
+    off)
+      rm -f "$f"
+      _coolbash_log "mode normal"
+      ;;
+    status) if [[ -e "$f" ]]; then echo "quiet : on"; else echo "quiet : off"; fi ;;
+    *)
+      _coolbash_error "usage : coolbash quiet [on|off|status]"
+      return 1
+      ;;
+  esac
+}
+
 # FR : COOLBASH_DISABLE="70-motd 33" — modules à ne pas charger (nom complet,
 #      numéro seul ou nom sans numéro).
 _coolbash_disabled() {
@@ -778,6 +814,21 @@ _coolbash_shell_function() {
           source "${COOLBASH_MODULE_DIR}/50-prompt.bash"
         fi
         ;;
+      quiet)
+        bash "${COOLBASH_ROOT}/cli/coolbash" "$@" || return 1
+        # FR : appliqué (ou défait) dans le shell courant : prompt reconstruit.
+        case "${2:-on}" in
+          on) _coolbash_quiet_apply ;;
+          off)
+            unset COOLBASH_QUIET COOLBASH_MOTD COOLBASH_STARTUP_TIME COOLBASH_PROMPT_EMOJI COOLBASH_PS0_STAMP COOLBASH_PROMPT_TRANSIENT
+            # shellcheck disable=SC1091
+            [[ -r "${COOLBASH_PREFIX}/config.bash" ]] && source "${COOLBASH_PREFIX}/config.bash"
+            ;;
+          *) return 0 ;;
+        esac
+        # shellcheck disable=SC1090,SC1091
+        source "${COOLBASH_MODULE_DIR}/50-prompt.bash"
+        ;;
       *) bash "${COOLBASH_ROOT}/cli/coolbash" "$@" ;;
     esac
   }
@@ -786,7 +837,7 @@ _coolbash_shell_function() {
     local cur="${COMP_WORDS[COMP_CWORD]}" sub="${COMP_WORDS[1]:-}" words
     COMPREPLY=()
     if ((COMP_CWORD == 1)); then
-      words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps help"
+      words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps quiet help"
     else
       case "$sub" in
         theme) words="--preview ${COOLBASH_THEMES:-coolbash nord dracula solarized gruvbox mono}" ;;
@@ -797,11 +848,12 @@ _coolbash_shell_function() {
             [[ -f "$f" ]] && f="${f##*/}" && words+=" ${f%.txt}"
           done
           ;;
-        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps help" ;;
+        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps quiet help" ;;
         sync) words="--update --overrides" ;;
         tidy) words="--apply" ;;
         compile) words="--write" ;;
         deps) words="--install" ;;
+        quiet) words="on off status" ;;
         *) return 0 ;;
       esac
     fi
@@ -819,6 +871,7 @@ _coolbash_cmd_init() {
   #      `export X="${X:-…}"` : le ~/.bashrc garde la priorité.
   # shellcheck disable=SC1091
   [[ -r "${COOLBASH_PREFIX}/config.bash" ]] && source "${COOLBASH_PREFIX}/config.bash"
+  _coolbash_quiet_apply
   [[ "${COOLBASH_STARTUP_TIME:-1}" != 0 && $- == *i* ]] && show=1
   [[ $show == 1 && "${COOLBASH_STARTUP_TIME:-1}" == verbose && -n "$t0" ]] && verbose=1
   for f in "${COOLBASH_MODULE_DIR}"/*.bash; do
@@ -866,6 +919,7 @@ _coolbash_cmd_help_topic() {
     setup) echo "coolbash setup [--defaults] — configuration interactive, lancée aussi à la fin de install/update (reprend la configuration existante et ne pose que les questions nouvelles) : palette, icônes, emoji, segments du prompt, seuils, MOTD (lignes, thèmes de citations), temps de démarrage, mises à jour, nvm, hooks, garde-fou git, j, suggestions, fzf, port de serve, mode. Écrit ~/.coolbash/config.bash (seuls les choix hors défaut), sourcé par init avant les modules. --defaults accepte tout." ;;
     compile) echo "coolbash compile [--write | fichier] — génère un ~/.bashrc autonome : réglages de config.bash, modules inlinés dans l'ordre (chacun dans une fonction), fonction coolbash, vérification de mise à jour, temps de démarrage. Sans argument : sur la sortie standard ; --write remplace ~/.bashrc (sauvegardé) ; make install le régénère quand setup a choisi le mode compiled." ;;
     tidy) echo "coolbash tidy [--apply] — range le ~/.bashrc : retire ce qu'un module prend en charge, convertit export PATH en path_prepend/append, déplace alias et fonctions dans 90-local-overrides.bash. Sans --apply, aperçu seulement ; avec, sauvegarde d'abord." ;;
+    quiet) echo "coolbash quiet [on|off|status] — mode présentation : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage, ni prompt transient — pour une démo, une capture, un enregistrement. Appliqué au shell courant et aux suivants (fichier ~/.coolbash/quiet) ; quiet off pour revenir." ;;
     help) echo "coolbash help [commande] — cette aide, ou le détail d'une commande." ;;
     *) return 1 ;;
   esac
@@ -932,6 +986,7 @@ _coolbash_cmd_help() {
   _row setup "Questionnaire interactif → ~/.coolbash/config.bash (aussi après install/update)"
   _row config "Tous les réglages COOLBASH_* avec leur valeur effective"
   _row theme "Palettes du prompt avec aperçu ; theme nord ; theme --preview nord"
+  _row quiet "Mode présentation : ni MOTD, ni emoji, ni heure, ni temps de démarrage ; quiet off"
   _row "allow/deny" "Autorise (retire) le hook .coolbash.bash du projet courant"
   _sec "Au quotidien"
   _row fortune "Une citation ; fortune <thème> ; fortune --add \"texte\" [thème]"
@@ -999,6 +1054,10 @@ case "${1:-}" in
   compile)
     shift
     _coolbash_cmd_compile "$@"
+    ;;
+  quiet)
+    shift
+    _coolbash_cmd_quiet "$@"
     ;;
   help | "")
     shift 2>/dev/null

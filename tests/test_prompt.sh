@@ -17,7 +17,7 @@ with_prompt() { HOME="${COOLBASH_TEST_TMP}" COLORTERM='' bash --norc --noprofile
 # --- 1. Plus aucun trap DEBUG, la durée passe par PS0 -----------------------
 assert_empty "aucun trap DEBUG après chargement" "$(with_prompt 'trap -p DEBUG')"
 assert_contains "PS0 mesure le départ via EPOCHREALTIME" "$(with_prompt 'printf %s "$PS0"')" "EPOCHREALTIME"
-assert_contains "PS0 muet si horodatage et titre désactivés" "$(COOLBASH_PS0_STAMP=0 COOLBASH_PS0_TITLE=0 with_prompt 'printf "[%s]" "${PS0@P}"')" "[]"
+assert_contains "PS0 muet si horodatage, titre et OSC 133 désactivés" "$(COOLBASH_PS0_STAMP=0 COOLBASH_PS0_TITLE=0 COOLBASH_PROMPT_OSC133=0 with_prompt 'printf "[%s]" "${PS0@P}"')" "[]"
 stamp="$(TERM=dumb with_prompt 'printf "%s" "${PS0@P}"')"
 assert_contains "PS0 affiche l'heure de départ (⏱)" "${stamp}" "⏱"
 assert_eq "…au format HH:MM:SS, en gris, suivi d'un retour à la ligne" "1" "$(printf '%s' "${stamp}" | grep -cE $'\e\[2m  ⏱ [0-9]{2}:[0-9]{2}:[0-9]{2}\e\[0m$')"
@@ -284,5 +284,25 @@ rm -f "${COOLBASH_TEST_TMP}/proj/rust-toolchain.toml"
 printf 'nightly\n' >"${COOLBASH_TEST_TMP}/proj/rust-toolchain"
 assert_eq "rust-toolchain : un canal nommé" $'\ue7a8 nightly' "$(tools_seg)"
 rm -f "${COOLBASH_TEST_TMP}/proj/rust-toolchain" "${COOLBASH_TEST_TMP}/proj/Cargo.toml"
+
+# --- 16. 0.30.0 : OSC 133, niveau de shell, jobs stoppés -------------------------
+m="$(TERM=xterm with_prompt 'true; _coolbash_prompt_build; printf %s "$PS1"')"
+assert_contains "OSC 133 : D;0 puis A ouvrent le prompt après un succès" "${m}" '\e]133;D;0\a\e]133;A\a'
+assert_contains "OSC 133 : B clôt le prompt, juste après le chevron" "${m}" '$\[\e[0m\] \[\e]133;B\a\]'
+assert_contains "OSC 133 : D;1 après un échec" "$(TERM=xterm with_prompt 'false; _coolbash_prompt_build; printf %s "$PS1"')" ']133;D;1'
+assert_contains "OSC 133 : C au début de la sortie (PS0)" "$(TERM=xterm with_prompt 'printf %s "$PS0"')" '\e]133;C\a'
+assert_eq "OSC 133 : rien sur un terminal sans titre (dumb)" "0" "$(TERM=dumb with_prompt '_coolbash_prompt_build; printf %s "$PS1$PS0"' | grep -c '133;')"
+assert_eq "COOLBASH_PROMPT_OSC133=0 : rien" "0" "$(TERM=xterm COOLBASH_PROMPT_OSC133=0 with_prompt '_coolbash_prompt_build; printf %s "$PS1$PS0"' | grep -c '133;')"
+assert_eq "kitty avec sa propre intégration : rien (pas de doublon)" "0" "$(TERM=xterm-kitty KITTY_SHELL_INTEGRATION=enabled with_prompt '_coolbash_prompt_build; printf %s "$PS1$PS0"' | grep -c '133;')"
+assert_eq "kitty, intégration désactivée : CoolBash émet les marques" "1" "$(TERM=xterm-kitty KITTY_SHELL_INTEGRATION=disabled with_prompt '_coolbash_prompt_build; printf %s "$PS1"' | grep -c '133;A')"
+assert_eq "VTE avec vte.sh dans PROMPT_COMMAND : rien" "0" "$(TERM=xterm with_prompt 'PROMPT_COMMAND="__vte_prompt_command; $PROMPT_COMMAND"; _coolbash_prompt_build; printf %s "$PS1"' | grep -c '133;')"
+# FR : bash -c incrémente SHLVL : avec SHLVL=3 dans l'environnement, le shell de test est au niveau 4.
+assert_eq "niveau de shell : au niveau de référence, rien" "" "$(SHLVL=3 COOLBASH_SHLVL_BASE=4 with_prompt '_coolbash_prompt_shlvl')"
+assert_eq "un niveau sous la référence : ⧉ 2 (icône nerd)" $'\uf0e8 2' "$(SHLVL=3 COOLBASH_SHLVL_BASE=3 with_prompt '_coolbash_prompt_shlvl')"
+assert_eq "deux niveaux : 3, en basic" "⧉ 3" "$(SHLVL=4 COOLBASH_SHLVL_BASE=3 COOLBASH_PROMPT_ICONS=basic with_prompt '_coolbash_prompt_shlvl')"
+assert_eq "la référence est posée (et exportée) par le premier shell" "1" "$(env -u COOLBASH_SHLVL_BASE SHLVL=7 bash --norc --noprofile -c 'source "$1"; source "$2"; [[ "$COOLBASH_SHLVL_BASE" == 8 ]] && bash -c "[[ -n \$COOLBASH_SHLVL_BASE ]] && echo 1"' _ "${CORE}" "${PROMPT}")"
+assert_eq "COOLBASH_PROMPT_SHLVL=0 : rien" "" "$(SHLVL=4 COOLBASH_SHLVL_BASE=3 COOLBASH_PROMPT_SHLVL=0 with_prompt '_coolbash_prompt_shlvl')"
+assert_contains "le niveau est dans PS1" "$(SHLVL=3 COOLBASH_SHLVL_BASE=3 ps1_of)" $'\uf0e8 2'
+assert_eq "jobs : un job stoppé est compté à part (⚙ 2 ⏸1)" $'\uf013 2 ⏸1' "$(with_prompt 'set -m; sleep 5 & sleep 5 & kill -STOP %2; sleep 0.2; jobs >/dev/null; _coolbash_prompt_jobs; kill -9 %1 %2 2>/dev/null; wait 2>/dev/null')"
 
 t_done

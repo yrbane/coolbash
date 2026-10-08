@@ -13,6 +13,20 @@ export HISTTIMEFORMAT='%F %T  '
 export HISTCONTROL=ignoreboth:erasedups
 export HISTIGNORE='ls:ll:la:cd:pwd:exit:clear:history*:fg:bg:jobs'
 
+# FR : les secrets n'entrent pas dans l'historique : une ligne qui contient
+#      password=, passwd=, secret…=, token=, api_key=, apikey=, private_key=
+#      (en toutes casses), « --password x », « --token x » ou « Bearer x » n'est
+#      pas enregistrée — HISTIGNORE est natif, zéro coût, et vaut pour le fichier
+#      comme pour Ctrl-R. Au pire une ligne innocente est perdue ; la retaper
+#      coûte moins qu'un jeton dans un ~/.bash_history. COOLBASH_HIST_SECRETS=0
+#      pour tout garder.
+if [[ "${COOLBASH_HIST_SECRETS:-1}" != 0 ]]; then
+  HISTIGNORE+=':*[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd]=*:*[Pp][Aa][Ss][Ss][Ww][Dd]=*'
+  HISTIGNORE+=':*[Ss][Ee][Cc][Rr][Ee][Tt]*=*:*[Tt][Oo][Kk][Ee][Nn]=*'
+  HISTIGNORE+=':*[Aa][Pp][Ii][_-][Kk][Ee][Yy]=*:*[Aa][Pp][Ii][Kk][Ee][Yy]=*:*[Pp][Rr][Ii][Vv][Aa][Tt][Ee][_-][Kk][Ee][Yy]=*'
+  HISTIGNORE+=':*--[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd] *:*--[Tt][Oo][Kk][Ee][Nn] *:*[Bb][Ee][Aa][Rr][Ee][Rr] *'
+fi
+
 # FR: Append + lecture incrémentale = évite 'history -c; -r' à chaque prompt.
 _coolbash_history_sync() {
   builtin history -a # FR: Ajoute les nouvelles lignes (session courante)

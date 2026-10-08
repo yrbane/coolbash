@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.30.0 — 2026-10-08 · « Marques de prompt, secrets à l'écart »
+### Ajouté
+- **OSC 133** (intégration shell) : le prompt émet les marques A/B/C/D — kitty, foot, wezterm,
+  ghostty, iTerm2 et les VTE récents savent alors sauter de prompt en prompt, sélectionner la sortie
+  d'une commande d'un clic, ou colorer la marge selon le code retour. Jamais en doublon de
+  l'intégration que le terminal injecte lui-même (kitty, vte.sh). `COOLBASH_PROMPT_OSC133=0`.
+- **Niveau de shell** dans le prompt : `⧉ 2` dès qu'on est dans un sous-shell (`bash`, `please`,
+  `nix-shell`, terminal de vim), référence = le premier shell CoolBash de la lignée.
+  `COOLBASH_PROMPT_SHLVL=0`.
+- **Jobs stoppés** comptés à part dans le segment jobs : `⚙ 2 ⏸1`.
+- **Secrets hors historique** : une ligne avec `password=`, `passwd=`, `secret…=`, `token=`,
+  `api_key=`, `private_key=`, `--password x`, `--token x` ou `Bearer x` (toutes casses) n'est pas
+  enregistrée — `HISTIGNORE` natif, zéro coût, vaut pour le fichier et pour Ctrl-R.
+  `COOLBASH_HIST_SECRETS=0`.
+- **`coolbash quiet [on|off|status]`** : mode présentation — ni MOTD, ni emoji, ni heure sous la
+  commande, ni temps de démarrage, ni prompt transient ; appliqué au shell courant et aux suivants
+  (`~/.coolbash/quiet`, ou `COOLBASH_QUIET=1`), compilé aussi.
+- `coolbash setup` pose les deux questions nouvelles (OSC 133, secrets) ; `config`, `help`,
+  complétion et README à jour.
+
 ## 0.29.1 — 2026-10-08 · « Les outils d'images dans deps »
 ### Ajouté
 - `coolbash deps` connaît aussi **viu** (Arch, brew) et **timg** (Debian, Fedora, brew), les replis

@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.29.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.30.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -56,6 +56,7 @@ coolbash <command>
 | ----------- | --------------------------------------------- |
 | `install`   | Installe CoolBash dans `~/.coolbash`, et la Nerd Font des icônes si aucune n'est présente |
 | `update`    | `git pull`, puis tests, puis install (clone git requis) ; annonce `0.8.1 → 0.9.0`, « déjà à jour », ou l'échec |
+| `quiet`     | Mode présentation pour une démo ou un enregistrement : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage, appliqué au shell courant et aux suivants ; `quiet off` |
 | `deps`      | Les outils optionnels absents (cowsay, lolcat, fzf, rsync, tldr, delta, shellcheck, shfmt, presse-papiers, notifications…) avec le paquet pour pacman, apt, dnf, zypper, apk ou brew, et la commande à lancer ; `deps --install` l'exécute |
 | `font`      | Installe (ou réessaie d'installer) la Nerd Font des icônes du prompt |
 | `verify`    | Vérifie la syntaxe (+ shellcheck si présent)  |
@@ -288,6 +289,10 @@ Variables lues au chargement (via `config.bash`, avant la ligne `source` du `.ba
 | `COOLBASH_PROMPT_PATH_FISH=0`   | Jamais de chemin abrégé façon fish (`~/D/coolbash/modules`), même quand il dépasse la moitié du terminal |
 | `COOLBASH_PROMPT_TRANSIENT=1`   | Expérimental : après l'Entrée, le prompt de deux lignes est remplacé par `chemin $ commande` sur une ligne |
 | `COOLBASH_PS1_OSC7=0`           | Ne pas annoncer le dossier courant au terminal (OSC 7)                 |
+| `COOLBASH_PROMPT_OSC133=0`      | Pas de marques de prompt OSC 133 (émises sinon sur kitty, foot, wezterm, ghostty… : saut de prompt en prompt, sélection de la sortie d'une commande ; jamais en doublon de l'intégration du terminal) |
+| `COOLBASH_PROMPT_SHLVL=0`       | Pas de niveau de shell (`⧉ 2` dans un sous-shell : `bash`, `please`, `nix-shell`) |
+| `COOLBASH_HIST_SECRETS=0`       | Enregistrer aussi dans l'historique les lignes contenant `password=`, `token=`, `api_key=`, `--password x`, `Bearer x`… (tenues à l'écart sinon, via `HISTIGNORE`) |
+| `COOLBASH_QUIET=1`              | Mode présentation (`coolbash quiet`) : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage |
 | `COOLBASH_PROMPT_CONTAINER_MARKERS` | Fichiers révélant un conteneur (défaut `/.dockerenv /run/.containerenv`) |
 | `PROMPT_DIRTRIM`                | Dossiers gardés dans `\w` (défaut `3`, réglage bash natif)             |
 | `COOLBASH_PS0_STAMP=0`          | Pas d'heure de départ en gris sous la commande                        |

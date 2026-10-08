@@ -295,9 +295,9 @@ assert_contains "…avec ses couleurs" "${sv}" $'\e[38;2;189;147;249m'
 assert_contains "…puis la réponse 2 est prise : nord" "$(cat "${home}/.coolbash/config.bash")" "COOLBASH_PROMPT_THEME:-nord"
 rm -f "${home}/.coolbash/config.bash"
 # FR : réponses : thème 2 (nord), icônes Entrée, emoji 2 (aucun), git n, tools Entrée, cloud Entrée,
-#      fish Entrée, transient Entrée, min_ms 500, bell Entrée, stamp Entrée ; MOTD o, hide « 5 9 »,
-#      fortune « 1 12 », startup 2 (verbose) ; update n, puis Entrée jusqu'au bout.
-su="$(printf '2\n\n2\nn\n\n\n\n\n500\n\n\n\n5 9\n1 12\n2\nn\n' | cli_home setup)"
+#      fish Entrée, transient Entrée, min_ms 500, bell Entrée, stamp Entrée, OSC 133 Entrée ; MOTD o,
+#      hide « 5 9 », fortune « 1 12 », startup 2 (verbose) ; update n, puis Entrée jusqu'au bout.
+su="$(printf '2\n\n2\nn\n\n\n\n\n500\n\n\n\n\n5 9\n1 12\n2\nn\n' | cli_home setup)"
 assert_contains "setup : annonce le fichier écrit" "${su}" "config.bash"
 cfg="$(cat "${home}/.coolbash/config.bash")"
 assert_contains "setup : thème nord (choix 2)" "${cfg}" 'export COOLBASH_PROMPT_THEME="${COOLBASH_PROMPT_THEME:-nord}"'
@@ -357,9 +357,9 @@ assert_eq "tidy : refuse un .bashrc compilé" "1" "$(
 sed -i 's/^# COOLBASH-COMPILED .*/# COOLBASH-COMPILED 0.1.0/' "${home}/.bashrc"
 assert_contains "doctor : un compilé d'une autre version demande une recompilation" "$(cli_home doctor)" "recompile"
 # setup : mode compiled → compile --write ; retour au mode source → une ligne
-# FR : 24 questions avant celle du mode (la 25e) — pas de configuration existante ici.
+# FR : 26 questions avant celle du mode (la 27e) — pas de configuration existante ici.
 su="$({
-  printf '\n%.0s' {1..24}
+  printf '\n%.0s' {1..26}
   printf '2\n'
 } | cli_home setup)"
 assert_contains "setup : mode compiled → ~/.bashrc compilé" "$(head -4 "${home}/.bashrc")" "# COOLBASH-COMPILED $(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" version)"
@@ -391,6 +391,27 @@ doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbas
 rc=$?
 assert_eq "doctor échoue si le .bashrc ne charge pas CoolBash" "1" "${rc}"
 assert_contains "…et le dit" "${doc}" "✘"
+
+# --- quiet : mode présentation ---------------------------------------------------
+qpfx="${COOLBASH_TEST_TMP}/quiet-pfx"
+mkdir -p "${qpfx}"
+qcli() { HOME="${COOLBASH_TEST_TMP}" COOLBASH_PREFIX="${qpfx}" bash "${COOLBASH_TEST_ROOT}/cli/coolbash" "$@" 2>&1; }
+assert_eq "quiet status : off au départ" "quiet : off" "$(qcli quiet status)"
+assert_contains "coolbash quiet : écrit le fichier et explique" "$(qcli quiet)" "présentation"
+assert_file "…~/.coolbash/quiet existe" "${qpfx}/quiet"
+assert_eq "quiet status : on" "quiet : on" "$(qcli quiet status)"
+# shellcheck disable=SC2016
+qinit="$(HOME="${COOLBASH_TEST_TMP}" COOLBASH_PREFIX="${qpfx}" COOLBASH_MODULE_DIR="${COOLBASH_TEST_ROOT}/modules" bash --norc --noprofile -ic 'source "$1" init; printf "motd=%s startup=%s emoji=[%s] stamp=%s quiet=%s" "$COOLBASH_MOTD" "$COOLBASH_STARTUP_TIME" "$COOLBASH_PROMPT_EMOJI" "$COOLBASH_PS0_STAMP" "$COOLBASH_QUIET"' _ "${COOLBASH_TEST_ROOT}/cli/coolbash" 2>/dev/null)"
+assert_contains "init en mode quiet : MOTD, temps de démarrage, emoji et heure coupés" "${qinit}" "motd=0 startup=0 emoji=[] stamp=0 quiet=1"
+assert_eq "…et aucun MOTD ni temps de démarrage affiché" "0" "$(HOME="${COOLBASH_TEST_TMP}" COOLBASH_PREFIX="${qpfx}" COOLBASH_MODULE_DIR="${COOLBASH_TEST_ROOT}/modules" bash --norc --noprofile -ic 'source "$1" init' _ "${COOLBASH_TEST_ROOT}/cli/coolbash" 2>/dev/null | grep -c 'démarrage\|Kernel')"
+assert_contains "quiet off : retour au mode normal" "$(qcli quiet off)" "normal"
+assert_no_path "…le fichier est retiré" "${qpfx}/quiet"
+assert_contains "COOLBASH_QUIET=1 dans l'environnement suffit" "$(HOME="${COOLBASH_TEST_TMP}" COOLBASH_PREFIX="${qpfx}" COOLBASH_MODULE_DIR="${COOLBASH_TEST_ROOT}/modules" COOLBASH_QUIET=1 bash --norc --noprofile -c 'source "$1" init; echo "motd=$COOLBASH_MOTD"' _ "${COOLBASH_TEST_ROOT}/cli/coolbash" 2>/dev/null)" "motd=0"
+assert_eq "quiet bidule : usage, code 1" "1" "$(
+  qcli quiet bidule >/dev/null
+  echo $?
+)"
+assert_contains "compile inline _coolbash_quiet_apply et l'appelle" "$(qcli compile | grep -c '^_coolbash_quiet_apply$')" "1"
 
 # --- config : réglages effectifs ---------------------------------------------
 cfg="$(COOLBASH_PROMPT_MIN_MS=250 bash "${COOLBASH_TEST_ROOT}/cli/coolbash" config 2>&1)"
