@@ -142,6 +142,17 @@ assert_contains "deps : sous apt, la commande apt" "${dpa}" "sudo apt install -y
 dpai="$(env -i PATH="${fd}/bin" HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps --install 2>&1)"
 assert_contains "deps --install sous apt : apt-get update d'abord (index périmé → 404)" "${dpai}" "sudo:apt-get update"
 assert_eq "…puis apt install" "1" "$(printf '%s\n' "${dpai}" | grep -A1 'sudo:apt-get update' | grep -c 'sudo:apt install')"
+# FR : 404 malgré apt-get update (vu sur Debian 13 : listes servies périmées par
+#      le cache) : le conseil qui débloque, et le code d'apt est rendu (0.35.2).
+printf '#!/bin/bash\necho "sudo:$*"; [[ "$*" == "apt install"* ]] && exit 100; exit 0\n' >|"${fd}/bin/sudo"
+dpaf="$(env -i PATH="${fd}/bin" HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps --install 2>&1)"
+assert_contains "deps --install : apt échoue → conseil de purger les listes" "${dpaf}" "rm -rf /var/lib/apt/lists/*"
+assert_contains "…et --fix-missing pour installer le reste" "${dpaf}" "--fix-missing"
+assert_eq "…code de retour d'apt rendu" "100" "$(
+  env -i PATH="${fd}/bin" HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps --install >/dev/null 2>&1
+  echo $?
+)"
+printf '#!/bin/bash\necho "sudo:$*"\n' >|"${fd}/bin/sudo"
 assert_contains "deps : sous apt, tldr s'appelle tealdeer" "$(printf '%s\n' "${dpa}" | grep 'sudo apt')" "tealdeer"
 assert_contains "deps : sous apt, xz-utils et libnotify-bin" "$(printf '%s\n' "${dpa}" | grep 'sudo apt')" "xz-utils"
 assert_contains "…libnotify-bin avec DISPLAY" "$(printf '%s\n' "${dpa}" | grep 'sudo apt')" "libnotify-bin"

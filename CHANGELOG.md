@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.35.2 — 2026-10-08 · « Quand apt dit 404 »
+### Modifié
+- `coolbash deps --install` : si `apt install` échoue, le code d'apt est rendu et un conseil s'affiche. Un 404 qui persiste après `apt-get update` (vu sur Debian 13 : les listes servies par le cache étaient périmées, mbedtls 3.6.5 demandé alors que Debian propose 3.6.6) se règle par `sudo rm -rf /var/lib/apt/lists/* && sudo apt-get update` ; `--fix-missing` installe le reste tout de suite.
+
 ## 0.35.1 — 2026-10-08 · « coolbash update tient compte de ton shell »
 ### Corrigé
 - `coolbash update` échouait (« Tests en échec : rien n'a été installé ») sur une machine où `coolbash setup` avait choisi un thème : le fichier `config.bash` écrit des `export`, donc `COOLBASH_PROMPT_THEME=gruvbox` était dans l'environnement du shell et trois tests l'héritaient. Le lanceur de tests retire désormais toutes les `COOLBASH_*` héritées (sauf les siennes, `COOLBASH_TEST_*`).

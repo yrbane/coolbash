@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.35.1"
+COOLBASH_VERSION="0.35.2"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -881,7 +881,7 @@ _coolbash_pkg_exists() {
   esac
 }
 _coolbash_cmd_deps() {
-  local install=0 pm="" col cmd role pkg line n=0 gui=0
+  local install=0 pm="" col cmd role pkg line n=0 gui=0 rc
   local -a pkgs=() missing=() unknown=()
   [[ "${1:-}" == --install ]] && install=1
   if command -v pacman >/dev/null 2>&1; then
@@ -951,7 +951,12 @@ _coolbash_cmd_deps() {
     # FR : un index apt périmé donne des 404 sur les .deb : update d'abord.
     [[ "$pm" == apt ]] && sudo apt-get update -q
     # shellcheck disable=SC2086
-    $cmd "${pkgs[@]}"
+    $cmd "${pkgs[@]}" || {
+      rc=$?
+      # FR : 404 malgré apt-get update = listes servies périmées (CDN, proxy apt).
+      [[ "$pm" == apt ]] && _coolbash_say '\n  apt a échoué (code %s). Un 404 malgré apt-get update = listes périmées :\n  sudo rm -rf /var/lib/apt/lists/* && sudo apt-get update, puis relance ;\n  ou le reste tout de suite : sudo apt install -y --fix-missing %s\n' "$rc" "${pkgs[*]}" >&2
+      return "$rc"
+    }
   else
     _coolbash_say '\n  coolbash deps --install pour lancer cette commande.\n'
   fi
