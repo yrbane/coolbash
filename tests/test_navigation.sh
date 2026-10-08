@@ -69,4 +69,9 @@ assert_contains "…code retour 127, comme bash" "${cnf}" "rc=127"
 assert_eq "shell non interactif : pas de handler (scripts inchangés)" "0" "$(nav 'declare -F command_not_found_handle >/dev/null && echo 1 || echo 0')"
 assert_eq "COOLBASH_CNF=0 : pas de handler" "0" "$(printf 'source "%s"; source "%s"\ndeclare -F command_not_found_handle >/dev/null && echo 1 || echo 0\n' "${CORE}" "${NAV}" | COOLBASH_CNF=0 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -i 2>/dev/null | tail -1)"
 
+# --- 0.31.0 : complétion de bd — les dossiers parents --------------------------------
+mkdir -p "${COOLBASH_TEST_TMP}/alpha/beta/gamma"
+assert_eq "complétion de bd : les parents, du plus proche au plus lointain" "beta alpha" "$(cd "${COOLBASH_TEST_TMP}/alpha/beta/gamma" && nav 'COMP_WORDS=(bd ""); COMP_CWORD=1; _coolbash_bd_complete; echo "${COMPREPLY[0]} ${COMPREPLY[1]}"')"
+assert_eq "…filtrés par le préfixe" "alpha" "$(cd "${COOLBASH_TEST_TMP}/alpha/beta/gamma" && nav 'COMP_WORDS=(bd al); COMP_CWORD=1; _coolbash_bd_complete; echo "${COMPREPLY[*]}"')"
+
 t_done

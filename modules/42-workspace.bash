@@ -125,6 +125,21 @@ todo() {
   for i in "${!lines[@]}"; do printf '  \e[1m%2d\e[0m  %s\n' "$((i + 1))" "${lines[i]}"; done
 }
 
+# FR : complétion : les sous-commandes, puis les numéros des tâches pour done / rm.
+_coolbash_todo_complete() {
+  local cur="${COMP_WORDS[COMP_CWORD]}" file="${COOLBASH_PREFIX:-$HOME/.coolbash}/todo.txt" n i line
+  COMPREPLY=()
+  if ((COMP_CWORD == 1)); then
+    mapfile -t COMPREPLY < <(compgen -W "add done rm list" -- "$cur")
+  elif ((COMP_CWORD == 2)) && [[ "${COMP_WORDS[1]}" == @(done|rm|d) && -r "$file" ]]; then
+    # FR : pas `read -r _` : bash réécrit $_ après chaque commande (boucle sans fin).
+    n=0
+    while IFS= read -r line || [[ -n "$line" ]]; do n=$((n + 1)); done <"$file"
+    for ((i = 1; i <= n; i++)); do [[ "$i" == "$cur"* ]] && COMPREPLY+=("$i"); done
+  fi
+}
+complete -F _coolbash_todo_complete todo
+
 # --- remind ----------------------------------------------------------------------------
 # FR : remind <délai> <texte> — 30s, 15m, 2h, ou des secondes. Détaché (double
 #      fork). À l'échéance : notify-send s'il existe, et de toute façon la ligne

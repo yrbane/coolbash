@@ -83,4 +83,10 @@ git -C "${repo}" checkout -q main
 assert_eq "COOLBASH_GIT_GUARD=0 : pas de garde-fou" "0" "$(COOLBASH_GIT_GUARD=0 ing 'git push --force origin main </dev/null >/dev/null 2>&1; echo $?')"
 assert_eq "git reste git pour tout le reste" "main" "$(ing 'git branch --show-current')"
 
+# --- 0.31.0 : complétion de gsw (branches) et gfix (commits) -----------------------
+git -C "${repo}" branch -q feature/compl 2>/dev/null
+assert_contains "complétion de gsw : les branches" "$(ing 'COMP_WORDS=(gsw fe); COMP_CWORD=1; _coolbash_gsw_complete; echo "${COMPREPLY[*]}"')" "feature/compl"
+assert_eq "…filtrées par le préfixe, sans HEAD ni doublon origin/" "0" "$(ing 'COMP_WORDS=(gsw fe); COMP_CWORD=1; _coolbash_gsw_complete; printf "%s\n" "${COMPREPLY[@]}"' | grep -c 'HEAD\|origin/\|^main$')"
+assert_eq "complétion de gfix : des sha courts" "1" "$(ing 'COMP_WORDS=(gfix ""); COMP_CWORD=1; _coolbash_gfix_complete; printf "%s\n" "${COMPREPLY[0]}"' | grep -cE '^[0-9a-f]{7,}$')"
+
 t_done

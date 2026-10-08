@@ -213,6 +213,15 @@ printf 'A\n' >|"${COOLBASH_TEST_TMP}/.coolbash/fortunes/petit.txt"
 yes B | head -1000 >|"${COOLBASH_TEST_TMP}/.coolbash/fortunes/gros.txt"
 n_petit="$(mod 70-motd.bash 'COOLBASH_ROOT=/nonexistent COOLBASH_FORTUNE="petit gros"; n=0; for _ in $(seq 400); do _coolbash_fortune t; [[ $t == A ]] && n=$((n+1)); done; echo $n')"
 if ((n_petit >= 140 && n_petit <= 260)); then t_ok "chaque thème a la même probabilité, quelle que soit sa taille (${n_petit}/400 pour le petit)"; else t_fail "tirage biaisé par la taille du thème : ${n_petit}/400 pour le petit (attendu ≈ 200)"; fi
+# FR : sans COOLBASH_FORTUNE, un thème personnel compte double : 2 embarqués + 1 perso → ≈ 50 %.
+froot="${COOLBASH_TEST_TMP}/froot"
+mkdir -p "${froot}/share/fortunes" "${COOLBASH_TEST_TMP}/fperso/fortunes"
+printf 'E1\n' >|"${froot}/share/fortunes/un.txt"
+printf 'E2\n' >|"${froot}/share/fortunes/deux.txt"
+printf 'P\n' >|"${COOLBASH_TEST_TMP}/fperso/fortunes/perso.txt"
+n_perso="$(mod 70-motd.bash "COOLBASH_ROOT='${froot}' COOLBASH_PREFIX='${COOLBASH_TEST_TMP}/fperso'; n=0; for _ in \$(seq 400); do _coolbash_fortune t; [[ \$t == P ]] && n=\$((n+1)); done; echo \$n")"
+if ((n_perso >= 150 && n_perso <= 250)); then t_ok "un thème personnel compte double dans le tirage (${n_perso}/400 ≈ 200)"; else t_fail "poids du thème personnel : ${n_perso}/400 (attendu ≈ 200)"; fi
+assert_contains "cheat se complète avec les commandes (-c)" "$(mod 40-functions.bash 'complete -p cheat')" "-c cheat"
 if (($(grep -c . "${COOLBASH_TEST_ROOT}/share/fortunes/chuck.txt") >= 5000)); then t_ok "chuck.txt : plus de 5000 facts"; else t_fail "chuck.txt : moins de 5000 facts"; fi
 assert_not_contains "doctor ne réclame plus fastfetch" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" doctor 2>&1)" "fastfetch"
 

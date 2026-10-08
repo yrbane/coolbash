@@ -28,7 +28,9 @@ _coolbash_motd_enabled() {
 #      Tirage en pur bash (mapfile + RANDOM) : zéro processus, là où le
 #      programme fortune coûtait 28 ms. COOLBASH_FORTUNE="dev chuck" limite aux
 #      thèmes cités ; chaque fichier retenu a le même poids, un thème répété pèse
-#      donc plus lourd. Un thème inconnu est ignoré ; aucun thème valide = tous.
+#      donc plus lourd. Un thème inconnu est ignoré ; aucun thème valide = tous —
+#      et alors les thèmes personnels (~/.coolbash/fortunes/) comptent double :
+#      on les a écrits pour les relire.
 _coolbash_fortune() {
   # FR : la sortie est écrite dans la variable nommée par $1 — aucun nom local
   #      ne doit pouvoir la masquer, d'où le préfixe _cf_.
@@ -39,7 +41,8 @@ _coolbash_fortune() {
     for _cf_d in "${_cf_dirs[@]}"; do [[ -s "$_cf_d/$_cf_t.txt" ]] && _cf_files+=("$_cf_d/$_cf_t.txt"); done
   done
   if ((${#_cf_files[@]} == 0)); then
-    for _cf_d in "${_cf_dirs[@]}"; do for _cf_f in "$_cf_d"/*.txt; do [[ -s "$_cf_f" ]] && _cf_files+=("$_cf_f"); done; done
+    for _cf_f in "${_cf_dirs[0]}"/*.txt; do [[ -s "$_cf_f" ]] && _cf_files+=("$_cf_f"); done
+    for _cf_f in "${_cf_dirs[1]}"/*.txt; do [[ -s "$_cf_f" ]] && _cf_files+=("$_cf_f" "$_cf_f"); done
   fi
   ((${#_cf_files[@]})) || return 1
   _cf_f="${_cf_files[RANDOM % ${#_cf_files[@]}]}"

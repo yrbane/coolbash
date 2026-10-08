@@ -95,6 +95,25 @@ gsw() {
   git switch -q "${chosen#origin/}" 2>/dev/null || git switch -q --track "origin/${chosen#origin/}"
 }
 
+# FR : complétion de gsw : les branches locales et distantes (sans origin/) ;
+#      de gfix : les 20 derniers commits (sha court, puis le sujet en aide).
+_coolbash_gsw_complete() {
+  local cur="${COMP_WORDS[COMP_CWORD]}" line
+  COMPREPLY=()
+  while IFS= read -r line; do
+    line="${line#remotes/}"
+    line="${line#origin/}"
+    [[ "$line" == HEAD* || "$line" != "$cur"* || " ${COMPREPLY[*]} " == *" $line "* ]] && continue
+    COMPREPLY+=("$line")
+  done < <(git branch -a --format='%(refname:short)' 2>/dev/null)
+}
+complete -F _coolbash_gsw_complete gsw
+_coolbash_gfix_complete() {
+  local cur="${COMP_WORDS[COMP_CWORD]}"
+  mapfile -t COMPREPLY < <(git log --format=%h -20 2>/dev/null | grep -- "^${cur}")
+}
+complete -F _coolbash_gfix_complete gfix
+
 # FR : gopen [-p] [fichier[:ligne]] — le dépôt, ou le fichier sur la branche
 #      courante, dans le navigateur (xdg-open, open) ; -p affiche l'URL.
 gopen() {

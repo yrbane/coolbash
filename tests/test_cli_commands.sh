@@ -84,6 +84,17 @@ assert_contains "coolbash help mentionne fortune" "$(bash "${COOLBASH_TEST_ROOT}
 # fortune --add : ajoute à un thème personnel (perso par défaut)
 fa="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" fortune --add "Ma première citation" 2>&1)"
 assert_file "fortune --add crée ~/.coolbash/fortunes/perso.txt" "${home}/.coolbash/fortunes/perso.txt"
+fcli() { HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" fortune "$@" 2>&1; }
+assert_contains "fortune --search : la citation et son thème" "$(fcli --search 'première citation')" "perso"
+assert_contains "…avec le compte" "$(fcli --search 'première citation')" "1 citation(s)"
+assert_contains "fortune --search limité à un thème" "$(fcli --search 'norris' chuck | tail -1)" "citation(s)"
+assert_eq "fortune --search sans résultat : code 1" "1" "$(
+  fcli --search 'zzzqqqxxx' >/dev/null
+  echo $?
+)"
+assert_contains "fortune --stats : une ligne par thème, perso marqué" "$(fcli --stats)" "perso"
+assert_contains "fortune --stats : le total" "$(fcli --stats)" "total"
+assert_contains "fortune --theme chuck : comme le thème positionnel" "$(fcli --theme chuck | tr '[:upper:]' '[:lower:]')" "chuck norris"
 assert_contains "fortune --add annonce le fichier et le nombre" "${fa}" "perso.txt"
 HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" fortune --add "Une deuxième" boulot >/dev/null 2>&1
 assert_eq "fortune --add <texte> <thème> écrit dans le thème demandé" "Une deuxième" "$(cat "${home}/.coolbash/fortunes/boulot.txt")"
@@ -425,5 +436,15 @@ while read -r v; do
   assert_contains "config connaît ${v} (documentée dans le README)" "${cfg}" "${v}"
 done < <(grep -oE '\| `COOLBASH_[A-Z0-9_]+' "${COOLBASH_TEST_ROOT}/README.md" | grep -oE 'COOLBASH_[A-Z0-9_]+' | sort -u)
 assert_contains "coolbash help mentionne config" "$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" help)" "config"
+
+# --- complétion de coolbash sync : les hôtes de ~/.ssh/config -----------------------
+mkdir -p "${COOLBASH_TEST_TMP}/.ssh"
+printf 'Host serveur-un\n  HostName 10.0.0.1\nHost *\n  User seb\nhost serveur-deux\n' >|"${COOLBASH_TEST_TMP}/.ssh/config"
+# shellcheck disable=SC2016
+comp="$(HOME="${COOLBASH_TEST_TMP}" MOTD_DISABLE=1 COOLBASH_MODULE_DIR="${COOLBASH_TEST_ROOT}/modules" bash --norc --noprofile -c 'source "$1" init; COMP_WORDS=(coolbash sync ""); COMP_CWORD=2; _coolbash_complete; echo "${COMPREPLY[*]}"' _ "${COOLBASH_TEST_ROOT}/cli/coolbash" 2>/dev/null)"
+assert_contains "sync se complète avec les hôtes SSH" "${comp}" "serveur-un"
+assert_contains "…Host ou host" "${comp}" "serveur-deux"
+assert_eq "…sans le motif *" "0" "$(printf '%s\n' "${comp}" | grep -c '\*')"
+assert_contains "…et les options" "${comp}" "--update"
 
 t_done

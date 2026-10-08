@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.31.0 — 2026-10-08 · « Tab partout, img partout »
+### Ajouté
+- **Complétion des fonctions maison** : `todo` (sous-commandes, puis les numéros pour `done`/`rm`),
+  `gsw` (branches locales et distantes), `gfix` (les 20 derniers commits), `bd` (les dossiers
+  parents), `cheat` (les commandes du PATH), `img` (images et dossiers seulement),
+  `coolbash sync` (les hôtes de `~/.ssh/config`), `coolbash fortune` (nouvelles options).
+- **`img`** : konsole ≥ 22.04 (protocole kitty), VS Code (en caractères si chafa/viu/timg, sinon
+  iTerm2), Windows Terminal (sixel) ; option `-h lignes` ; sans `-w` ni `-h`, la largeur du
+  terminal (`COLUMNS − 2`) sans jamais agrandir un PNG plus petit (largeur lue dans l'en-tête).
+- **`coolbash fortune --search mot [thème…]`** : les citations qui contiennent le mot, avec leur
+  thème et le compte ; **`--stats`** : le nombre par thème, perso marqué ; **`--theme`** accepté
+  avant les thèmes.
+- **Thèmes personnels pondérés** : sans `COOLBASH_FORTUNE`, un fichier de `~/.coolbash/fortunes/`
+  compte double dans le tirage.
+
 ## 0.30.1 — 2026-10-08 · « Un test sans job control »
 ### Corrigé
 - Le test du job stoppé (`⚙ 2 ⏸1`) dépendait du job control, absent sans tty (CI) : `jobs` est

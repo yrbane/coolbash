@@ -212,6 +212,8 @@ serve() {
 
 # FR : cheat <commande> — des exemples, vite : tldr si présent, sinon la section
 #      EXAMPLES du man (extraite en pur bash, surlignages retirés), sinon --help.
+#      Complétion : les commandes du PATH.
+complete -c cheat
 cheat() {
   local cmd="${1:-}" line in=0 found=0
   [[ -n "$cmd" ]] || {

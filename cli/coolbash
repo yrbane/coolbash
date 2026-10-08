@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.30.1"
+COOLBASH_VERSION="0.31.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -180,9 +180,60 @@ _coolbash_cmd_doctor() {
   ((ko == 0))
 }
 
-# FR : `coolbash fortune [thème…]` — une citation, hors MOTD (test des thèmes).
+# FR : les fichiers de citations : embarqués (share/fortunes) puis personnels
+#      (~/.coolbash/fortunes), un par thème ; $1 = variable tableau de sortie.
+_coolbash_fortune_files() {
+  local -n _ff_out="$1"
+  local _ff_f
+  _ff_out=()
+  for _ff_f in "${COOLBASH_ROOT}"/share/fortunes/*.txt "${COOLBASH_PREFIX}"/fortunes/*.txt; do
+    [[ -s "$_ff_f" ]] && _ff_out+=("$_ff_f")
+  done
+}
+
+# FR : `coolbash fortune [--theme] [thème…]` — une citation, hors MOTD (test des
+#      thèmes) ; --search mot [thème…] cherche dans les citations ; --stats compte
+#      par thème ; --add "texte" [thème] ajoute à un thème personnel.
 _coolbash_cmd_fortune() {
-  local text motd="${COOLBASH_MODULE_DIR}/70-motd.bash"
+  local text motd="${COOLBASH_MODULE_DIR}/70-motd.bash" f theme n total=0
+  local -a files
+  [[ "${1:-}" == --theme ]] && shift
+  if [[ "${1:-}" == --stats ]]; then
+    _coolbash_fortune_files files
+    printf 'CoolBash %s — citations par thème\n\n' "${COOLBASH_VERSION}"
+    for f in "${files[@]}"; do
+      theme="${f##*/}"
+      n=$(grep -c . "$f")
+      total=$((total + n))
+      printf '  %-14s %6d  %s\n' "${theme%.txt}" "$n" "$([[ "$f" == "${COOLBASH_PREFIX}"/* ]] && printf 'perso (%s)' "$f" || printf 'embarqué')"
+    done
+    printf '\n  %-14s %6d  (COOLBASH_FORTUNE : %s)\n' total "$total" "${COOLBASH_FORTUNE:-tous, les personnels comptent double}"
+    return 0
+  fi
+  if [[ "${1:-}" == --search ]]; then
+    local motif="${2:-}" hits=0 line
+    [[ -n "$motif" ]] || {
+      _coolbash_error 'usage : coolbash fortune --search <mot> [thème…]'
+      return 1
+    }
+    shift 2
+    _coolbash_fortune_files files
+    for f in "${files[@]}"; do
+      theme="${f##*/}"
+      theme="${theme%.txt}"
+      if (($#)); then [[ " $* " == *" $theme "* ]] || continue; fi
+      while IFS= read -r line; do
+        hits=$((hits + 1))
+        printf '  \e[36m%s\e[0m  %s\n' "$theme" "$line"
+      done < <(grep -i -- "$motif" "$f")
+    done
+    ((hits)) || {
+      _coolbash_error "aucune citation ne contient « $motif »"
+      return 1
+    }
+    printf '\n  %d citation(s)\n' "$hits"
+    return 0
+  fi
   # FR : --add "texte" [thème] → ~/.coolbash/fortunes/<thème>.txt (perso par défaut).
   if [[ "${1:-}" == --add ]]; then
     local theme="${3:-perso}" file n
@@ -842,14 +893,19 @@ _coolbash_shell_function() {
       case "$sub" in
         theme) words="--preview ${COOLBASH_THEMES:-coolbash nord dracula solarized gruvbox mono}" ;;
         fortune)
-          words="--add"
+          words="--add --search --stats --theme"
           local f
           for f in "${COOLBASH_ROOT}"/share/fortunes/*.txt "${COOLBASH_PREFIX}"/fortunes/*.txt; do
             [[ -f "$f" ]] && f="${f##*/}" && words+=" ${f%.txt}"
           done
           ;;
         help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps quiet help" ;;
-        sync) words="--update --overrides" ;;
+        sync)
+          # FR : les hôtes de ~/.ssh/config (sans motif *), plus les options.
+          words="--update --overrides"
+          local h
+          while read -r h; do [[ "$h" == *[*?]* ]] || words+=" $h"; done < <(sed -n 's/^[Hh]ost[[:space:]]\+//p' "$HOME/.ssh/config" 2>/dev/null)
+          ;;
         tidy) words="--apply" ;;
         compile) words="--write" ;;
         deps) words="--install" ;;
@@ -911,7 +967,7 @@ _coolbash_cmd_help_topic() {
     version) echo "coolbash version — la version installée." ;;
     doctor) echo "coolbash doctor — diagnostic : bash, ~/.bashrc, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton ~/.bashrc refait à la main." ;;
     config) echo "coolbash config — tous les réglages COOLBASH_* avec leur valeur effective (définie ou par défaut) et un mot d'explication. À définir avant la ligne source du ~/.bashrc, ou via coolbash setup." ;;
-    fortune) printf '%s\n' "coolbash fortune [thème…] — une citation, au hasard ou dans les thèmes cités (dev unix sysadmin lois corporate absurde humour-noir moralistes proverbes sciences cinema chuck, et les tiens dans ~/.coolbash/fortunes/)." "coolbash fortune --add \"texte\" [thème] — ajoute une citation au thème (perso par défaut)." ;;
+    fortune) printf '%s\n' "coolbash fortune [--theme] [thème…] — une citation, au hasard ou dans les thèmes cités (dev unix sysadmin lois corporate absurde humour-noir moralistes proverbes sciences cinema chuck, et les tiens dans ~/.coolbash/fortunes/, qui comptent double dans le tirage)." "coolbash fortune --search <mot> [thème…] — les citations qui contiennent le mot, avec leur thème." "coolbash fortune --stats — le nombre de citations par thème." "coolbash fortune --add \"texte\" [thème] — ajoute une citation au thème (perso par défaut)." ;;
     bench) echo "coolbash bench [N] — N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module du plus lourd au plus léger." ;;
     theme) echo "coolbash theme [nom] — sans argument, la liste des palettes (coolbash nord dracula solarized gruvbox mono) avec un aperçu ; avec, l'enregistre dans ~/.coolbash/theme et l'applique au shell courant. theme --preview <nom> [--full] : l'aperçu seul (une ligne, ou le prompt complet)." ;;
     sync) echo "coolbash sync [--update] [--overrides] user@host… — pousse fortunes/, motd.txt et theme vers ~/.coolbash d'autres machines (rsync sur SSH). --overrides ajoute 90-local-overrides.bash, --update y lance coolbash update." ;;
@@ -989,7 +1045,7 @@ _coolbash_cmd_help() {
   _row quiet "Mode présentation : ni MOTD, ni emoji, ni heure, ni temps de démarrage ; quiet off"
   _row "allow/deny" "Autorise (retire) le hook .coolbash.bash du projet courant"
   _sec "Au quotidien"
-  _row fortune "Une citation ; fortune <thème> ; fortune --add \"texte\" [thème]"
+  _row fortune "Une citation ; fortune <thème> ; --search mot ; --stats ; --add \"texte\" [thème]"
   _row bench "N démarrages de shell : moyenne, min, max, coût par module"
   _row sync "Pousse fortunes/, motd.txt, theme, config.bash vers d'autres machines (rsync)"
   _sec "Diagnostic"

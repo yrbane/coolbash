@@ -23,7 +23,7 @@ printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA
 b64="$(base64 -w0 "${png}")"
 fb="${COOLBASH_TEST_TMP}/fbimg"
 mkdir -p "${fb}"
-for b in bash base64 env grep sed cat head tail tr cut wc; do ln -sf "$(command -v "$b")" "${fb}/$b"; done
+for b in bash base64 env grep sed cat head tail tr cut wc od; do ln -sf "$(command -v "$b")" "${fb}/$b"; done
 
 # --- choix de la méthode -------------------------------------------------------
 be() { im "$@" '_coolbash_img_backend b; echo "$b"'; }
@@ -45,6 +45,19 @@ assert_eq "chafa : terminal inconnu, chafa présent" "chafa" "$(
 rm -f "${fb}/chafa"
 assert_eq "rien : terminal inconnu, aucun outil → vide, code 1" "1 " "$(im -u COOLBASH_IMG -u KITTY_WINDOW_ID -u GHOSTTY_RESOURCES_DIR -u WEZTERM_EXECUTABLE -u TERM_PROGRAM TERM=dumb PATH="${fb}" '_coolbash_img_backend b; echo "$? $b"')"
 assert_eq "COOLBASH_IMG force la méthode" "sixel" "$(be COOLBASH_IMG=sixel TERM=dumb PATH="${fb}")"
+# FR : 0.31.0 — konsole récent, VS Code, Windows Terminal.
+noterm=(-u COOLBASH_IMG -u KITTY_WINDOW_ID -u GHOSTTY_RESOURCES_DIR -u WEZTERM_EXECUTABLE -u TERM_PROGRAM -u WT_SESSION -u KONSOLE_VERSION)
+assert_eq "kitty : konsole ≥ 22.04 (KONSOLE_VERSION)" "kitty" "$(be "${noterm[@]}" KONSOLE_VERSION=230800 TERM=xterm-256color PATH="${fb}")"
+assert_eq "…mais pas un konsole plus ancien" "" "$(be "${noterm[@]}" KONSOLE_VERSION=210400 TERM=xterm-256color PATH="${fb}")"
+assert_eq "iterm : VS Code sans outil en caractères" "iterm" "$(be "${noterm[@]}" TERM_PROGRAM=vscode TERM=xterm-256color PATH="${fb}")"
+printf '#!/bin/bash\n' >"${fb}/chafa"
+chmod +x "${fb}/chafa"
+assert_eq "chafa : VS Code avec chafa (images en caractères, sans réglage)" "chafa" "$(be "${noterm[@]}" TERM_PROGRAM=vscode TERM=xterm-256color PATH="${fb}")"
+rm -f "${fb}/chafa"
+printf '#!/bin/bash\n' >"${fb}/img2sixel"
+chmod +x "${fb}/img2sixel"
+assert_eq "sixel : Windows Terminal (WT_SESSION) avec img2sixel" "sixel" "$(be "${noterm[@]}" WT_SESSION=x TERM=xterm-256color PATH="${fb}")"
+rm -f "${fb}/img2sixel"
 
 # --- protocole kitty, émis en pur bash --------------------------------------------
 k="$(im -u TMUX COOLBASH_IMG=kitty PATH="${fb}" "img '${png}'" | cat -v)"
@@ -52,6 +65,8 @@ assert_contains "kitty : séquence APC _G avec a=T,f=100" "${k}" '^[_Ga=T,f=100,
 assert_contains "kitty : le PNG en base64" "${k}" "${b64}"
 assert_contains "kitty : terminée par ESC \\\\" "${k}" "^[\\"
 assert_contains "kitty : -w 40 → c=40" "$(im -u TMUX COOLBASH_IMG=kitty PATH="${fb}" "img -w 40 '${png}'" | cat -v)" ',c=40,'
+assert_contains "kitty : -h 10 → r=10" "$(im -u TMUX COOLBASH_IMG=kitty PATH="${fb}" "img -h 10 '${png}'" | cat -v)" ',r=10,'
+assert_contains "kitty : -w 40 -h 10, dans l'ordre voulu" "$(im -u TMUX COOLBASH_IMG=kitty PATH="${fb}" "img -h 10 -w 40 '${png}'" | cat -v)" ',c=40,r=10,'
 assert_contains "kitty sous tmux : enveloppe passthrough" "$(im COOLBASH_IMG=kitty TMUX=/tmp/x PATH="${fb}" "img '${png}'" | cat -v)" '^[Ptmux;^[^[_G'
 big="${COOLBASH_TEST_TMP}/big.png"
 head -c 5000 /dev/urandom >"${big}" # FR : > 4096 octets une fois en base64 ; seul le suffixe .png compte ici
@@ -63,11 +78,21 @@ it="$(im -u TMUX COOLBASH_IMG=iterm PATH="${fb}" "img '${png}'" | cat -v)"
 assert_contains "iterm : OSC 1337 File=inline=1" "${it}" '^[]1337;File=inline=1;name='
 assert_contains "iterm : taille et données" "${it}" ";size=${#b64}:${b64}^G"
 assert_contains "iterm : -w 30 → width=30" "$(im -u TMUX COOLBASH_IMG=iterm PATH="${fb}" "img -w 30 '${png}'" | cat -v)" ';width=30:'
+assert_contains "iterm : -h 5 → height=5" "$(im -u TMUX COOLBASH_IMG=iterm PATH="${fb}" "img -h 5 '${png}'" | cat -v)" ';height=5:'
+
+# --- largeur automatique : COLUMNS − 2, sans agrandir un petit PNG --------------------
+assert_contains "sans -w : un gros PNG prend la largeur du terminal (COLUMNS − 2)" "$(im -u TMUX COOLBASH_IMG=iterm COLUMNS=50 PATH="${fb}" "img '${big}'" | cat -v)" ';width=48:'
+assert_contains "sans -w : un PNG d'un pixel n'est pas agrandi (1 colonne)" "$(im -u TMUX COOLBASH_IMG=iterm COLUMNS=50 PATH="${fb}" "img '${png}'" | cat -v)" ';width=1:'
+assert_eq "sans -w ni COLUMNS : taille native" "0" "$(im -u TMUX -u COLUMNS COOLBASH_IMG=iterm PATH="${fb}" "img '${png}'" | cat -v | grep -c 'width=')"
+assert_contains "-w explicite prime sur COLUMNS" "$(im -u TMUX COOLBASH_IMG=iterm COLUMNS=50 PATH="${fb}" "img -w 7 '${png}'" | cat -v)" ';width=7:'
+assert_contains "complétion de img : images et dossiers seulement" "$(im 'complete -p img')" "plusdirs"
 
 # --- repli chafa et sixel : les outils sont appelés avec le fichier --------------------
 printf '#!/bin/bash\necho "chafa:$*"\n' >"${fb}/chafa"
 chmod +x "${fb}/chafa"
 assert_contains "chafa : appelé avec --size et le fichier" "$(im COOLBASH_IMG=chafa PATH="${fb}" "img -w 50 '${png}'")" "chafa:--size 50x ${png}"
+assert_contains "chafa : -h 12 seul → --size x12" "$(im -u COLUMNS COOLBASH_IMG=chafa PATH="${fb}" "img -h 12 '${png}'")" "chafa:--size x12 ${png}"
+assert_contains "chafa : sans taille ni COLUMNS, aucun --size" "$(im -u COLUMNS COOLBASH_IMG=chafa PATH="${fb}" "img '${png}'")" "chafa:${png}"
 rm -f "${fb}/chafa"
 printf '#!/bin/bash\necho "viu:$*"\n' >"${fb}/viu"
 chmod +x "${fb}/viu"

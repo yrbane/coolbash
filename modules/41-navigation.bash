@@ -110,6 +110,18 @@ bd() {
   return 1
 }
 
+# FR : complétion de bd : les noms des dossiers parents du dossier courant.
+_coolbash_bd_complete() {
+  local cur="${COMP_WORDS[COMP_CWORD]}" p="${PWD%/*}" part
+  COMPREPLY=()
+  while [[ -n "$p" ]]; do
+    part="${p##*/}"
+    [[ -n "$part" && "$part" == "$cur"* ]] && COMPREPLY+=("$part")
+    p="${p%/*}"
+  done
+}
+complete -F _coolbash_bd_complete bd
+
 # --- h / hstats -------------------------------------------------------------------
 # FR : h <motif> — l'historique de la session (avec HISTTIMEFORMAT, donc daté),
 #      filtré sans tenir compte de la casse ; sans motif, les 30 dernières.

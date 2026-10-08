@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.30.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.31.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -65,13 +65,13 @@ coolbash <command>
 | `init`      | Charge tous les modules dans le shell courant |
 | `version`   | Affiche la version                            |
 | `config`    | Tous les réglages `COOLBASH_*` avec leur valeur effective (définie ou par défaut) |
-| `fortune`   | Une citation du MOTD, au hasard ou d'un thème donné : `coolbash fortune chuck` ; `fortune --add "texte" [thème]` en ajoute une à `~/.coolbash/fortunes/` |
+| `fortune`   | Une citation du MOTD, au hasard ou d'un thème donné : `coolbash fortune chuck` ; `fortune --search mot [thème…]` cherche ; `fortune --stats` compte par thème ; `fortune --add "texte" [thème]` en ajoute une à `~/.coolbash/fortunes/` |
 | `compile`   | `compile [--write \| fichier]` : un `~/.bashrc` autonome — réglages et modules inlinés, aucune lecture de `~/.coolbash` au chargement ; `--write` remplace `~/.bashrc` (sauvegardé). Régénéré par `install`/`update` en mode `compiled` |
 | `setup`     | Configuration interactive, lancée aussi à la fin de `install` et `update` (reprise de l'existant, seules les questions nouvelles) : questions à choix (palette, icônes, emoji, segments, seuils, MOTD, citations, mises à jour, nvm, hooks, garde-fou…) → `~/.coolbash/config.bash`, sourcé par `init` avant les modules ; `setup --defaults` accepte tout |
 | `tidy`      | `tidy` montre le tri du `~/.bashrc` (retiré / déplacé / conservé) ; `tidy --apply` l'applique après sauvegarde : ce qu'un module fait déjà est retiré, `export PATH` devient `path_prepend`/`path_append`, alias et fonctions vont dans `90-local-overrides` |
 | `allow` / `deny` | Autorise (ou retire) le hook `.coolbash.bash` du projet courant : il est sourcé à l'entrée du dossier et défait à la sortie ; modifié, il redevient non autorisé |
 | `theme`     | `theme` liste les palettes du prompt avec un aperçu ; `theme nord` l'enregistre (`~/.coolbash/theme`) et l'applique au shell courant ; `theme --preview nord [--full]` rend l'aperçu seul |
-| `sync`      | `sync [--update] [--overrides] user@host…` : pousse `fortunes/`, `motd.txt` et `theme` vers `~/.coolbash` d'autres machines par rsync sur SSH ; `--overrides` ajoute `90-local-overrides`, `--update` y lance `coolbash update` |
+| `sync`      | `sync [--update] [--overrides] user@host…` (Tab propose les hôtes de `~/.ssh/config`) : pousse `fortunes/`, `motd.txt` et `theme` vers `~/.coolbash` d'autres machines par rsync sur SSH ; `--overrides` ajoute `90-local-overrides`, `--update` y lance `coolbash update` |
 | `bench`     | `bench [N]` : N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module |
 | `doctor`    | Diagnostic : bash, `.bashrc`, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton `~/.bashrc` refait à la main (nvm, cargo, PATH, alias…) alors qu'un module s'en charge |
 | `help`      | Affiche l’aide de la CLI ; `help <commande>` le détail. La complétion Tab de `coolbash` connaît les sous-commandes, les thèmes et les thèmes de citations |
@@ -346,7 +346,10 @@ bash : zéro processus, là où le programme `fortune` coûtait 28 ms. Douze th�
 - `COOLBASH_FORTUNE="dev chuck"` limite le tirage à ces thèmes. Chaque fichier retenu a le même poids :
   `"chuck chuck dev"` favorise Chuck.
 - Tes propres thèmes : un fichier `~/.coolbash/fortunes/<thème>.txt`, jamais touché par `make install`.
-- `coolbash fortune [thème…]` en affiche une, hors MOTD. Sans aucun fichier, le programme `fortune` est utilisé s'il existe.
+  Sans `COOLBASH_FORTUNE`, ils comptent **double** dans le tirage : on les a écrits pour les relire.
+- `coolbash fortune [thème…]` en affiche une, hors MOTD ; `--search mot` retrouve une citation avec son
+  thème ; `--stats` compte par thème ; `--add "texte" [thème]` en ajoute une. Sans aucun fichier, le
+  programme `fortune` est utilisé s'il existe.
 
 ### 📦 Un `~/.bashrc` autonome (mode `compiled`)
 
@@ -388,19 +391,19 @@ Fonctions volontairement exposées dans le shell (tout le reste est préfixé `_
 | `serve`                        | `40-functions`        | `serve [dossier] [port]` : serveur HTTP statique (python3, sinon php) sur le premier port libre dès `COOLBASH_SERVE_PORT` (8000), URL affichée |
 | `gwip`, `gunwip`               | `31-git`              | Commit « WIP » de tout l'état courant (hooks ignorés, `[skip ci]`), et son annulation (refusée si le dernier commit n'est pas un WIP) |
 | `gfix`                         | `31-git`              | `gfix <commit>` : fixup de ce qui est indexé, puis rebase autosquash sans éditeur |
-| `gsw`                          | `31-git`              | `gsw [motif]` : changer de branche — unique = direct (distante suivie), sinon fzf, sinon la liste |
+| `gsw`                          | `31-git`              | `gsw [motif]` : changer de branche — unique = direct (distante suivie), sinon fzf, sinon la liste ; Tab complète les branches (`gfix` : les derniers commits) |
 | `gopen`                        | `31-git`              | `gopen [-p] [fichier[:ligne]]` : le dépôt ou le fichier sur la branche courante dans le navigateur (`-p` affiche l'URL) |
 | `git`                          | `31-git`              | Garde-fou : `git push --force` sur main/master demande confirmation ; `--force-with-lease` (`gpf`) reste libre. `COOLBASH_GIT_GUARD=0` |
 | `j`                            | `41-navigation`       | `j coolb` : saute dans le dossier connu le plus fréquent/récent qui correspond (les `cd` sont notés à chaque prompt dans `~/.coolbash/dirs`) ; `j` seul liste ; complétion par Tab |
-| `bd`                           | `41-navigation`       | `bd Dev` : remonte jusqu'au dossier parent nommé (exact, sinon préfixe) |
+| `bd`                           | `41-navigation`       | `bd Dev` : remonte jusqu'au dossier parent nommé (exact, sinon préfixe) ; Tab propose les parents |
 | `h`, `hstats`                  | `41-navigation`       | `h motif` cherche dans l'historique daté ; `hstats [N]` tes commandes les plus fréquentes avec leur part |
 | `command_not_found_handle`     | `41-navigation`       | Commande introuvable : le paquet qui la fournit (`pacman -F`, `apt-file`), sinon des noms proches. Shell interactif seulement |
-| `todo`                         | `42-workspace`        | `todo add "…"`, `todo done N`, `todo rm N`, `todo` : tâches dans `~/.coolbash/todo.txt`, les ouvertes reprises dans le MOTD |
+| `todo`                         | `42-workspace`        | `todo add "…"`, `todo done N`, `todo rm N`, `todo` : tâches dans `~/.coolbash/todo.txt`, les ouvertes reprises dans le MOTD ; Tab complète les sous-commandes et les numéros |
 | `remind`                       | `42-workspace`        | `remind 15m "sortir le pain"` : notification bureau (notify-send) et ligne sur le terminal, en tâche de fond |
 | `retry`                        | `42-workspace`        | `retry 5 cmd…` : relance jusqu'au succès, délai 1, 2, 4… s |
 | `copy`, `paste`, `copypath`    | `42-workspace`        | Presse-papiers : wl-copy, xclip, xsel, pbcopy selon la session ; OSC 52 en SSH ou sans outil |
-| `img`                          | `43-images`           | `img [-w colonnes] fichier…` : la meilleure méthode du terminal — protocole kitty (kitty, ghostty), iTerm2 (iTerm2, WezTerm), sixel (foot, xterm), sinon chafa/viu/timg ; `COOLBASH_IMG` force ; passthrough tmux |
-| `cheat`                        | `40-functions`        | `cheat tar` : exemples par `tldr` si présent, sinon la section EXAMPLES du man, sinon `--help` |
+| `img`                          | `43-images`           | `img [-w colonnes] [-h lignes] fichier…` : la meilleure méthode du terminal — protocole kitty (kitty, ghostty, konsole ≥ 22.04), iTerm2 (iTerm2, WezTerm, VS Code), sixel (foot, xterm, Windows Terminal), sinon chafa/viu/timg ; sans taille, la largeur du terminal sans agrandir un petit PNG ; `COOLBASH_IMG` force ; passthrough tmux ; complétion limitée aux images |
+| `cheat`                        | `40-functions`        | `cheat tar` : exemples par `tldr` si présent, sinon la section EXAMPLES du man, sinon `--help` ; Tab complète les commandes |
 | `man`                          | `40-functions`        | `man` colorisé                              |
 | `mkcd`, `extract`, `up`, `timer` | `40-functions`      | Créer+entrer, extraire une archive (`extract -d` : dans un dossier à son nom), remonter de N répertoires, chronométrer |
 | `coolbash_log`, `coolbash_error` | `40-functions`      | Messages colorés (ex-`log`/`error`, renommés en 0.4.0) |

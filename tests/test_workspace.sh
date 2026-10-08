@@ -54,6 +54,9 @@ assert_contains "todo vide : rien à faire" "$(ws 'todo')" "rien à faire"
 ws 'todo add "Renouveler le certificat"; todo add "Relire la PR"' >/dev/null
 assert_eq "todo add : deux tâches numérotées" "2" "$(ws 'todo' | sed 's/\x1b\[[0-9;]*m//g' | grep -cE '^ +[0-9]+  ')"
 assert_contains "todo : la première en 1" "$(ws 'todo' | sed 's/\x1b\[[0-9;]*m//g' | head -1)" "1  Renouveler"
+assert_eq "complétion de todo : sous-commandes" "add done rm list" "$(ws 'COMP_WORDS=(todo ""); COMP_CWORD=1; _coolbash_todo_complete; echo "${COMPREPLY[*]}"')"
+assert_eq "complétion de todo done : les numéros des tâches" "1 2" "$(ws 'COMP_WORDS=(todo done ""); COMP_CWORD=2; _coolbash_todo_complete; echo "${COMPREPLY[*]}"')"
+assert_eq "complétion de todo add : rien" "" "$(ws 'COMP_WORDS=(todo add ""); COMP_CWORD=2; _coolbash_todo_complete; echo "${COMPREPLY[*]}"')"
 ws 'todo done 1' >/dev/null
 assert_eq "todo done 1 : il reste la seconde, renumérotée" "   1  Relire la PR" "$(ws 'todo' | sed 's/\x1b\[[0-9;]*m//g' | head -1)"
 assert_contains "todo done : archivée avec la date" "$(cat "${PFX}/todo.done")" "Renouveler le certificat"
