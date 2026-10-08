@@ -141,9 +141,13 @@ stage:
 	@find "$(DIST)/root" -type f ! -perm -u+x -exec chmod 644 {} +
 
 pkg-deb: stage
-	@mkdir -p "$(DIST)/root/DEBIAN"
-	@sed 's/@VERSION@/$(VERSION)/' packaging/deb/control.in >| "$(DIST)/root/DEBIAN/control"
-	@deb="$(DIST)/coolbash_$(VERSION)_all.deb"; \
+	@# FR : umask 027 (Debian 13) créerait DEBIAN/ en 750 : dpkg-deb exige 755.
+	@#      set -e : une étape qui échoue fait échouer make (plus de .deb fantôme).
+	@set -e; \
+	mkdir -p "$(DIST)/root/DEBIAN"; chmod 755 "$(DIST)/root/DEBIAN"; \
+	sed 's/@VERSION@/$(VERSION)/' packaging/deb/control.in >| "$(DIST)/root/DEBIAN/control"; \
+	chmod 644 "$(DIST)/root/DEBIAN/control"; \
+	deb="$(DIST)/coolbash_$(VERSION)_all.deb"; \
 	if command -v dpkg-deb >/dev/null 2>&1; then \
 	  dpkg-deb -Zgzip --build --root-owner-group "$(DIST)/root" "$$deb" >/dev/null; \
 	else \

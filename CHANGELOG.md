@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.35.1 — 2026-10-08 · « coolbash update tient compte de ton shell »
+### Corrigé
+- `coolbash update` échouait (« Tests en échec : rien n'a été installé ») sur une machine où `coolbash setup` avait choisi un thème : le fichier `config.bash` écrit des `export`, donc `COOLBASH_PROMPT_THEME=gruvbox` était dans l'environnement du shell et trois tests l'héritaient. Le lanceur de tests retire désormais toutes les `COOLBASH_*` héritées (sauf les siennes, `COOLBASH_TEST_*`).
+- `make pkg-deb` sur Debian 13, où les utilisateurs ont `umask 027` : le dossier `DEBIAN/` naissait en 750, `dpkg-deb` refusait (« control directory has bad permissions »), et `make` rendait quand même 0 sans `.deb`. Les permissions sont forcées (755 / 644) et une étape qui échoue fait échouer la cible.
+- Tests : `pkg-deb` est exercé sous `umask 027`, un `control.in` illisible doit faire échouer `make`, et `run.sh` est vérifié avec des `COOLBASH_*` dans l'environnement.
+
 ## 0.35.0 — 2026-10-08 · « L'aide du shell, avec des exemples »
 ### Ajouté
 - `coolbash help` : une section « Dans le shell » liste les 25 fonctions du shell (`j`, `bd`, `h`, `hstats`, `mkcd`, `up`, `extract`, `timer`, `gsw`, `gwip`, `gunwip`, `gfix`, `gopen`, `todo`, `remind`, `retry`, `copy`, `paste`, `copypath`, `backup`, `whoport`, `serve`, `cheat`, `please`, `img`) avec une ligne chacune, à la place de la simple énumération.

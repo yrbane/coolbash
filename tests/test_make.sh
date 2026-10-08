@@ -212,7 +212,9 @@ pkver="$(sed -n 's/^COOLBASH_VERSION="\(.*\)"/\1/p' "${pk}/cli/coolbash")"
 assert_success "make dist produit l'archive source" make -s -C "${pk}" dist
 assert_file "…dist/coolbash-<version>.tar.gz" "${pk}/dist/coolbash-${pkver}.tar.gz"
 assert_contains "…préfixée coolbash-<version>/, avec les modules" "$(tar -tzf "${pk}/dist/coolbash-${pkver}.tar.gz")" "coolbash-${pkver}/modules/00-core.bash"
-assert_success "make pkg-deb produit le .deb (dpkg-deb, sinon ar + tar)" make -s -C "${pk}" pkg-deb
+# FR : Debian 13 donne umask 027 aux utilisateurs : DEBIAN/ naissait en 750 et
+#      dpkg-deb refusait — sans que make échoue (0.35.1).
+assert_success "make pkg-deb produit le .deb (dpkg-deb, sinon ar + tar), même sous umask 027" bash -c 'umask 027; make -s -C "$1" pkg-deb' _ "${pk}"
 deb="${pk}/dist/coolbash_${pkver}_all.deb"
 assert_file "…dist/coolbash_<version>_all.deb" "${deb}"
 # FR : inspection par dpkg-deb quand il est là (Debian), sinon par ar + tar (Arch, macOS).
@@ -229,6 +231,16 @@ else
   t_skip "ar absent : membres du .deb non listés"
 fi
 assert_contains "…control porte la version" "$(deb_control)" "Version: ${pkver}"
+assert_contains "…et aucune erreur de permissions de dpkg-deb" "$(bash -c 'umask 027; make -s -C "$1" pkg-deb 2>&1' _ "${pk}")" "[CoolBash] dist/"
+printf 'Package: coolbash\nVersion: @VERSION@\nArchitecture: all\nMaintainer: x\nDescription: x\n' >|"${pk}/packaging/deb/control.in"
+chmod 000 "${pk}/packaging/deb/control.in"
+if [[ $EUID -ne 0 ]]; then
+  assert_failure "pkg-deb : une étape qui échoue fait échouer make (plus de .deb fantôme)" make -s -C "${pk}" pkg-deb
+else
+  t_skip "root lit tout : l'échec de pkg-deb n'est pas simulable"
+fi
+chmod 644 "${pk}/packaging/deb/control.in"
+cp "${COOLBASH_TEST_ROOT}/packaging/deb/control.in" "${pk}/packaging/deb/control.in"
 assert_contains "…les fichiers vont dans /usr/share/coolbash et /usr/bin/coolbash" "$(deb_files)" "./usr/bin/coolbash"
 assert_contains "…avec le CHANGELOG et les citations" "$(deb_files)" "./usr/share/coolbash/share/fortunes/dev.txt"
 assert_eq "…le wrapper est exécutable" "1" "$(deb_files | grep './usr/bin/coolbash$' | grep -c '^-rwxr-xr-x')"
@@ -243,6 +255,11 @@ fi
 assert_contains "coolbash update sur une installation par paquet : message explicite" "$(COOLBASH_PREFIX="${pk}/.cb" COOLBASH_REPO="${pk}" bash "${pk}/cli/coolbash" update 2>&1)" "installé par paquet"
 assert_success "make clean retire dist/" make -s -C "${pk}" clean
 assert_no_path "…dist/ absent" "${pk}/dist"
+# FR : coolbash setup écrit des export : COOLBASH_PROMPT_THEME=gruvbox dans le shell
+#      de l'utilisateur faisait échouer les tests de coolbash update (0.35.1).
+printf '#!/usr/bin/env bash\nprintf "theme=%%s mode=%%s root=%%s\\n" "${COOLBASH_PROMPT_THEME-unset}" "${COOLBASH_INSTALL_MODE-unset}" "${COOLBASH_ROOT-unset}"\n' >|"${pk}/tests/test_zzenv.sh"
+assert_contains "run.sh : les COOLBASH_* du shell n'entrent pas dans les tests" "$(COOLBASH_PROMPT_THEME=gruvbox COOLBASH_INSTALL_MODE=compiled COOLBASH_ROOT=/x bash "${pk}/tests/run.sh" zzenv 2>&1)" "theme=unset mode=unset root=unset"
+rm -f "${pk}/tests/test_zzenv.sh"
 # hooks
 git -C "${pk}" init -q -b main
 git -C "${pk}" config user.email t@t
