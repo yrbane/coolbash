@@ -411,7 +411,7 @@ assert_eq "…et seulement elle" "1" "$(cli_home changelog | grep -cE '^[0-9]+\.
 assert_contains "changelog --since 0.30.1 : les versions suivantes" "$(cli_home changelog --since 0.30.1)" "0.31.0 —"
 assert_eq "…pas la 0.30.1 elle-même ni avant" "0" "$(cli_home changelog --since 0.30.1 | grep -c '0.30.1 —\|0.30.0 —')"
 assert_eq "changelog X.Y.Z = --since X.Y.Z" "$(cli_home changelog --since 0.30.1)" "$(cli_home changelog 0.30.1)"
-assert_contains "changelog : les sous-titres sans leurs ###" "$(cli_home changelog)" "Ajouté"
+assert_eq "changelog : les sous-titres sans leurs ###" "0" "$(cli_home changelog | grep -c '^### ')"
 assert_eq "changelog --since abc : usage, code 1" "1" "$(
   cli_home changelog --since abc >/dev/null
   echo $?

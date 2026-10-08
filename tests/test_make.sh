@@ -215,11 +215,23 @@ assert_contains "…préfixée coolbash-<version>/, avec les modules" "$(tar -tz
 assert_success "make pkg-deb produit le .deb (dpkg-deb, sinon ar + tar)" make -s -C "${pk}" pkg-deb
 deb="${pk}/dist/coolbash_${pkver}_all.deb"
 assert_file "…dist/coolbash_<version>_all.deb" "${deb}"
-assert_eq "…un vrai .deb : debian-binary, control.tar.gz, data.tar.gz" "debian-binary control.tar.gz data.tar.gz" "$(ar t "${deb}" | tr '\n' ' ' | sed 's/ $//')"
-assert_contains "…control porte la version" "$(ar p "${deb}" control.tar.gz | tar -xzO ./control)" "Version: ${pkver}"
-assert_contains "…les fichiers vont dans /usr/share/coolbash et /usr/bin/coolbash" "$(ar p "${deb}" data.tar.gz | tar -tz)" "./usr/bin/coolbash"
-assert_contains "…avec le CHANGELOG et les citations" "$(ar p "${deb}" data.tar.gz | tar -tz)" "./usr/share/coolbash/share/fortunes/dev.txt"
-assert_eq "…le wrapper est exécutable" "1" "$(ar p "${deb}" data.tar.gz | tar -tzv ./usr/bin/coolbash | grep -c '^-rwxr-xr-x')"
+# FR : inspection par dpkg-deb quand il est là (Debian), sinon par ar + tar (Arch, macOS).
+if command -v dpkg-deb >/dev/null 2>&1; then
+  deb_control() { dpkg-deb -f "${deb}"; }
+  deb_files() { dpkg-deb -c "${deb}"; }
+else
+  deb_control() { ar p "${deb}" control.tar.gz | tar -xzO ./control; }
+  deb_files() { ar p "${deb}" data.tar.gz | tar -tzv; }
+fi
+if command -v ar >/dev/null 2>&1; then
+  assert_eq "…un vrai .deb : debian-binary, control.tar.gz, data.tar.gz" "debian-binary control.tar.gz data.tar.gz" "$(ar t "${deb}" | tr '\n' ' ' | sed 's/ $//')"
+else
+  t_skip "ar absent : membres du .deb non listés"
+fi
+assert_contains "…control porte la version" "$(deb_control)" "Version: ${pkver}"
+assert_contains "…les fichiers vont dans /usr/share/coolbash et /usr/bin/coolbash" "$(deb_files)" "./usr/bin/coolbash"
+assert_contains "…avec le CHANGELOG et les citations" "$(deb_files)" "./usr/share/coolbash/share/fortunes/dev.txt"
+assert_eq "…le wrapper est exécutable" "1" "$(deb_files | grep './usr/bin/coolbash$' | grep -c '^-rwxr-xr-x')"
 if command -v makepkg >/dev/null 2>&1 && [[ $EUID -ne 0 ]]; then
   assert_success "make pkg-arch produit le paquet Arch (makepkg)" make -s -C "${pk}" pkg-arch
   assert_eq "…dist/arch/coolbash-<version>-1-any.pkg.tar.*" "1" "$(compgen -G "${pk}/dist/arch/coolbash-${pkver}-1-any.pkg.tar.*" | wc -l)"

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.34.1 — 2026-10-08 · « Le .deb inspecté par dpkg-deb »
+### Corrigé
+- Le test du `.deb` n'exige plus `ar` : `dpkg-deb -f` / `-c` quand il est là (conteneur Debian de
+  la CI, sans binutils), `ar` + `tar` sinon.
+
 ## 0.34.0 — 2026-10-08 · « In English, too »
 ### Ajouté
 - **Messages en anglais** quand la langue de l'utilisateur n'est pas le français (`LC_ALL`,
