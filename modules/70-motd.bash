@@ -59,6 +59,7 @@ _coolbash_fortune() {
 _coolbash_motd() {
   _coolbash_motd_enabled || return 0
   [[ -t 1 ]] || return 0
+  _coolbash_motd_hidden image || _coolbash_motd_image
   _coolbash_motd_sysinfo
   local text=""
   if ! _coolbash_fortune text && command -v fortune >/dev/null 2>&1; then text="$(fortune -a 2>/dev/null)"; fi
@@ -225,6 +226,19 @@ _coolbash_motd_update() {
   read -r v 2>/dev/null <"${COOLBASH_PREFIX:-$HOME/.coolbash}/.update-available" || return 0
   [[ -n "$v" && "$v" != "${COOLBASH_VERSION:-}" ]] || return 0
   printf '\e[33m⇡ CoolBash %s disponible\e[0m (installée : %s) → coolbash update\n' "$v" "${COOLBASH_VERSION:-?}"
+}
+
+# FR : ~/.coolbash/motd.png (ou .jpg) affiché par `img` (module 43-images) si le
+#      terminal sait le faire ; silencieux sinon. COOLBASH_MOTD_IMAGE_WIDTH colonnes.
+_coolbash_motd_image() {
+  local f
+  declare -F img >/dev/null 2>&1 || return 0
+  for f in "${COOLBASH_PREFIX:-$HOME/.coolbash}"/motd.{png,jpg,jpeg,gif,webp}; do
+    [[ -r "$f" ]] || continue
+    img -w "${COOLBASH_MOTD_IMAGE_WIDTH:-40}" "$f" 2>/dev/null
+    return 0
+  done
+  return 0
 }
 
 # FR : tâches ouvertes (todo add …), cinq au plus.

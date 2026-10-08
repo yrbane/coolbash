@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.29.0 — 2026-10-08 · « Des images dans le terminal »
+### Ajouté
+- **Module `43-images`, commande `img [-w colonnes] fichier…`** : la meilleure méthode selon le
+  terminal — **protocole graphique de kitty** (kitty, ghostty ; PNG envoyé en base64 par morceaux
+  de 4096 octets, les autres formats convertis par magick, ou `kitten icat` s'il est là),
+  **protocole iTerm2** (iTerm2, WezTerm, mintty), **sixel** (foot, xterm, mlterm, contour ;
+  img2sixel ou magick), sinon **chafa**, viu ou timg en caractères. `COOLBASH_IMG` force la
+  méthode ; sous tmux, les séquences kitty et iTerm2 sont enveloppées (passthrough). Sans aucune
+  méthode, `img` renvoie vers `coolbash deps`.
+- **Image dans le MOTD** : `~/.coolbash/motd.png` (ou jpg, gif, webp) s'affiche en tête de
+  l'accueil, `COOLBASH_MOTD_IMAGE_WIDTH` colonnes (40). Mot `image` pour `COOLBASH_MOTD_HIDE`.
+- `coolbash deps` connaît chafa, libsixel et imagemagick.
+- Tests : `tests/test_images.sh` — détection par terminal, séquences kitty (contrôle, base64,
+  morceaux, `-w`, tmux) et iTerm2 émises en pur bash sur un PNG de 1 pixel, repli chafa/viu,
+  sixel, usage, image du MOTD.
+
 ## 0.28.1 — 2026-10-08 · « tealdeer, pas tldr »
 ### Corrigé
 - `coolbash deps` proposait `tldr` sur Debian, où le paquet n'existe plus depuis la 13 : le client

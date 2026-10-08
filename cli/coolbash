@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.28.1"
+COOLBASH_VERSION="0.29.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -90,10 +90,12 @@ COOLBASH_FZF|1|0 = pas de raccourcis fzf (Ctrl-R)
 COOLBASH_FZF_KEYBINDINGS||fichier key-bindings.bash à utiliser
 COOLBASH_MOTD|1|0 = pas de MOTD (MOTD_DISABLE=1 aussi)
 COOLBASH_FORTUNE|(tous)|thèmes de citations du MOTD, ex. "dev chuck"
-COOLBASH_MOTD_HIDE||lignes du MOTD à taire : date disk mem load battery reboot failed update note todo
+COOLBASH_MOTD_HIDE||lignes du MOTD à taire : image date disk mem load battery reboot failed update note todo
 COOLBASH_UPDATE_CHECK|1|0 = ne jamais vérifier les mises à jour (git fetch quotidien en arrière-plan)
 COOLBASH_UPDATE_CHECK_S|86400|intervalle entre deux vérifications, en secondes
 COOLBASH_SERVE_PORT|8000|premier port essayé par serve
+COOLBASH_IMG|(auto)|méthode de img : kitty, iterm, sixel ou chafa
+COOLBASH_MOTD_IMAGE_WIDTH|40|largeur (colonnes) de ~/.coolbash/motd.png dans le MOTD
 COOLBASH_HOOKS|1|0 = ignorer les hooks .coolbash.bash des projets
 COOLBASH_GIT_GUARD|1|0 = git push --force sur main/master sans confirmation
 COOLBASH_J|1|0 = ne pas noter les cd (j <motif> : saut de dossier par fréquence)
@@ -619,6 +621,9 @@ shfmt|make lint / fmt (développement)|shfmt|shfmt|shfmt|shfmt|shfmt|shfmt
 notify-send|remind (notification bureau)|libnotify|libnotify-bin|libnotify|libnotify-tools|libnotify|-
 wl-copy|copy / paste (Wayland)|wl-clipboard|wl-clipboard|wl-clipboard|wl-clipboard|wl-clipboard|-
 xclip|copy / paste (X11)|xclip|xclip|xclip|xclip|xclip|-
+chafa|img (images en caractères, tout terminal)|chafa|chafa|chafa|chafa|chafa|chafa
+img2sixel|img (sixel : foot, xterm, wezterm)|libsixel|libsixel-bin|libsixel-utils|libsixel-tools|libsixel-tools|libsixel
+magick|img (conversion PNG pour kitty, sixel)|imagemagick|imagemagick|ImageMagick|ImageMagick|imagemagick|imagemagick
 DEPS
 }
 # FR : le paquet existe-t-il dans les dépôts configurés ? Sans réseau. Seulement
@@ -935,7 +940,7 @@ _coolbash_cmd_help() {
   _row test "La suite de tests"
   _row version "La version installée"
   _row help "Cette aide ; help <commande> pour le détail"
-  printf '\n  %sDans le shell :%s j bd h hstats · gsw gwip gunwip gfix gopen · todo remind retry · copy paste copypath · backup whoport serve cheat please\n\n' "$B" "$R"
+  printf '\n  %sDans le shell :%s j bd h hstats · gsw gwip gunwip gfix gopen · todo remind retry · copy paste copypath · backup whoport serve cheat please · img\n\n' "$B" "$R"
   unset -f _row _sec
 }
 

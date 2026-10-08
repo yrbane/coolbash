@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.28.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.29.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -101,6 +101,7 @@ coolbash/
 │   ├─ 40-functions.bash
 │   ├─ 41-navigation.bash
 │   ├─ 42-workspace.bash
+│   ├─ 43-images.bash
 │   ├─ 50-prompt.bash
 │   ├─ 60-completion.bash
 │   ├─ 70-motd.bash
@@ -133,6 +134,7 @@ coolbash/
 | `34-python-venv.bash`     | Helpers pour venv Python                            |
 | `35-toolchains.bash`      | SDK du HOME dans le `PATH` (cargo, pnpm, Android, foundry), nvm paresseux |
 | `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`, `backup`, `whoport`, `serve`, `cheat`…) |
+| `43-images.bash`          | `img [-w colonnes] fichier…` : images dans le terminal (protocole kitty, iTerm2, sixel, sinon chafa/viu/timg) ; `~/.coolbash/motd.png` dans le MOTD |
 | `42-workspace.bash`       | Hooks de projet (`.coolbash.bash` après `coolbash allow`), `todo`, `remind`, `retry`, presse-papiers (`copy`, `paste`, `copypath`) |
 | `41-navigation.bash`      | `j` (saut de dossier par fréquence, pur bash), `bd`, `h`, `hstats`, paquet suggéré pour une commande introuvable |
 | `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji, icônes)  |
@@ -267,8 +269,10 @@ Variables lues au chargement (via `config.bash`, avant la ligne `source` du `.ba
 | `COOLBASH_GIT_GUARD=0`          | `git push --force` sur main/master sans confirmation                  |
 | `COOLBASH_J=0`                  | Ne pas noter les `cd` (désactive `j`)                                  |
 | `COOLBASH_CNF=0`                | Pas de suggestion de paquet pour une commande introuvable              |
+| `COOLBASH_IMG`                  | Méthode de `img` : `kitty`, `iterm`, `sixel` ou `chafa` (défaut : détection du terminal) |
+| `COOLBASH_MOTD_IMAGE_WIDTH`     | Largeur en colonnes de `~/.coolbash/motd.png` dans le MOTD (défaut `40`) |
 | `COOLBASH_SERVE_PORT`           | Premier port essayé par `serve` (défaut `8000`)                        |
-| `COOLBASH_MOTD_HIDE`            | Lignes du MOTD à taire, ex. `"battery load"` (mots : `date disk mem load battery reboot failed update note todo`) |
+| `COOLBASH_MOTD_HIDE`            | Lignes du MOTD à taire, ex. `"battery load"` (mots : `image date disk mem load battery reboot failed update note todo`) |
 | `COOLBASH_FORTUNE`              | Thèmes de citations du MOTD, ex. `"dev chuck"` (défaut : tous, un thème répété pèse plus lourd) |
 | `COOLBASH_STARTUP_TIME`         | Temps de démarrage affiché à l'ouverture : `1` (défaut), `0` = muet, `verbose` = temps de chaque module. Le total est l'âge du processus (tout le `~/.bashrc` compris), la part CoolBash à côté |
 | `COOLBASH_FZF=0`                | Pas de raccourcis fzf (`Ctrl-R`, `Ctrl-T`, `Alt-C`), chargés sinon en shell interactif |
@@ -308,6 +312,7 @@ n'apparaît que si elle a quelque chose à dire.
 | `Reboot required` | modules du noyau courant disparus (Arch) ou `/var/run/reboot-required` (Debian) | rouge |
 | `Failed units:`  | `systemctl --failed`, seulement si > 0   | rouge                                |
 | `⇡ CoolBash x.y.z disponible` | `.update-available`, écrit par la vérification quotidienne | jaune          |
+| image            | `~/.coolbash/motd.png` (ou jpg, gif, webp), affichée par `img` en tête | —                   |
 | note             | `~/.coolbash/motd.txt`, ton pense-bête   | cyan                                 |
 | À faire          | `todo.txt`, cinq tâches ouvertes au plus | —                                    |
 
@@ -389,6 +394,7 @@ Fonctions volontairement exposées dans le shell (tout le reste est préfixé `_
 | `remind`                       | `42-workspace`        | `remind 15m "sortir le pain"` : notification bureau (notify-send) et ligne sur le terminal, en tâche de fond |
 | `retry`                        | `42-workspace`        | `retry 5 cmd…` : relance jusqu'au succès, délai 1, 2, 4… s |
 | `copy`, `paste`, `copypath`    | `42-workspace`        | Presse-papiers : wl-copy, xclip, xsel, pbcopy selon la session ; OSC 52 en SSH ou sans outil |
+| `img`                          | `43-images`           | `img [-w colonnes] fichier…` : la meilleure méthode du terminal — protocole kitty (kitty, ghostty), iTerm2 (iTerm2, WezTerm), sixel (foot, xterm), sinon chafa/viu/timg ; `COOLBASH_IMG` force ; passthrough tmux |
 | `cheat`                        | `40-functions`        | `cheat tar` : exemples par `tldr` si présent, sinon la section EXAMPLES du man, sinon `--help` |
 | `man`                          | `40-functions`        | `man` colorisé                              |
 | `mkcd`, `extract`, `up`, `timer` | `40-functions`      | Créer+entrer, extraire une archive (`extract -d` : dans un dossier à son nom), remonter de N répertoires, chronométrer |
