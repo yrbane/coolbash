@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.34.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.35.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -58,7 +58,7 @@ coolbash <command>
 | `install`   | Installe CoolBash dans `~/.coolbash`, et la Nerd Font des icônes si aucune n'est présente |
 | `update`    | `git pull`, puis tests, puis install (clone git requis) ; annonce `0.8.1 → 0.9.0`, « déjà à jour », ou l'échec |
 | `quiet`     | Mode présentation pour une démo ou un enregistrement : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage, appliqué au shell courant et aux suivants ; `quiet off` |
-| `deps`      | Les outils optionnels absents (cowsay, lolcat, fzf, rsync, tldr, delta, shellcheck, shfmt, presse-papiers, notifications…) avec le paquet pour pacman, apt, dnf, zypper, apk ou brew, et la commande à lancer ; `deps --install` l'exécute |
+| `deps`      | Les outils optionnels absents (cowsay, lolcat, fzf, rsync, tldr, delta, shellcheck, shfmt, presse-papiers, notifications…) avec le paquet pour pacman, apt, dnf, zypper, apk ou brew, et la commande à lancer ; `deps --install` l'exécute ; sous apt, `--install` lance `apt-get update` d'abord |
 | `font`      | Installe (ou réessaie d'installer) la Nerd Font des icônes du prompt |
 | `verify`    | Vérifie la syntaxe (+ shellcheck si présent)  |
 | `test`      | Lance la suite de tests                       |
@@ -76,7 +76,7 @@ coolbash <command>
 | `bench`     | `bench [N]` : N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module |
 | `changelog` | Ce qui a changé : sans argument la version installée ; `changelog --since 0.30.0` ; `--next` ce que la mise à jour disponible apporterait ; `--all` dans le pager. `update` l'affiche avant le questionnaire |
 | `doctor`    | Diagnostic : bash, `.bashrc`, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton `~/.bashrc` refait à la main (nvm, cargo, PATH, alias…) alors qu'un module s'en charge |
-| `help`      | Affiche l’aide de la CLI ; `help <commande>` le détail. La complétion Tab de `coolbash` connaît les sous-commandes, les thèmes et les thèmes de citations |
+| `help`      | Affiche l’aide de la CLI, avec la section « Dans le shell » (une ligne par fonction) ; `help <commande>` le détail ; `help <fonction>` (ou `<fonction> --help` dans le shell) l'aide et les exemples d'une fonction du shell ; `help shell` toutes. La complétion Tab de `coolbash` connaît les sous-commandes, les fonctions, les thèmes et les thèmes de citations |
 
 La fonction shell `coolbash` est disponible dès que `~/.bashrc` a chargé CoolBash.
 Les commandes `install`/`update`/`verify`/`test`/`uninstall` délèguent au `Makefile` du clone git,
@@ -402,6 +402,7 @@ Fichiers utilisateur chargés s'ils existent : `~/.bash_aliases` (par `30-aliase
 ## 🧩 API publique
 
 Fonctions volontairement exposées dans le shell (tout le reste est préfixé `_coolbash_`) :
+Chacune répond à `--help` (ou `-h`) avec son aide et des exemples, les mêmes que `coolbash help <fonction>` ; `coolbash help shell` les affiche toutes.
 
 | Fonction                       | Module                | Rôle                                        |
 | ------------------------------ | --------------------- | ------------------------------------------- |

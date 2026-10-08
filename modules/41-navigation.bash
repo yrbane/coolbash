@@ -58,6 +58,7 @@ _coolbash_dirs_ranked() {
 }
 
 j() {
+  _coolbash_fn_help j "$@" && return
   local motif="${1:-}" best base
   if [[ -z "$motif" ]]; then
     _coolbash_dirs_ranked | head -15
@@ -90,6 +91,7 @@ _coolbash_prompt_command_add _coolbash_dirs_track
 
 # --- bd : remonter jusqu'au parent nommé -----------------------------------------
 bd() {
+  _coolbash_fn_help bd "$@" && return
   local name="${1:-}" p="$PWD" part
   [[ -n "$name" ]] || {
     _coolbash_say 'usage : bd <nom-de-dossier-parent>\n' >&2
@@ -126,6 +128,7 @@ complete -F _coolbash_bd_complete bd
 # FR : h <motif> — l'historique de la session (avec HISTTIMEFORMAT, donc daté),
 #      filtré sans tenir compte de la casse ; sans motif, les 30 dernières.
 h() {
+  _coolbash_fn_help h "$@" && return
   if [[ -z "${1:-}" ]]; then
     builtin history 30
   else
@@ -136,6 +139,7 @@ h() {
 # FR : hstats [N] — les N (20) premières commandes de HISTFILE, avec leur part.
 #      Les lignes « #epoch » de l'horodatage sont ignorées ; sudo est transparent.
 hstats() {
+  _coolbash_fn_help hstats "$@" && return
   local n="${1:-20}" line first total=0 c
   local -A count=()
   [[ -r "${HISTFILE:-$HOME/.bash_history}" ]] || {

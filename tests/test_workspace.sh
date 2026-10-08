@@ -105,4 +105,11 @@ assert_contains "sans aucun outil : OSC 52 aussi" "$(ws -u SSH_CONNECTION -u SSH
 assert_eq "copypath : chemin absolu dans le presse-papiers et affiché" "${proj}/.coolbash.bash" "$(cd "${proj}" && ws -u SSH_CONNECTION -u SSH_TTY WAYLAND_DISPLAY=w PATH="${fb}:${PATH}" 'copypath .coolbash.bash')"
 assert_eq "copypath fichier absent → erreur" "1" "$(ws 'copypath /nulle/part >/dev/null 2>&1; echo $?')"
 
+# --- --help (0.35.0) ------------------------------------------------------------------
+assert_contains "todo --help : l'aide du CLI" "$(ws COOLBASH_ROOT="${COOLBASH_TEST_ROOT}" 'todo --help')" "todo.done"
+assert_contains "remind -h" "$(ws COOLBASH_ROOT="${COOLBASH_TEST_ROOT}" 'remind -h')" "notify-send"
+assert_contains "retry --help" "$(ws COOLBASH_ROOT="${COOLBASH_TEST_ROOT}" 'retry --help')" "retry <N>"
+assert_contains "copy --help" "$(ws COOLBASH_ROOT="${COOLBASH_TEST_ROOT}" 'copy --help')" "OSC 52"
+assert_contains "copypath --help" "$(ws COOLBASH_ROOT="${COOLBASH_TEST_ROOT}" 'copypath --help')" "copypath [fichier]"
+
 t_done

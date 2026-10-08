@@ -74,4 +74,9 @@ mkdir -p "${COOLBASH_TEST_TMP}/alpha/beta/gamma"
 assert_eq "complétion de bd : les parents, du plus proche au plus lointain" "beta alpha" "$(cd "${COOLBASH_TEST_TMP}/alpha/beta/gamma" && nav 'COMP_WORDS=(bd ""); COMP_CWORD=1; _coolbash_bd_complete; echo "${COMPREPLY[0]} ${COMPREPLY[1]}"')"
 assert_eq "…filtrés par le préfixe" "alpha" "$(cd "${COOLBASH_TEST_TMP}/alpha/beta/gamma" && nav 'COMP_WORDS=(bd al); COMP_CWORD=1; _coolbash_bd_complete; echo "${COMPREPLY[*]}"')"
 
+# --- --help (0.35.0) ------------------------------------------------------------------
+assert_contains "j --help : l'aide du CLI" "$(nav "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' j --help")" "coolbash/dirs"
+assert_contains "bd -h : l'aide du CLI" "$(nav "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' bd -h")" "bd <nom>"
+assert_contains "hstats --help" "$(nav "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' hstats --help")" "hstats [N]"
+
 t_done

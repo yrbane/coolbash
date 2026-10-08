@@ -28,11 +28,15 @@ coolbash_log() { printf '\e[32m%s\e[0m\n' "$*"; }
 coolbash_error() { printf '\e[31m%s\e[0m\n' "$*" >&2; }
 
 # FR: mkcd crée puis cd.
-mkcd() { mkdir -p -- "$1" && { cd -- "$1" || return; }; }
+mkcd() {
+  _coolbash_fn_help mkcd "$@" && return
+  mkdir -p -- "$1" && { cd -- "$1" || return; }
+}
 
 # FR: extract [-d] <archive> — selon l'extension ; -d extrait dans un dossier
 #     au nom de l'archive. Code 3 si l'outil nécessaire est absent.
 extract() {
+  _coolbash_fn_help extract "$@" && return
   local into=0 f abs dir
   local -a cmd
   [[ "${1:-}" == "-d" ]] && {
@@ -90,6 +94,7 @@ extract() {
 
 # FR: up remonte de N répertoires (1 par défaut).
 up() {
+  _coolbash_fn_help up "$@" && return
   local d="" limit="${1:-1}" i
   for ((i = 1; i <= limit; i++)); do d+="../"; done
   cd "$d" || return
@@ -97,6 +102,7 @@ up() {
 
 # FR: Chronomètre l'exécution d'une commande.
 timer() {
+  _coolbash_fn_help timer "$@" && return
   local start end rc ms
   start="${EPOCHREALTIME//[.,]/}"
   "$@"
@@ -111,6 +117,7 @@ timer() {
 #      cp -a garde permissions et dates, et copie les dossiers ; `command cp`
 #      parce que cp est aliasé en cp -i.
 backup() {
+  _coolbash_fn_help backup "$@" && return
   local f stamp dest rc=0
   (($#)) || {
     _coolbash_say 'usage : backup <fichier|dossier>…\n' >&2
@@ -134,6 +141,7 @@ backup() {
 #      de commande via /proc), sinon lsof. Les processus des autres utilisateurs
 #      ne montrent pas leur pid sans sudo.
 whoport() {
+  _coolbash_fn_help whoport "$@" && return
   local port="${1:-}" proto local_addr users pid name cmd found=0
   [[ "$port" =~ ^[0-9]+$ ]] || {
     _coolbash_say 'usage : whoport <port>\n' >&2
@@ -187,6 +195,7 @@ _coolbash_free_port() {
 # FR : serve [dossier] [port] — serveur HTTP statique (python3, sinon php) sur
 #      le premier port libre à partir de COOLBASH_SERVE_PORT (8000). URL affichée.
 serve() {
+  _coolbash_fn_help serve "$@" && return
   local dir="${1:-.}" port="${2:-}"
   [[ -d "$dir" ]] || {
     _coolbash_say "serve : %s n'est pas un dossier\n" "$dir" >&2
@@ -215,6 +224,7 @@ serve() {
 #      Complétion : les commandes du PATH.
 complete -c cheat
 cheat() {
+  _coolbash_fn_help cheat "$@" && return
   local cmd="${1:-}" line in=0 found=0
   [[ -n "$cmd" ]] || {
     _coolbash_say 'usage : cheat <commande>\n' >&2

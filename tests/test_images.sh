@@ -116,4 +116,9 @@ assert_contains "MOTD : motd.png est affiché avec la méthode du terminal" "${m
 rm -f "${COOLBASH_TEST_TMP}/.coolbash/motd.png"
 assert_eq "MOTD : sans motd.png, rien" "" "$(HOME="${COOLBASH_TEST_TMP}" COOLBASH_PREFIX="${COOLBASH_TEST_TMP}/.coolbash" COOLBASH_IMG=iterm bash --norc --noprofile -c 'source "$1"; source "$2"; source "$3"; _coolbash_motd_image' _ "${CORE}" "${IMG}" "${COOLBASH_TEST_ROOT}/modules/70-motd.bash" 2>&1)"
 
+# --- --help (0.35.0) : --help ou -h seul ; -h <lignes> reste une option ------------------
+assert_contains "img --help : l'aide du CLI" "$(im COOLBASH_ROOT="${COOLBASH_TEST_ROOT}" 'img --help')" "COOLBASH_IMG"
+assert_contains "img -h seul : l'aide aussi" "$(im COOLBASH_ROOT="${COOLBASH_TEST_ROOT}" 'img -h')" "Exemples"
+assert_contains "img -h 20 sans fichier : l'usage" "$(im COOLBASH_ROOT="${COOLBASH_TEST_ROOT}" 'img -h 20')" "usage : img"
+
 t_done

@@ -35,9 +35,11 @@ unalias gwip gunwip gfix gsw gopen git 2>/dev/null
 #      gunwip — le défait et rend les changements, non indexés. Refuse si le
 #      dernier commit n'est pas un WIP : on ne défait jamais un vrai commit.
 gwip() {
+  _coolbash_fn_help gwip "$@" && return
   git add -A && git commit -q --no-verify -m "WIP [skip ci]: $(printf '%(%Y-%m-%d %H:%M)T' -1)" && git log -1 --oneline
 }
 gunwip() {
+  _coolbash_fn_help gunwip "$@" && return
   local subject
   subject="$(git log -1 --format=%s 2>/dev/null)"
   [[ "$subject" == WIP* ]] || {
@@ -50,6 +52,7 @@ gunwip() {
 # FR : gfix <commit> — commit fixup de ce qui est indexé, puis rebase autosquash
 #      sans éditeur, avec autostash pour ce qui ne l'est pas.
 gfix() {
+  _coolbash_fn_help gfix "$@" && return
   local target="${1:-}"
   [[ -n "$target" ]] || {
     _coolbash_say "usage : gfix <commit>  (indexe d'abord la correction : git add …)\n" >&2
@@ -70,6 +73,7 @@ gfix() {
 #      branche distante est suivie localement) ; ambigu ou vide → fzf s'il est là
 #      et qu'on a un terminal, sinon la liste des candidates.
 gsw() {
+  _coolbash_fn_help gsw "$@" && return
   local motif="${1:-}" line chosen
   local -a cands=()
   while IFS= read -r line; do
@@ -117,6 +121,7 @@ complete -F _coolbash_gfix_complete gfix
 # FR : gopen [-p] [fichier[:ligne]] — le dépôt, ou le fichier sur la branche
 #      courante, dans le navigateur (xdg-open, open) ; -p affiche l'URL.
 gopen() {
+  _coolbash_fn_help gopen "$@" && return
   local print=0 target="" url branch path line
   [[ "${1:-}" == -p ]] && {
     print=1

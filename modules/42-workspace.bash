@@ -85,6 +85,7 @@ _coolbash_prompt_command_add _coolbash_hook_check
 # FR : todo | todo add "…" | todo done N | todo rm N — fichier ~/.coolbash/todo.txt,
 #      une tâche par ligne ; « done » la retire (et l'archive dans todo.done).
 todo() {
+  _coolbash_fn_help todo "$@" && return
   local file="${COOLBASH_PREFIX:-$HOME/.coolbash}/todo.txt" n i
   local -a lines=()
   case "${1:-}" in
@@ -145,6 +146,7 @@ complete -F _coolbash_todo_complete todo
 #      fork). À l'échéance : notify-send s'il existe, et de toute façon la ligne
 #      sur le terminal d'origine (sonnerie + OSC 777 pour les terminaux qui savent).
 remind() {
+  _coolbash_fn_help remind "$@" && return
   local spec="${1:-}" secs text tty
   shift
   text="${*:-Rappel}"
@@ -172,6 +174,7 @@ remind() {
 # --- retry -------------------------------------------------------------------------------
 # FR : retry <N> <commande…> — jusqu'à N essais, délai 1, 2, 4… s (plafond 60).
 retry() {
+  _coolbash_fn_help retry "$@" && return
   local n="${1:-}" i delay=1 rc
   shift
   [[ "$n" =~ ^[0-9]+$ && "$n" -ge 1 && $# -ge 1 ]] || {
@@ -211,6 +214,7 @@ _coolbash_clip_tool() {
   fi
 }
 copy() {
+  _coolbash_fn_help copy "$@" && return
   local text
   if (($#)); then text="$*"; else text="$(cat)"; fi
   case "$(_coolbash_clip_tool)" in
@@ -222,6 +226,7 @@ copy() {
   esac
 }
 paste() {
+  _coolbash_fn_help paste "$@" && return
   case "$(_coolbash_clip_tool)" in
     wl) wl-paste --no-newline ;;
     xclip) xclip -selection clipboard -o ;;
@@ -234,6 +239,7 @@ paste() {
   esac
 }
 copypath() {
+  _coolbash_fn_help copypath "$@" && return
   local p="${1:-.}"
   [[ -e "$p" ]] || {
     _coolbash_say 'copypath : %s introuvable\n' "$p" >&2

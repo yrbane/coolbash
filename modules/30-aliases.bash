@@ -51,6 +51,7 @@ alias mv='mv -i'
 #      lecture de « nom() { » → erreur de syntaxe au rechargement du .bashrc.
 unalias please 2>/dev/null
 please() {
+  _coolbash_fn_help please "$@" && return
   local cmd
   cmd="$(HISTTIMEFORMAT='' builtin fc -ln -1 -1 2>/dev/null)"
   cmd="${cmd#"${cmd%%[![:space:]]*}"}"

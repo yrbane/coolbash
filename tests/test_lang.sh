@@ -74,4 +74,10 @@ assert_contains "compile inline la table et l'initialise" "$(cat "${lh}/compiled
 assert_eq "bashrc compilé : anglais quand la langue l'est" "todo: no task #9" "$(env -u LC_ALL -u LC_MESSAGES COOLBASH_LANG=en HOME="${lh}" COOLBASH_PREFIX="${lh}/.coolbash" COOLBASH_STARTUP_TIME=0 bash --norc --noprofile -ic 'source "$1"; todo done 9' _ "${lh}/compiled.bashrc" 2>&1 | tail -1)"
 assert_eq "bashrc compilé : français sinon" "todo : pas de tâche n° 9" "$(env -u LC_ALL -u LC_MESSAGES -u COOLBASH_LANG LANG=C.UTF-8 HOME="${lh}" COOLBASH_PREFIX="${lh}/.coolbash" COOLBASH_STARTUP_TIME=0 bash --norc --noprofile -ic 'source "$1"; todo done 9' _ "${lh}/compiled.bashrc" 2>&1 | tail -1)"
 
+# --- aide des fonctions du shell en anglais (0.35.0) --------------------------------------
+assert_contains "help en anglais : section In the shell" "$(cli_en help)" "In the shell"
+assert_contains "help gsw en anglais" "$(cli_en help gsw)" "switches branch"
+assert_contains "help shell en anglais : les exemples" "$(cli_en help shell)" "Examples:"
+assert_eq "help shell en anglais : plus rien en français" "0" "$(cli_en help shell | grep -c 'Exemples :')"
+
 t_done

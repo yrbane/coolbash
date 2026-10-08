@@ -139,6 +139,11 @@ _coolbash_img_png_width() {
 complete -o filenames -o plusdirs -f -X '!*.@(png|PNG|jpg|JPG|jpeg|JPEG|gif|GIF|webp|WEBP|bmp|BMP|svg|SVG)' img
 
 img() {
+  # FR : -h est aussi l'option hauteur : seul, ou --help, c'est l'aide.
+  if [[ "${1:-}" == --help ]] || [[ "${1:-}" == -h && $# -eq 1 ]]; then
+    _coolbash_fn_help img --help
+    return
+  fi
   local cols="" rows="" f backend rc=0 auto=0 px
   while [[ "${1:-}" == -w || "${1:-}" == -h ]]; do
     if [[ "$1" == -w ]]; then cols="${2:-}"; else rows="${2:-}"; fi

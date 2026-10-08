@@ -89,4 +89,9 @@ assert_contains "complétion de gsw : les branches" "$(ing 'COMP_WORDS=(gsw fe);
 assert_eq "…filtrées par le préfixe, sans HEAD ni doublon origin/" "0" "$(ing 'COMP_WORDS=(gsw fe); COMP_CWORD=1; _coolbash_gsw_complete; printf "%s\n" "${COMPREPLY[@]}"' | grep -c 'HEAD\|origin/\|^main$')"
 assert_eq "complétion de gfix : des sha courts" "1" "$(ing 'COMP_WORDS=(gfix ""); COMP_CWORD=1; _coolbash_gfix_complete; printf "%s\n" "${COMPREPLY[0]}"' | grep -cE '^[0-9a-f]{7,}$')"
 
+# --- --help (0.35.0) : l'aide et les exemples du CLI --------------------------------
+assert_contains "gsw --help : l'aide du CLI" "$(ing "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' gsw --help")" "gsw [motif]"
+assert_contains "gfix -h : l'aide du CLI" "$(ing "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' gfix -h")" "fixup"
+assert_contains "gopen --help" "$(ing "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}' gopen --help")" "Exemples"
+
 t_done

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.35.0 — 2026-10-08 · « L'aide du shell, avec des exemples »
+### Ajouté
+- `coolbash help` : une section « Dans le shell » liste les 25 fonctions du shell (`j`, `bd`, `h`, `hstats`, `mkcd`, `up`, `extract`, `timer`, `gsw`, `gwip`, `gunwip`, `gfix`, `gopen`, `todo`, `remind`, `retry`, `copy`, `paste`, `copypath`, `backup`, `whoport`, `serve`, `cheat`, `please`, `img`) avec une ligne chacune, à la place de la simple énumération.
+- `coolbash help <fonction>` : l'aide détaillée d'une fonction du shell — ce qu'elle fait, ses options, ses fichiers, puis des exemples commentés. `coolbash help shell` les affiche toutes. Tab complète les noms.
+- `<fonction> --help` (ou `-h`) dans le shell affiche la même aide, pour toutes ces fonctions. `img -h` seul aussi ; `img -h 20` reste l'option hauteur.
+- Tout est traduit : `COOLBASH_LANG=en coolbash help shell`.
+### Modifié
+- `coolbash deps --install` sous apt lance `sudo apt-get update` avant `apt install` : un index périmé donnait des 404 sur les `.deb` (vu sur un Debian 13 fraîchement installé).
+
 ## 0.34.1 — 2026-10-08 · « Le .deb inspecté par dpkg-deb »
 ### Corrigé
 - Le test du `.deb` n'exige plus `ar` : `dpkg-deb -f` / `-c` quand il est là (conteneur Debian de

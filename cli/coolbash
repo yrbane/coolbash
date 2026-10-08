@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.34.1"
+COOLBASH_VERSION="0.35.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -789,6 +789,7 @@ _coolbash_compile_emit() {
     cat "${COOLBASH_PREFIX}/config.bash"
   fi
   printf '\n# ===== fonctions de la CLI =====\n'
+  printf 'COOLBASH_SHELL_FUNCS="%s"\n' "$COOLBASH_SHELL_FUNCS"
   declare -f _coolbash_log _coolbash_error _coolbash_disabled _coolbash_shell_age_ms _coolbash_startup_report \
     _coolbash_update_due _coolbash_update_check _coolbash_cmd_config _coolbash_shell_function _coolbash_quiet_apply \
     _coolbash_lang_init _coolbash_t _coolbash_say
@@ -947,6 +948,8 @@ _coolbash_cmd_deps() {
   _coolbash_say '  %sImages :%s kitten icat vient avec le terminal kitty ; une seule méthode suffit à img (chafa va partout)\n' $'\e[2m' $'\e[0m'
   if ((install)); then
     printf '\n'
+    # FR : un index apt périmé donne des 404 sur les .deb : update d'abord.
+    [[ "$pm" == apt ]] && sudo apt-get update -q
     # shellcheck disable=SC2086
     $cmd "${pkgs[@]}"
   else
@@ -1086,7 +1089,7 @@ _coolbash_shell_function() {
             [[ -f "$f" ]] && f="${f##*/}" && words+=" ${f%.txt}"
           done
           ;;
-        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps quiet changelog help" ;;
+        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps quiet changelog help shell ${COOLBASH_SHELL_FUNCS:-}" ;;
         sync)
           # FR : les hôtes de ~/.ssh/config (sans motif *), plus les options.
           words="--update --overrides"
@@ -1147,11 +1150,51 @@ _coolbash_lines() {
   local l
   for l in "$@"; do printf '%s\n' "$(_coolbash_t "$l")"; done
 }
+# FR : coolbash help <fonction du shell> — l'aide détaillée et les exemples des
+#      fonctions du shell (aussi via <fonction> --help) ; help shell : toutes.
+COOLBASH_SHELL_FUNCS="j bd h hstats mkcd up extract timer gsw gwip gunwip gfix gopen todo remind retry copy paste copypath backup whoport serve cheat please img"
+_coolbash_cmd_help_shell() {
+  case "${1:-}" in
+    j) _coolbash_lines "j [motif] — saute dans le dossier le plus fréquent et récent dont le chemin contient le motif (casse ignorée). Chaque cd est noté à chaque prompt dans ~/.coolbash/dirs : 10 points par visite, bonus de fraîcheur. Un motif qui correspond au nom du dossier lui-même prime sur un motif noyé dans le chemin. Sans motif : les 15 dossiers les mieux classés. Tab complète avec les noms connus. COOLBASH_DIRS=0 pour ne rien noter." "Exemples :" "  j coolb               # → ~/Dev/coolbash" "  j                     # tes dossiers, du mieux classé au moins" "  j dev/api             # un bout de chemin marche aussi" ;;
+    bd) _coolbash_lines "bd <nom> — remonte jusqu'au dossier parent nommé : nom exact d'abord, puis préfixe, en partant du parent immédiat. Tab propose les parents du dossier courant." "Exemples :" "  bd Dev                # ~/Dev/coolbash/tests/lib → ~/Dev" "  bd co                 # préfixe : → ~/Dev/coolbash" "  cd -                  # revenir d'où l'on vient" ;;
+    h) _coolbash_lines "h [motif] — l'historique daté : sans motif les 30 dernières commandes, avec motif toutes celles qui le contiennent (casse ignorée). Ctrl-R (fzf) reste la recherche interactive." "Exemples :" "  h                     # les 30 dernières commandes" "  h ssh                 # tout ce qui contient ssh, avec date et heure" "  h 'git rebase'        # un motif avec espace, entre quotes" ;;
+    hstats) _coolbash_lines "hstats [N] — les N commandes les plus fréquentes de ton historique (20 par défaut), avec leur part en %. sudo est transparent : « sudo apt » compte pour apt." "Exemples :" "  hstats                # le top 20" "  hstats 5              # le top 5" ;;
+    mkcd) _coolbash_lines "mkcd <dossier> — crée le dossier (et ses parents) puis y entre." "Exemples :" "  mkcd ~/Dev/essai/src" ;;
+    up) _coolbash_lines "up [N] — remonte de N dossiers (1 par défaut)." "Exemples :" "  up                    # cd .." "  up 3                  # cd ../../.." ;;
+    extract) _coolbash_lines "extract [-d] <archive> — extrait selon l'extension : tar.gz tgz tar.bz2 tbz2 tar.xz tar.zst tar zip rar 7z, et gz bz2 xz (fichier seul, décompressé sur place). -d extrait dans un dossier au nom de l'archive : fini les archives qui s'étalent dans le dossier courant. Code 3 si l'outil nécessaire manque." "Exemples :" "  extract site.tar.gz" "  extract -d photos.zip # → photos/" ;;
+    timer) _coolbash_lines "timer <commande…> — chronomètre la commande (à la milliseconde) et rend son code de retour." "Exemples :" "  timer make test" "  timer sleep 2         # ⏱  2.001s" ;;
+    gsw) _coolbash_lines "gsw [motif] — change de branche. Une seule branche (locale ou distante) correspond : bascule directe, une distante est créée et suivie localement. Plusieurs, ou pas de motif : fzf s'il est là (aperçu des 5 derniers commits), sinon la liste des candidates. Tab complète les branches." "Exemples :" "  gsw                   # choisir dans fzf" "  gsw feat              # la seule branche qui contient « feat »" "  gsw fix-42            # une branche distante : créée et suivie" ;;
+    gwip) _coolbash_lines "gwip — met tout l'état courant (fichiers suivis et nouveaux) dans un commit « WIP [skip ci]: date » sans lancer les hooks. Pour changer de branche, ou partir, sans rien perdre. gunwip le défait." "Exemples :" "  gwip                  # WIP [skip ci]: 2026-10-08 16:40" "  gwip && gsw main      # mettre de côté, puis changer de branche" ;;
+    gunwip) _coolbash_lines "gunwip — défait le dernier commit s'il est un WIP (gwip) et rend les changements, non indexés. Refuse si le dernier commit n'est pas un WIP : on ne défait jamais un vrai commit." "Exemples :" "  gsw feat && gunwip    # retour sur la branche, le travail reprend où il était" ;;
+    gfix) _coolbash_lines "gfix <commit> — corrige un commit passé : ce qui est indexé devient un commit fixup, puis rebase autosquash sans éditeur (autostash pour ce qui n'est pas indexé). Tab propose les 20 derniers commits." "Exemples :" "  git add src/x.sh && gfix 3f2a1c0" "  gfix HEAD~2           # le commit d'avant-avant" ;;
+    gopen) _coolbash_lines "gopen [-p] [fichier[:ligne]] — ouvre dans le navigateur le dépôt (remote origin, SSH ou HTTPS), ou le fichier sur la branche courante, à la ligne donnée. -p affiche l'URL sans ouvrir." "Exemples :" "  gopen                 # https://github.com/user/repo" "  gopen README.md:42    # le fichier, ligne 42, sur la branche courante" "  gopen -p cli/coolbash | copy    # l'URL dans le presse-papiers" ;;
+    todo) _coolbash_lines "todo [add \"texte\" | done N | rm N | list] — tâches dans ~/.coolbash/todo.txt, une par ligne, numérotées. done l'archive dans todo.done avec la date, rm la supprime. Les tâches ouvertes sont rappelées dans le MOTD. Tab complète les sous-commandes et les numéros." "Exemples :" "  todo add \"relire le README\"" "  todo                  # la liste numérotée" "  todo done 2           # faite, archivée" "  todo rm 1             # supprimée, sans archive" ;;
+    remind) _coolbash_lines "remind <délai> \"texte\" — rappel en tâche de fond : 30s, 15m, 2h, ou des secondes. À l'échéance : notification bureau (notify-send) et ligne jaune sur le terminal d'origine (sonnerie, OSC 777). Survit à la fermeture du shell." "Exemples :" "  remind 15m \"sortir le pain\"" "  remind 2h \"réunion\"" "  remind 90 \"thé\"       # 90 secondes" ;;
+    retry) _coolbash_lines "retry <N> <commande…> — relance la commande jusqu'au succès, N essais au plus, délai 1, 2, 4… s entre deux (plafond 60). Rend le dernier code de retour." "Exemples :" "  retry 5 ssh serveur" "  retry 3 git push" "  retry 10 ping -c1 -W1 hôte   # jusqu'à ce que l'hôte réponde" ;;
+    copy) _coolbash_lines "copy [texte] — met le texte (ou l'entrée standard) dans le presse-papiers : wl-copy (Wayland), xclip ou xsel (X11), pbcopy (macOS). Sinon, et toujours en SSH, OSC 52 : c'est le terminal qui affiche qui reçoit le texte, même à distance (kitty, foot, wezterm, alacritty, tmux configuré)." "Exemples :" "  copy \"un texte\"" "  cat ~/.ssh/id_ed25519.pub | copy" "  git rev-parse HEAD | copy" ;;
+    paste) _coolbash_lines "paste — affiche le presse-papiers (wl-paste, xclip, xsel, pbpaste). OSC 52 ne sait qu'écrire : en SSH, ou sans outil, paste refuse." "Exemples :" "  paste > notes.txt" "  paste | wc -l" ;;
+    copypath) _coolbash_lines "copypath [fichier] — copie le chemin absolu du fichier (ou du dossier courant) dans le presse-papiers, et l'affiche." "Exemples :" "  copypath              # /home/seb/Dev/coolbash" "  copypath cli/coolbash" ;;
+    backup) _coolbash_lines "backup <fichier|dossier>… — copie horodatée à côté de l'original : nom.AAAA-MM-JJ-HHMM.bak, permissions et dates conservées (cp -a), dossiers compris." "Exemples :" "  backup ~/.bashrc      # ~/.bashrc.2026-10-08-1640.bak" "  backup config/ *.conf" ;;
+    whoport) _coolbash_lines "whoport <port> — quel processus écoute sur ce port : pid, nom, ligne de commande (ss, sinon lsof). Les processus des autres utilisateurs n'ont pas de pid sans sudo." "Exemples :" "  whoport 8080" "  sudo whoport 443      # pour un service système" ;;
+    serve) _coolbash_lines "serve [dossier] [port] — serveur HTTP statique du dossier (python3, sinon php) sur le premier port libre à partir de COOLBASH_SERVE_PORT (8000). L'URL est affichée ; Ctrl-C arrête." "Exemples :" "  serve                 # le dossier courant sur http://localhost:8000/" "  serve dist 3000" ;;
+    cheat) _coolbash_lines "cheat <commande> — des exemples, vite : tldr s'il est installé (coolbash deps), sinon la section EXAMPLES du man, sinon --help. Tab complète les commandes du PATH." "Exemples :" "  cheat tar" "  cheat rsync" ;;
+    please) _coolbash_lines "please — relance la dernière commande avec sudo. Redirections, pipes et enchaînements passent entiers sous sudo bash -c (un « sudo echo x > /etc/f » écrirait sinon sans droits). pls est un alias de sudo pour une commande à venir." "Exemples :" "  apt install fzf       # refusé : pas root" "  please                # sudo apt install fzf" "  pls systemctl restart nginx" ;;
+    img) _coolbash_lines "img [-w colonnes] [-h lignes] <fichier…> — affiche une image dans le terminal par la meilleure méthode : protocole kitty (kitty, ghostty, konsole ≥ 22.04, wezterm), iTerm2 (iTerm2, WezTerm, mintty, VS Code), sixel (foot, xterm, mlterm, Windows Terminal), sinon chafa, viu ou timg en caractères. Sans taille : la largeur du terminal, sans agrandir un PNG plus petit. COOLBASH_IMG=kitty|iterm|sixel|chafa force la méthode ; passthrough sous tmux. Tab ne propose que des images." "Exemples :" "  img capture.png" "  img -w 40 logo.png    # 40 colonnes de large" "  img -h 20 *.jpg       # 20 lignes de haut, chacune" "  COOLBASH_IMG=chafa img photo.webp   # forcer le repli en caractères" "  cp logo.png ~/.coolbash/motd.png    # affichée à chaque ouverture de terminal" ;;
+    shell)
+      local f
+      for f in $COOLBASH_SHELL_FUNCS; do
+        _coolbash_cmd_help_shell "$f"
+        printf '\n'
+      done
+      ;;
+    *) return 1 ;;
+  esac
+}
 _coolbash_cmd_help_topic() {
   case "$1" in
     install) _coolbash_lines "coolbash install — installe (ou réinstalle) CoolBash dans ~/.coolbash et ajoute la ligne source au ~/.bashrc (sauvegardé la première fois). Installe la Nerd Font sauf COOLBASH_FONT=0." ;;
     update) _coolbash_lines "coolbash update — git pull du clone, suite de tests, nouveautés depuis l'ancienne version, puis install. Annonce « x.y.z → a.b.c », « déjà à jour », ou l'échec (rien n'est installé si les tests échouent). Installé par paquet (pacman, apt) : la mise à jour vient du gestionnaire de paquets, puis coolbash install." ;;
-    deps) _coolbash_lines "coolbash deps [--install] — les outils optionnels absents (cowsay, lolcat, fzf, rsync, tldr, delta, shellcheck, shfmt, presse-papiers, notifications…) avec le paquet correspondant pour pacman, apt, dnf, zypper, apk ou brew, et la commande à lancer ; --install l'exécute." ;;
+    deps) _coolbash_lines "coolbash deps [--install] — les outils optionnels absents (cowsay, lolcat, fzf, rsync, tldr, delta, shellcheck, shfmt, presse-papiers, notifications…) avec le paquet correspondant pour pacman, apt, dnf, zypper, apk ou brew, et la commande à lancer ; --install l'exécute (sous apt, après apt-get update)." ;;
     font) _coolbash_lines "coolbash font — installe (ou réessaie) la JetBrainsMono Nerd Font utilisée par les icônes du prompt. À sélectionner ensuite dans le profil du terminal." ;;
     verify | lint) _coolbash_lines "coolbash verify — bash -n, shellcheck et shfmt sur tout le dépôt (make lint)." ;;
     test) _coolbash_lines "coolbash test — la suite de tests complète (make test)." ;;
@@ -1170,8 +1213,8 @@ _coolbash_cmd_help_topic() {
     compile) _coolbash_lines "coolbash compile [--write | fichier] — génère un ~/.bashrc autonome : réglages de config.bash, modules inlinés dans l'ordre (chacun dans une fonction), fonction coolbash, vérification de mise à jour, temps de démarrage. Sans argument : sur la sortie standard ; --write remplace ~/.bashrc (sauvegardé) ; make install le régénère quand setup a choisi le mode compiled." ;;
     tidy) _coolbash_lines "coolbash tidy [--apply] — range le ~/.bashrc : retire ce qu'un module prend en charge, convertit export PATH en path_prepend/append, déplace alias et fonctions dans 90-local-overrides.bash. Sans --apply, aperçu seulement ; avec, sauvegarde d'abord." ;;
     quiet) _coolbash_lines "coolbash quiet [on|off|status] — mode présentation : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage, ni prompt transient — pour une démo, une capture, un enregistrement. Appliqué au shell courant et aux suivants (fichier ~/.coolbash/quiet) ; quiet off pour revenir." ;;
-    help) _coolbash_lines "coolbash help [commande] — cette aide, ou le détail d'une commande." ;;
-    *) return 1 ;;
+    help) _coolbash_lines "coolbash help [commande | fonction | shell] — cette aide, le détail d'une commande, ou l'aide et les exemples d'une fonction du shell (shell : toutes)." ;;
+    *) _coolbash_cmd_help_shell "$1" ;;
   esac
 }
 
@@ -1249,7 +1292,33 @@ _coolbash_cmd_help() {
   _row test "La suite de tests"
   _row version "La version installée"
   _row help "Cette aide ; help <commande> pour le détail"
-  _coolbash_say '\n  %sDans le shell :%s j bd h hstats · gsw gwip gunwip gfix gopen · todo remind retry · copy paste copypath · backup whoport serve cheat please · img\n\n' "$B" "$R"
+  _sec "Dans le shell"
+  _row j "Saute dans un dossier fréquent : j coolb ; j seul liste"
+  _row bd "Remonte au dossier parent nommé : bd Dev"
+  _row h "Cherche dans l'historique daté : h ssh ; h seul, les 30 dernières"
+  _row hstats "Tes commandes les plus fréquentes, avec leur part"
+  _row mkcd "Crée un dossier et y entre"
+  _row up "Remonte de N dossiers : up 2"
+  _row extract "Extrait une archive selon l'extension ; -d dans un dossier à son nom"
+  _row timer "Chronomètre une commande"
+  _row gsw "Change de branche : motif unique direct, sinon fzf"
+  _row gwip "Commit WIP de tout l'état courant, hooks ignorés"
+  _row gunwip "Défait le dernier commit WIP, rend les changements"
+  _row gfix "Corrige un commit passé : fixup + autosquash de ce qui est indexé"
+  _row gopen "Le dépôt ou un fichier[:ligne] dans le navigateur ; -p l'URL"
+  _row todo "Tâches : todo add \"…\", todo done N, todo rm N (rappel dans le MOTD)"
+  _row remind "Rappel en tâche de fond : remind 15m \"texte\""
+  _row retry "Relance jusqu'au succès : retry 5 cmd…, délai 1, 2, 4… s"
+  _row copy "Texte ou stdin → presse-papiers (OSC 52 en SSH)"
+  _row paste "Le presse-papiers sur la sortie"
+  _row copypath "Le chemin absolu d'un fichier → presse-papiers"
+  _row backup "Copie horodatée à côté : nom.AAAA-MM-JJ-HHMM.bak"
+  _row whoport "Quel processus écoute sur ce port : whoport 8080"
+  _row serve "Serveur HTTP statique du dossier, premier port libre dès 8000"
+  _row cheat "Des exemples : tldr, sinon EXAMPLES du man, sinon --help"
+  _row please "Relance la dernière commande avec sudo"
+  _row img "Une image dans le terminal : kitty, iTerm2, sixel, sinon chafa"
+  _coolbash_say '\n  %scoolbash help <fonction>, ou <fonction> --help, pour le détail et des exemples ; coolbash help shell pour tout.%s\n\n' "$D" "$R"
   unset -f _row _sec
 }
 

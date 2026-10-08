@@ -363,4 +363,16 @@ assert_contains "please : une redirection → sudo bash -c" "${pl}" "sudo:bash -
 pl="$(mod 30-aliases.bash "set -o history; history -s 'systemctl restart nginx'; PATH='${fb}'; please 2>&1")"
 assert_contains "please : une commande simple → sudo direct" "${pl}" "sudo:systemctl restart nginx"
 
+# --- --help des fonctions de 40-functions et 30-aliases (0.35.0) ----------------------
+fh() { mod "$1" "COOLBASH_ROOT='${COOLBASH_TEST_ROOT}'; $2"; }
+assert_contains "extract --help : l'aide du CLI" "$(fh 40-functions.bash 'extract --help')" "extract [-d]"
+assert_contains "timer -h" "$(fh 40-functions.bash 'timer -h')" "timer <commande"
+assert_contains "mkcd --help" "$(fh 40-functions.bash 'mkcd --help')" "mkcd <dossier>"
+assert_contains "up --help" "$(fh 40-functions.bash 'up --help')" "up [N]"
+assert_contains "backup --help" "$(fh 40-functions.bash 'backup --help')" ".bak"
+assert_contains "whoport --help" "$(fh 40-functions.bash 'whoport --help')" "whoport <port>"
+assert_contains "serve --help" "$(fh 40-functions.bash 'serve --help')" "COOLBASH_SERVE_PORT"
+assert_contains "cheat --help" "$(fh 40-functions.bash 'cheat --help')" "tldr"
+assert_contains "please --help" "$(fh 30-aliases.bash 'please --help')" "sudo bash -c"
+
 t_done

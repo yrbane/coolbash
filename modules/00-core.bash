@@ -76,6 +76,13 @@ shopt -s autocd cdspell dirspell checkjobs extglob globstar histappend cmdhist c
 # FR : un alias homonyme (ancienne version, ~/.bash_aliases) serait développé à la
 #      lecture de « nom() { » → erreur de syntaxe au rechargement du .bashrc.
 unalias path_prepend path_append 2>/dev/null
+# FR : <fonction> --help / -h → coolbash help <fonction> : l'aide et les exemples
+#      du CLI. Code 1 sinon, pour enchaîner : _coolbash_fn_help nom "$@" && return
+_coolbash_fn_help() {
+  [[ "${2:-}" == --help || "${2:-}" == -h ]] || return 1
+  bash "${COOLBASH_ROOT:-${COOLBASH_PREFIX:-$HOME/.coolbash}}/cli/coolbash" help "$1"
+}
+
 path_prepend() { case ":$PATH:" in *":$1:"*) ;; *) PATH="$1:$PATH" ;; esac }
 path_append() { case ":$PATH:" in *":$1:"*) ;; *) PATH="$PATH:$1" ;; esac }
 
