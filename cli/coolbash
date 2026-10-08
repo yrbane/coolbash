@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.29.0"
+COOLBASH_VERSION="0.29.1"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -624,6 +624,8 @@ xclip|copy / paste (X11)|xclip|xclip|xclip|xclip|xclip|-
 chafa|img (images en caractères, tout terminal)|chafa|chafa|chafa|chafa|chafa|chafa
 img2sixel|img (sixel : foot, xterm, wezterm)|libsixel|libsixel-bin|libsixel-utils|libsixel-tools|libsixel-tools|libsixel
 magick|img (conversion PNG pour kitty, sixel)|imagemagick|imagemagick|ImageMagick|ImageMagick|imagemagick|imagemagick
+viu|img (repli en caractères)|viu|-|-|-|-|viu
+timg|img (repli en caractères)|-|timg|timg|-|-|timg
 DEPS
 }
 # FR : le paquet existe-t-il dans les dépôts configurés ? Sans réseau. Seulement
@@ -700,6 +702,7 @@ _coolbash_cmd_deps() {
     printf '  %sAUR :%s yay -S c-lolcat  (lolcat en C, 120 ms de moins par shell)\n' $'\e[2m' $'\e[0m'
   fi
   printf '  %sPolice :%s coolbash font · %sNeo-cowsay (Go, 3 ms) :%s https://github.com/Code-Hex/Neo-cowsay/releases\n' $'\e[2m' $'\e[0m' $'\e[2m' $'\e[0m'
+  printf '  %sImages :%s kitten icat vient avec le terminal kitty ; une seule méthode suffit à img (chafa va partout)\n' $'\e[2m' $'\e[0m'
   if ((install)); then
     printf '\n'
     # shellcheck disable=SC2086

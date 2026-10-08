@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.29.1 — 2026-10-08 · « Les outils d'images dans deps »
+### Ajouté
+- `coolbash deps` connaît aussi **viu** (Arch, brew) et **timg** (Debian, Fedora, brew), les replis
+  en caractères de `img`, avec « - » là où le paquet n'existe pas (vérifié dans les dépôts) ; et
+  rappelle que `kitten icat` vient avec le terminal kitty, et qu'une seule méthode suffit.
+
 ## 0.29.0 — 2026-10-08 · « Des images dans le terminal »
 ### Ajouté
 - **Module `43-images`, commande `img [-w colonnes] fichier…`** : la meilleure méthode selon le
