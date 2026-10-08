@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.32.0 — 2026-10-08 · « Ce qui a changé, ce qui se répare »
+### Ajouté
+- **`coolbash changelog`** : sans argument, la section de la version installée ; `--since X.Y.Z`
+  (ou `X.Y.Z`) tout depuis cette version ; `--next` ce que la mise à jour disponible apporterait
+  (depuis `origin/main`, déjà récupéré par la vérification quotidienne) ; `--all` dans le pager.
+  `coolbash update` affiche les nouveautés depuis l'ancienne version **avant** le questionnaire ;
+  l'alerte ⇡ du MOTD renvoie vers `changelog --next`. `make install` copie le CHANGELOG.
+- **`coolbash doctor --fix`** : répare ce qui se répare sans question — ligne source absente du
+  `~/.bashrc` (sauvegardé), `~/.bashrc` compilé d'une autre version (recompilé), CLI, modules ou
+  citations absents (`make install` sans questionnaire), Nerd Font absente (`coolbash font`), delta
+  sans pager git. Sans `--fix`, doctor dit ce qu'il réparerait.
+- **Module `45-tmux`** (opt-in, `COOLBASH_TMUX_SSH=1`) : en SSH, avec un terminal, le shell
+  s'attache à la session tmux ou la crée (`COOLBASH_TMUX_SESSION`, `main`) ; détacher ferme la
+  connexion. Jamais hors SSH, dans tmux/screen, sans tty (scp, rsync) ni en mode safe.
+  `coolbash setup` pose la question.
+
 ## 0.31.0 — 2026-10-08 · « Tab partout, img partout »
 ### Ajouté
 - **Complétion des fonctions maison** : `todo` (sous-commandes, puis les numéros pour `done`/`rm`),

@@ -12,7 +12,7 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.31.0"
+COOLBASH_VERSION="0.32.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
@@ -87,6 +87,8 @@ COOLBASH_PROMPT_TRANSIENT|0|1 = prompt réduit à une ligne après l'Entrée (ex
 COOLBASH_PROMPT_OSC133|1|0 = pas de marques de prompt OSC 133 (saut de prompt en prompt dans kitty, foot, wezterm…)
 COOLBASH_PROMPT_SHLVL|1|0 = pas de niveau de shell (⧉ 2) dans un sous-shell
 COOLBASH_HIST_SECRETS|1|0 = enregistrer aussi les lignes avec password=, token=, api_key=, Bearer…
+COOLBASH_TMUX_SSH|0|1 = en SSH, attacher (ou créer) une session tmux à la connexion
+COOLBASH_TMUX_SESSION|main|nom de la session tmux de COOLBASH_TMUX_SSH
 COOLBASH_QUIET|0|1 = mode présentation : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage (coolbash quiet)
 COOLBASH_NVM_LAZY|1|0 = charger nvm.sh au démarrage (lent)
 COOLBASH_STARTUP_TIME|1|temps de démarrage affiché : 0 = non, verbose = par module
@@ -113,8 +115,15 @@ COOLBASH_CONFIG
 }
 
 # FR : diagnostic — requis (✘ = échec) et optionnels (– = absent, informatif).
+#      --fix répare ce qui se répare sans question : ligne source absente du
+#      ~/.bashrc (sauvegardé), ~/.bashrc compilé d'une autre version (recompilé),
+#      CLI, modules ou citations absents (make install, sans questionnaire),
+#      Nerd Font absente (coolbash font), delta sans pager git.
 _coolbash_cmd_doctor() {
-  local ko=0 n bashrc="${COOLBASH_BASHRC:-${HOME}/.bashrc}" loc
+  local ko=0 n bashrc="${COOLBASH_BASHRC:-${HOME}/.bashrc}" loc fix=0 f
+  local -a fixes=()
+  [[ "${1:-}" == --fix ]] && fix=1
+  _coolbash_fix_add() { [[ " ${fixes[*]} " == *" $1 "* ]] || fixes+=("$1"); }
   _coolbash_req() { if "$@" >/dev/null 2>&1; then printf '  \e[32m✔\e[0m %s\n' "${COOLBASH_DOCTOR_LABEL}"; else
     printf '  \e[31m✘\e[0m %s\n' "${COOLBASH_DOCTOR_LABEL}"
     ko=$((ko + 1))
@@ -127,21 +136,28 @@ _coolbash_cmd_doctor() {
     n="$(sed -n 's/^# COOLBASH-COMPILED //p' "${bashrc}" | head -1)"
     COOLBASH_DOCTOR_LABEL="${bashrc} autonome (compilé, CoolBash ${n})"
     _coolbash_req test "$n" = "${COOLBASH_VERSION}"
-    [[ "$n" == "${COOLBASH_VERSION}" ]] || printf '               → recompile : coolbash compile --write (make install le fait en mode compiled)\n'
+    [[ "$n" == "${COOLBASH_VERSION}" ]] || {
+      printf '               → recompile : coolbash compile --write (make install le fait en mode compiled)\n'
+      _coolbash_fix_add compile
+    }
   else
     COOLBASH_DOCTOR_LABEL="${bashrc} charge cli/coolbash"
     _coolbash_req grep -qF 'cli/coolbash' "${bashrc}"
+    grep -qF 'cli/coolbash' "${bashrc}" 2>/dev/null || _coolbash_fix_add bashrc
   fi
   COOLBASH_DOCTOR_LABEL="CLI installée : ${COOLBASH_PREFIX}/cli/coolbash"
   _coolbash_req test -x "${COOLBASH_PREFIX}/cli/coolbash"
+  [[ -x "${COOLBASH_PREFIX}/cli/coolbash" ]] || _coolbash_fix_add install
   n=0
   for f in "${COOLBASH_MODULE_DIR}"/*.bash; do [[ -r "$f" ]] && n=$((n + 1)); done
   COOLBASH_DOCTOR_LABEL="modules chargés : ${n} dans ${COOLBASH_MODULE_DIR}"
   _coolbash_req test "$n" -gt 0
+  ((n > 0)) || _coolbash_fix_add install
   n=0
   for f in "${COOLBASH_ROOT}"/share/fortunes/*.txt "${COOLBASH_PREFIX}"/fortunes/*.txt; do [[ -s "$f" ]] && n=$((n + 1)); done
   COOLBASH_DOCTOR_LABEL="citations : ${n} thème(s) dans ${COOLBASH_ROOT}/share/fortunes (+ ${COOLBASH_PREFIX}/fortunes)"
   _coolbash_req test "$n" -gt 0
+  ((n > 0)) || _coolbash_fix_add install
   loc="${LC_ALL:-${LANG:-}}"
   COOLBASH_DOCTOR_LABEL="locale ${loc:-non définie} présente sur la machine"
   # shellcheck disable=SC2016
@@ -157,6 +173,7 @@ _coolbash_cmd_doctor() {
   printf '               → coolbash deps : tout ce qui manque, et la commande pour l\x27installer\n'
   if command -v delta >/dev/null 2>&1 && ! git config --global --get core.pager >/dev/null 2>&1; then
     printf '               → delta est installé : git config --global core.pager delta\n'
+    _coolbash_fix_add delta
   fi
   # FR : icônes du prompt — 0 = Nerd Font présente, 1 = absente, 2 = fc-list absent.
   bash "${COOLBASH_ROOT}/cli/coolbash-font" status
@@ -167,6 +184,7 @@ _coolbash_cmd_doctor() {
       printf '  \e[33m–\e[0m %-10s %s\n' "police" "Nerd Font absente : les icônes du prompt seront illisibles"
       printf '               → lance « coolbash font », puis choisis la police dans ton terminal\n'
       printf '               → ou sans police : export COOLBASH_PROMPT_ICONS=basic avant la ligne source du .bashrc\n'
+      [[ "${COOLBASH_FONT:-1}" == 0 ]] || _coolbash_fix_add font
       ;;
     *) printf '  \e[33m–\e[0m %-10s %s\n' "police" "indéterminé (fc-list absent) — sans Nerd Font : COOLBASH_PROMPT_ICONS=basic" ;;
   esac
@@ -177,7 +195,42 @@ _coolbash_cmd_doctor() {
   printf '\nMode : %s%s\n' "${COOLBASH_MODE:-$([[ $EUID -eq 0 ]] && echo safe || echo normal)}" "${COOLBASH_DISABLE:+ · désactivés : ${COOLBASH_DISABLE}}"
   unset -f _coolbash_req _coolbash_opt
   unset COOLBASH_DOCTOR_LABEL
+  if ((fix)); then
+    printf '\n'
+    if ((${#fixes[@]} == 0)); then
+      _coolbash_log "doctor --fix : rien à réparer."
+    else
+      for f in "${fixes[@]}"; do _coolbash_doctor_fix "$f" "$bashrc" || ko=$((ko + 1)); done
+      _coolbash_log "doctor --fix : terminé — relance coolbash doctor pour vérifier."
+    fi
+  elif ((${#fixes[@]})); then
+    printf '\n               → coolbash doctor --fix répare : %s\n' "${fixes[*]}"
+  fi
+  unset -f _coolbash_fix_add
   ((ko == 0))
+}
+
+# FR : une réparation de doctor --fix ($1 = quoi, $2 = ~/.bashrc).
+_coolbash_doctor_fix() {
+  local bashrc="$2"
+  case "$1" in
+    bashrc)
+      [[ -s "$bashrc" ]] && ! ls "${bashrc}".avant-coolbash-* >/dev/null 2>&1 && command cp -a -- "$bashrc" "${bashrc}.avant-coolbash-$(printf '%(%Y-%m-%d)T' -1)"
+      printf 'source "%s/cli/coolbash" init\n' "${COOLBASH_PREFIX}" >>"$bashrc" || return 1
+      _coolbash_log "réparé : ligne source ajoutée à ${bashrc}"
+      ;;
+    compile) _coolbash_cmd_compile --write ;;
+    install)
+      _coolbash_log "réparation : make install (sans questionnaire)"
+      COOLBASH_SETUP=0 _coolbash_make install
+      ;;
+    font) bash "${COOLBASH_ROOT}/cli/coolbash-font" install ;;
+    delta)
+      git config --global core.pager delta || return 1
+      _coolbash_log "réparé : git config --global core.pager delta"
+      ;;
+    *) return 1 ;;
+  esac
 }
 
 # FR : les fichiers de citations : embarqués (share/fortunes) puis personnels
@@ -262,6 +315,93 @@ _coolbash_cmd_fortune() {
   if _coolbash_fortune text; then printf '%s\n' "$text"; else
     _coolbash_error "aucune citation (thèmes : ${*:-tous})"
     return 1
+  fi
+}
+
+# FR : « a > b » au sens des versions (sort -V).
+_coolbash_ver_gt() {
+  [[ "$1" != "$2" && "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" == "$1" ]]
+}
+# FR : les sections « ## X.Y.Z — … » d'un CHANGELOG lu sur stdin dont la version
+#      est > $1 (vide = toutes) et ≤ $2 (vide = sans borne) ; titres en gras.
+_coolbash_changelog_filter() {
+  local since="${1:-}" until="${2:-}" line v keep=0 B="" R=""
+  [[ -t 1 && -z "${NO_COLOR:-}" ]] && B=$'\e[1m' R=$'\e[0m'
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" =~ ^##\ ([0-9][0-9.]*) ]]; then
+      v="${BASH_REMATCH[1]}"
+      keep=1
+      [[ -n "$since" ]] && ! _coolbash_ver_gt "$v" "$since" && keep=0
+      [[ -n "$until" ]] && _coolbash_ver_gt "$v" "$until" && keep=0
+      ((keep)) && printf '%s%s%s\n' "$B" "${line#\#\# }" "$R"
+      continue
+    fi
+    ((keep)) || continue
+    [[ "$line" == "# "* ]] && continue
+    [[ "$line" == "### "* ]] && line="${line#\#\#\# }"
+    printf '%s\n' "$line"
+  done
+}
+# FR : coolbash changelog [--since X | --next | --all | X] — ce qui a changé :
+#      sans argument, la version installée ; --since X (ou X) tout depuis X ;
+#      --next ce que la mise à jour disponible apporterait (origin/main, déjà
+#      récupéré par la vérification quotidienne) ; --all tout, dans le pager.
+#      Le CHANGELOG est copié dans ~/.coolbash par make install.
+_coolbash_cmd_changelog() {
+  local file="" since="" until="${COOLBASH_VERSION}" repo f
+  # FR : celui du clone d'abord (make update l'appelle avant d'installer), sinon la copie.
+  for f in "${COOLBASH_ROOT}/CHANGELOG.md" "${COOLBASH_PREFIX}/CHANGELOG.md"; do
+    [[ -r "$f" ]] && {
+      file="$f"
+      break
+    }
+  done
+  case "${1:-}" in
+    --next)
+      repo="${COOLBASH_REPO:-$(cat "${COOLBASH_PREFIX}/.repo" 2>/dev/null)}"
+      repo="${repo:-${COOLBASH_ROOT}}"
+      [[ -d "${repo}/.git" ]] || {
+        _coolbash_error "pas de clone git (${repo}) : coolbash update d'abord"
+        return 1
+      }
+      git -C "$repo" show origin/main:CHANGELOG.md 2>/dev/null | _coolbash_changelog_filter "${COOLBASH_VERSION}" ""
+      return 0
+      ;;
+    --all)
+      [[ -n "$file" ]] || {
+        _coolbash_error "aucun CHANGELOG.md (coolbash update le copie)"
+        return 1
+      }
+      ${PAGER:-less} "$file"
+      return
+      ;;
+    --since)
+      since="${2:-}"
+      until=""
+      [[ "$since" =~ ^[0-9][0-9.]*$ ]] || {
+        _coolbash_error "usage : coolbash changelog [--since X.Y.Z | --next | --all | X.Y.Z]"
+        return 1
+      }
+      ;;
+    "") since="" ;;
+    *)
+      since="$1"
+      until=""
+      [[ "$since" =~ ^[0-9][0-9.]*$ ]] || {
+        _coolbash_error "usage : coolbash changelog [--since X.Y.Z | --next | --all | X.Y.Z]"
+        return 1
+      }
+      ;;
+  esac
+  [[ -n "$file" ]] || {
+    _coolbash_error "aucun CHANGELOG.md (coolbash update le copie)"
+    return 1
+  }
+  if [[ -z "$since" ]]; then
+    # FR : la section de la version installée seulement.
+    _coolbash_changelog_filter "" "$until" <"$file" | awk 'NR>1 && /^(\x1b\[1m)?[0-9]/{exit} {print}'
+  else
+    _coolbash_changelog_filter "$since" "$until" <"$file"
   fi
 }
 
@@ -888,7 +1028,7 @@ _coolbash_shell_function() {
     local cur="${COMP_WORDS[COMP_CWORD]}" sub="${COMP_WORDS[1]:-}" words
     COMPREPLY=()
     if ((COMP_CWORD == 1)); then
-      words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps quiet help"
+      words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps quiet changelog help"
     else
       case "$sub" in
         theme) words="--preview ${COOLBASH_THEMES:-coolbash nord dracula solarized gruvbox mono}" ;;
@@ -899,7 +1039,7 @@ _coolbash_shell_function() {
             [[ -f "$f" ]] && f="${f##*/}" && words+=" ${f%.txt}"
           done
           ;;
-        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps quiet help" ;;
+        help) words="install update font verify test uninstall init version doctor config fortune bench theme sync allow deny tidy setup compile deps quiet changelog help" ;;
         sync)
           # FR : les hôtes de ~/.ssh/config (sans motif *), plus les options.
           words="--update --overrides"
@@ -910,6 +1050,8 @@ _coolbash_shell_function() {
         compile) words="--write" ;;
         deps) words="--install" ;;
         quiet) words="on off status" ;;
+        changelog) words="--since --next --all" ;;
+        doctor) words="--fix" ;;
         *) return 0 ;;
       esac
     fi
@@ -965,7 +1107,8 @@ _coolbash_cmd_help_topic() {
     uninstall) echo "coolbash uninstall — supprime ~/.coolbash et la police installée, puis restaure le ~/.bashrc d'avant CoolBash s'il a été sauvegardé (sinon retire juste la ligne source)." ;;
     init) echo "coolbash init — charge les modules dans le shell courant (c'est ce que fait la ligne source du ~/.bashrc)." ;;
     version) echo "coolbash version — la version installée." ;;
-    doctor) echo "coolbash doctor — diagnostic : bash, ~/.bashrc, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton ~/.bashrc refait à la main." ;;
+    doctor) echo "coolbash doctor [--fix] — diagnostic : bash, ~/.bashrc, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton ~/.bashrc refait à la main. --fix répare ce qui se répare sans question : ligne source absente, ~/.bashrc compilé d'une autre version, modules ou citations absents (make install), police (coolbash font), delta sans pager." ;;
+    changelog) echo "coolbash changelog [--since X.Y.Z | --next | --all | X.Y.Z] — ce qui a changé : sans argument la version installée ; --since X (ou X) tout depuis X ; --next ce que la mise à jour disponible apporterait ; --all tout, dans le pager. Affiché aussi par coolbash update, avant le questionnaire." ;;
     config) echo "coolbash config — tous les réglages COOLBASH_* avec leur valeur effective (définie ou par défaut) et un mot d'explication. À définir avant la ligne source du ~/.bashrc, ou via coolbash setup." ;;
     fortune) printf '%s\n' "coolbash fortune [--theme] [thème…] — une citation, au hasard ou dans les thèmes cités (dev unix sysadmin lois corporate absurde humour-noir moralistes proverbes sciences cinema chuck, et les tiens dans ~/.coolbash/fortunes/, qui comptent double dans le tirage)." "coolbash fortune --search <mot> [thème…] — les citations qui contiennent le mot, avec leur thème." "coolbash fortune --stats — le nombre de citations par thème." "coolbash fortune --add \"texte\" [thème] — ajoute une citation au thème (perso par défaut)." ;;
     bench) echo "coolbash bench [N] — N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module du plus lourd au plus léger." ;;
@@ -1049,7 +1192,8 @@ _coolbash_cmd_help() {
   _row bench "N démarrages de shell : moyenne, min, max, coût par module"
   _row sync "Pousse fortunes/, motd.txt, theme, config.bash vers d'autres machines (rsync)"
   _sec "Diagnostic"
-  _row doctor "bash, .bashrc, modules, citations, locale, outils, police, redondances"
+  _row doctor "bash, .bashrc, modules, citations, locale, outils, police, redondances ; doctor --fix répare"
+  _row changelog "Ce qui a changé : la version installée ; --since x.y.z ; --next (mise à jour dispo) ; --all"
   _row verify "bash -n + shellcheck + shfmt (make lint)"
   _row test "La suite de tests"
   _row version "La version installée"
@@ -1073,7 +1217,14 @@ case "${1:-}" in
   uninstall) _coolbash_cmd_uninstall ;;
   init) _coolbash_cmd_init ;;
   version) _coolbash_cmd_version ;;
-  doctor) _coolbash_cmd_doctor ;;
+  doctor)
+    shift
+    _coolbash_cmd_doctor "$@"
+    ;;
+  changelog)
+    shift
+    _coolbash_cmd_changelog "$@"
+    ;;
   config) _coolbash_cmd_config ;;
   fortune)
     shift

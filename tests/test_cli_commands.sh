@@ -368,9 +368,9 @@ assert_eq "tidy : refuse un .bashrc compilé" "1" "$(
 sed -i 's/^# COOLBASH-COMPILED .*/# COOLBASH-COMPILED 0.1.0/' "${home}/.bashrc"
 assert_contains "doctor : un compilé d'une autre version demande une recompilation" "$(cli_home doctor)" "recompile"
 # setup : mode compiled → compile --write ; retour au mode source → une ligne
-# FR : 26 questions avant celle du mode (la 27e) — pas de configuration existante ici.
+# FR : 27 questions avant celle du mode (la 28e) — pas de configuration existante ici.
 su="$({
-  printf '\n%.0s' {1..26}
+  printf '\n%.0s' {1..27}
   printf '2\n'
 } | cli_home setup)"
 assert_contains "setup : mode compiled → ~/.bashrc compilé" "$(head -4 "${home}/.bashrc")" "# COOLBASH-COMPILED $(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" version)"
@@ -402,6 +402,50 @@ doc="$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbas
 rc=$?
 assert_eq "doctor échoue si le .bashrc ne charge pas CoolBash" "1" "${rc}"
 assert_contains "…et le dit" "${doc}" "✘"
+
+# --- changelog : ce qui a changé --------------------------------------------------------
+cur="$(bash "${COOLBASH_TEST_ROOT}/cli/coolbash" version)"
+assert_file "make install copie CHANGELOG.md dans ~/.coolbash" "${home}/.coolbash/CHANGELOG.md"
+assert_contains "changelog sans argument : la section de la version installée" "$(cli_home changelog)" "${cur} —"
+assert_eq "…et seulement elle" "1" "$(cli_home changelog | grep -cE '^[0-9]+\.[0-9]+\.[0-9]+ —')"
+assert_contains "changelog --since 0.30.1 : les versions suivantes" "$(cli_home changelog --since 0.30.1)" "0.31.0 —"
+assert_eq "…pas la 0.30.1 elle-même ni avant" "0" "$(cli_home changelog --since 0.30.1 | grep -c '0.30.1 —\|0.30.0 —')"
+assert_eq "changelog X.Y.Z = --since X.Y.Z" "$(cli_home changelog --since 0.30.1)" "$(cli_home changelog 0.30.1)"
+assert_contains "changelog : les sous-titres sans leurs ###" "$(cli_home changelog)" "Ajouté"
+assert_eq "changelog --since abc : usage, code 1" "1" "$(
+  cli_home changelog --since abc >/dev/null
+  echo $?
+)"
+assert_eq "changelog --next sans clone git : erreur explicite, code 1" "1" "$(
+  mkdir -p "${COOLBASH_TEST_TMP}/nogit"
+  COOLBASH_REPO="${COOLBASH_TEST_TMP}/nogit" cli_home changelog --next >/dev/null
+  echo $?
+)"
+assert_contains "coolbash help changelog" "$(cli_home help changelog)" "--next"
+
+# --- doctor --fix --------------------------------------------------------------------------
+fhome="${COOLBASH_TEST_TMP}/fixhome"
+mkdir -p "${fhome}"
+make -s -C "${home}/clone" install PREFIX="${fhome}/.coolbash" BASHRC="${fhome}/.bashrc" >/dev/null
+fcli_home() { HOME="${fhome}" COOLBASH_PREFIX="${fhome}/.coolbash" COOLBASH_FONT=0 bash "${fhome}/.coolbash/cli/coolbash" "$@" 2>&1; }
+# FR : delta présent sur la machine → un pager git déjà réglé, pour que « sain » le soit.
+printf '[core]\n\tpager = delta\n' >|"${fhome}/.gitconfig"
+assert_contains "doctor --fix sur une installation saine : rien à réparer" "$(fcli_home doctor --fix)" "rien à réparer"
+printf '# mon bashrc\nalias ll="ls -l"\n' >|"${fhome}/.bashrc"
+assert_contains "doctor : ligne source absente → propose --fix" "$(fcli_home doctor)" "doctor --fix répare : bashrc"
+assert_contains "doctor --fix : ajoute la ligne source" "$(fcli_home doctor --fix)" "ligne source ajoutée"
+assert_contains "…dans le ~/.bashrc" "$(cat "${fhome}/.bashrc")" 'cli/coolbash" init'
+assert_eq "…l'original est sauvegardé" "1" "$(compgen -G "${fhome}/.bashrc.avant-coolbash-*" | wc -l)"
+assert_eq "…et doctor repasse au vert (code 0)" "0" "$(
+  fcli_home doctor >/dev/null
+  echo $?
+)"
+printf '# COOLBASH-COMPILED 0.0.1\n' >|"${fhome}/.bashrc"
+assert_contains "doctor --fix : ~/.bashrc compilé d'une autre version → recompilé" "$(fcli_home doctor --fix)" "compilé :"
+assert_contains "…à la version courante" "$(head -5 "${fhome}/.bashrc")" "# COOLBASH-COMPILED ${cur}"
+rm -rf "${fhome}/.coolbash/modules"
+assert_contains "doctor --fix : modules absents → make install sans questionnaire" "$(fcli_home doctor --fix)" "make install"
+assert_file "…les modules sont de retour" "${fhome}/.coolbash/modules/00-core.bash"
 
 # --- quiet : mode présentation ---------------------------------------------------
 qpfx="${COOLBASH_TEST_TMP}/quiet-pfx"

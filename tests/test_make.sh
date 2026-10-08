@@ -165,10 +165,16 @@ git -C "${upd}/clone" push -q
 out="$(mkup 2>&1)"
 assert_contains "première installation : version annoncée" "${out}" "1.0.0"
 sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.1.0"/' "${upd}/clone/cli/coolbash"
+printf '# Changelog\n\n## 1.1.0 — 2026-01-01 · « Test »\n### Ajouté\n- une nouveauté de test\n\n## 1.0.0 — 2025-12-31 · « Base »\n- ancienne\n' >|"${upd}/clone/CHANGELOG.md"
 git -C "${upd}/clone" add -A
 git -C "${upd}/clone" commit -qm "v1.1.0"
 git -C "${upd}/clone" push -q
-assert_contains "update annonce l'ancienne et la nouvelle version" "$(mkup 2>&1)" "1.0.0 → 1.1.0"
+out="$(mkup 2>&1)"
+assert_contains "update annonce l'ancienne et la nouvelle version" "${out}" "1.0.0 → 1.1.0"
+assert_contains "update affiche les nouveautés depuis l'ancienne version" "${out}" "Nouveautés depuis la 1.0.0"
+assert_contains "…les puces de la 1.1.0" "${out}" "une nouveauté de test"
+assert_eq "…pas celles de la 1.0.0" "0" "$(printf '%s\n' "${out}" | grep -c 'ancienne')"
+assert_file "update copie le CHANGELOG dans le préfixe" "${upd}/.coolbash/CHANGELOG.md"
 assert_contains "update sans changement : déjà à jour" "$(mkup 2>&1)" "déjà à jour (1.1.0)"
 printf '#!/usr/bin/env bash\nexit 1\n' >"${upd}/clone/tests/test_ko.sh"
 sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.2.0"/' "${upd}/clone/cli/coolbash"

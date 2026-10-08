@@ -37,6 +37,10 @@ install:
 	  [[ "$$f" -ef "$$dest" ]] && continue; \
 	  cp "$$f" "$$dest.new" && mv -f "$$dest.new" "$$dest"; \
 	done
+	@# FR : le CHANGELOG, pour `coolbash changelog` (copie puis mv, comme le reste).
+	@if [[ -f CHANGELOG.md ]] && ! [[ CHANGELOG.md -ef "$(PREFIX)/CHANGELOG.md" ]]; then \
+	  cp CHANGELOG.md "$(PREFIX)/CHANGELOG.md.new" && mv -f "$(PREFIX)/CHANGELOG.md.new" "$(PREFIX)/CHANGELOG.md"; \
+	fi
 	@[[ "$(ROOT)" -ef "$(PREFIX)" ]] || echo "$(ROOT)" >| "$(PREFIX)/.repo"
 	@touch "$(BASHRC)"
 	@# FR : première installation sur un .bashrc non vide → copie « avant CoolBash »
@@ -69,6 +73,11 @@ update:
 	old="$$(ver)"; \
 	git -C "$(ROOT)" pull --rebase || { echo "[CoolBash] ✘ git pull en échec : rien n'a été installé (version en place : $${old:-aucune})." >&2; exit 1; }; \
 	$(MAKE) -C "$(ROOT)" test || { echo "[CoolBash] ✘ Tests en échec : rien n'a été installé (version en place : $${old:-aucune})." >&2; exit 1; }; \
+	new="$$(sed -n 's/^COOLBASH_VERSION="\(.*\)"/\1/p' cli/coolbash)"; \
+	if [[ -n "$$old" && "$$old" != "$$new" && -f CHANGELOG.md ]]; then \
+	  echo "[CoolBash] Nouveautés depuis la $$old :"; \
+	  COOLBASH_PREFIX="$(PREFIX)" bash cli/coolbash changelog --since "$$old" | sed 's/^/  /'; \
+	fi; \
 	$(MAKE) -C "$(ROOT)" install || exit 1; \
 	new="$$(ver)"; \
 	if [[ -z "$$old" ]]; then echo "[CoolBash] Version installée : $$new"; \

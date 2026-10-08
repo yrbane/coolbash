@@ -228,7 +228,7 @@ _coolbash_motd_update() {
   local v
   read -r v 2>/dev/null <"${COOLBASH_PREFIX:-$HOME/.coolbash}/.update-available" || return 0
   [[ -n "$v" && "$v" != "${COOLBASH_VERSION:-}" ]] || return 0
-  printf '\e[33m⇡ CoolBash %s disponible\e[0m (installée : %s) → coolbash update\n' "$v" "${COOLBASH_VERSION:-?}"
+  printf '\e[33m⇡ CoolBash %s disponible\e[0m (installée : %s) → coolbash update · coolbash changelog --next\n' "$v" "${COOLBASH_VERSION:-?}"
 }
 
 # FR : ~/.coolbash/motd.png (ou .jpg) affiché par `img` (module 43-images) si le

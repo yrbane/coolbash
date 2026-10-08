@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.31.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.32.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -73,6 +73,7 @@ coolbash <command>
 | `theme`     | `theme` liste les palettes du prompt avec un aperçu ; `theme nord` l'enregistre (`~/.coolbash/theme`) et l'applique au shell courant ; `theme --preview nord [--full]` rend l'aperçu seul |
 | `sync`      | `sync [--update] [--overrides] user@host…` (Tab propose les hôtes de `~/.ssh/config`) : pousse `fortunes/`, `motd.txt` et `theme` vers `~/.coolbash` d'autres machines par rsync sur SSH ; `--overrides` ajoute `90-local-overrides`, `--update` y lance `coolbash update` |
 | `bench`     | `bench [N]` : N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module |
+| `changelog` | Ce qui a changé : sans argument la version installée ; `changelog --since 0.30.0` ; `--next` ce que la mise à jour disponible apporterait ; `--all` dans le pager. `update` l'affiche avant le questionnaire |
 | `doctor`    | Diagnostic : bash, `.bashrc`, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton `~/.bashrc` refait à la main (nvm, cargo, PATH, alias…) alors qu'un module s'en charge |
 | `help`      | Affiche l’aide de la CLI ; `help <commande>` le détail. La complétion Tab de `coolbash` connaît les sous-commandes, les thèmes et les thèmes de citations |
 
@@ -103,6 +104,7 @@ coolbash/
 │   ├─ 41-navigation.bash
 │   ├─ 42-workspace.bash
 │   ├─ 43-images.bash
+│   ├─ 45-tmux.bash
 │   ├─ 50-prompt.bash
 │   ├─ 60-completion.bash
 │   ├─ 70-motd.bash
@@ -136,6 +138,7 @@ coolbash/
 | `35-toolchains.bash`      | SDK du HOME dans le `PATH` (cargo, pnpm, Android, foundry), nvm paresseux |
 | `40-functions.bash`       | Fonctions utilitaires (`mkcd`, `extract`, `timer`, `backup`, `whoport`, `serve`, `cheat`…) |
 | `43-images.bash`          | `img [-w colonnes] fichier…` : images dans le terminal (protocole kitty, iTerm2, sixel, sinon chafa/viu/timg) ; `~/.coolbash/motd.png` dans le MOTD |
+| `45-tmux.bash`            | En SSH, attache ou crée la session tmux à la connexion (`COOLBASH_TMUX_SSH=1`, opt-in) |
 | `42-workspace.bash`       | Hooks de projet (`.coolbash.bash` après `coolbash allow`), `todo`, `remind`, `retry`, presse-papiers (`copy`, `paste`, `copypath`) |
 | `41-navigation.bash`      | `j` (saut de dossier par fréquence, pur bash), `bd`, `h`, `hstats`, paquet suggéré pour une commande introuvable |
 | `50-prompt.bash`          | Prompt dynamique (git, venv, durée, emoji, icônes)  |
@@ -292,6 +295,7 @@ Variables lues au chargement (via `config.bash`, avant la ligne `source` du `.ba
 | `COOLBASH_PROMPT_OSC133=0`      | Pas de marques de prompt OSC 133 (émises sinon sur kitty, foot, wezterm, ghostty… : saut de prompt en prompt, sélection de la sortie d'une commande ; jamais en doublon de l'intégration du terminal) |
 | `COOLBASH_PROMPT_SHLVL=0`       | Pas de niveau de shell (`⧉ 2` dans un sous-shell : `bash`, `please`, `nix-shell`) |
 | `COOLBASH_HIST_SECRETS=0`       | Enregistrer aussi dans l'historique les lignes contenant `password=`, `token=`, `api_key=`, `--password x`, `Bearer x`… (tenues à l'écart sinon, via `HISTIGNORE`) |
+| `COOLBASH_TMUX_SSH=1`           | En SSH, attacher ou créer la session tmux dès la connexion (`exec`, détacher ferme la connexion) ; `COOLBASH_TMUX_SESSION` la nomme (`main`) |
 | `COOLBASH_QUIET=1`              | Mode présentation (`coolbash quiet`) : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage |
 | `COOLBASH_PROMPT_CONTAINER_MARKERS` | Fichiers révélant un conteneur (défaut `/.dockerenv /run/.containerenv`) |
 | `PROMPT_DIRTRIM`                | Dossiers gardés dans `\w` (défaut `3`, réglage bash natif)             |

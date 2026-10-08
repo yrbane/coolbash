@@ -39,7 +39,7 @@ declare -A SINCE=(
   [COOLBASH_PROMPT_THEME]=0.19.0 [COOLBASH_UPDATE_CHECK]=0.19.0
   [COOLBASH_J]=0.20.0 [COOLBASH_CNF]=0.20.0 [COOLBASH_GIT_GUARD]=0.21.0
   [COOLBASH_HOOKS]=0.22.0 [COOLBASH_PROMPT_CLOUD]=0.23.0 [COOLBASH_INSTALL_MODE]=0.26.0
-  [COOLBASH_PROMPT_OSC133]=0.30.0 [COOLBASH_HIST_SECRETS]=0.30.0
+  [COOLBASH_PROMPT_OSC133]=0.30.0 [COOLBASH_HIST_SECRETS]=0.30.0 [COOLBASH_TMUX_SSH]=0.32.0
 )
 
 # FR : relit le config.bash actuel : sa version et les valeurs déjà choisies.
@@ -251,6 +251,7 @@ _yesno COOLBASH_CNF "Suggérer le paquet quand une commande est introuvable ?" 1
 _yesno COOLBASH_FZF "Raccourcis fzf (Ctrl-R, Ctrl-T, Alt-C) s'il est installé ?" 1
 _yesno COOLBASH_HIST_SECRETS "Tenir les secrets hors de l'historique (password=, token=, api_key=, Bearer…) ?" 1
 _text COOLBASH_SERVE_PORT "Premier port essayé par serve :" 8000 '[0-9]{2,5}'
+_yesno COOLBASH_TMUX_SSH "En SSH, attacher (ou créer) une session tmux à la connexion (détacher = Ctrl-b d) ?" 0
 _choice COOLBASH_MODE "Mode du shell :" normal \
   "normal|normal — tout CoolBash" "safe|safe — shell minimal (le défaut de root) : ni MOTD, ni git dans le prompt, ni completion différée"
 
