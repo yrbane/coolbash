@@ -12,15 +12,46 @@
 #      Un `PREFIX=` générique a déjà cassé nvm — voir tests/test_cli_isolation.sh
 # =============================================================================
 
-COOLBASH_VERSION="0.33.0"
+COOLBASH_VERSION="0.34.0"
 COOLBASH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 COOLBASH_MODULE_DIR="${COOLBASH_MODULE_DIR:-${COOLBASH_PREFIX}/modules}"
 
+# FR : messages traduits (share/lang) : français dans le source, anglais si la
+#      langue de l'utilisateur n'est pas le français (COOLBASH_LANG=fr|en force).
+# shellcheck disable=SC1091
+[[ -r "${COOLBASH_ROOT}/share/lang/_lang.bash" ]] && source "${COOLBASH_ROOT}/share/lang/_lang.bash"
+declare -F _coolbash_lang_init >/dev/null 2>&1 && _coolbash_lang_init "${COOLBASH_ROOT}/share/lang"
+# FR : sans share/lang (CLI copiée seule) : les messages restent en français.
+if ! declare -F _coolbash_t >/dev/null 2>&1; then
+  _coolbash_t() { printf '%s' "$1"; }
+  _coolbash_say() {
+    local _cs_f="$1"
+    shift
+    # shellcheck disable=SC2059
+    printf "$_cs_f" "$@"
+  }
+fi
+
 # -----------------------------------------------------------------------------
 #  Helpers d'affichage
-_coolbash_log() { printf '\e[32m[CoolBash]\e[0m %s\n' "$*"; }
-_coolbash_error() { printf '\e[31m[Error]\e[0m %s\n' "$*" >&2; }
+# FR : un seul argument = texte tel quel ; plusieurs = format traduit + arguments.
+_coolbash_log() {
+  if (($# > 1)); then
+    printf '\e[32m[CoolBash]\e[0m '
+    _coolbash_say "$@"
+    printf '\n'
+  else printf '\e[32m[CoolBash]\e[0m %s\n' "$(_coolbash_t "$*")"; fi
+}
+_coolbash_error() {
+  {
+    if (($# > 1)); then
+      printf '\e[31m[Error]\e[0m '
+      _coolbash_say "$@"
+      printf '\n'
+    else printf '\e[31m[Error]\e[0m %s\n' "$(_coolbash_t "$*")"; fi
+  } >&2
+}
 
 # -----------------------------------------------------------------------------
 #  FR : les commandes de gestion délèguent au Makefile du clone git.
@@ -31,7 +62,7 @@ _coolbash_make() {
   repo="${COOLBASH_REPO:-$(cat "${COOLBASH_PREFIX}/.repo" 2>/dev/null)}"
   repo="${repo:-${COOLBASH_ROOT}}"
   if [[ ! -f "${repo}/Makefile" ]]; then
-    _coolbash_error "Aucun Makefile dans ${repo} : lance cette commande depuis un clone git de CoolBash (ou définis COOLBASH_REPO)."
+    _coolbash_error 'Aucun Makefile dans %s : lance cette commande depuis un clone git de CoolBash (ou définis COOLBASH_REPO).' "$repo"
     return 1
   fi
   make -C "${repo}" "$@"
@@ -47,7 +78,7 @@ _coolbash_cmd_update() {
   repo="${COOLBASH_REPO:-$(cat "${COOLBASH_PREFIX}/.repo" 2>/dev/null)}"
   repo="${repo:-${COOLBASH_ROOT}}"
   if [[ -f "${repo}/Makefile" && ! -d "${repo}/.git" ]]; then
-    _coolbash_error "${repo} n'est pas un clone git : CoolBash est installé par paquet — mets-le à jour avec ton gestionnaire de paquets (pacman -Syu, apt upgrade), puis : coolbash install"
+    _coolbash_error "%s n'est pas un clone git : CoolBash est installé par paquet — mets-le à jour avec ton gestionnaire de paquets (pacman -Syu, apt upgrade), puis : coolbash install" "$repo"
     return 1
   fi
   _coolbash_make update
@@ -64,19 +95,20 @@ _coolbash_cmd_version() { printf '%s\n' "${COOLBASH_VERSION}"; }
 #      un sous-processus ne les verrait pas. Format : nom|défaut|rôle.
 _coolbash_cmd_config() {
   local name def desc val state
-  printf 'CoolBash %s — réglages (à définir avant la ligne source du ~/.bashrc)\n\n' "${COOLBASH_VERSION}"
+  _coolbash_say 'CoolBash %s — réglages (à définir avant la ligne source du ~/.bashrc)\n\n' "${COOLBASH_VERSION}"
   while IFS='|' read -r name def desc; do
     [[ -n "$name" ]] || continue
     if [[ -n "${!name+x}" ]]; then
       val="${!name}"
-      state="défini"
+      state="$(_coolbash_t 'défini')"
     else
       val="$def"
-      state="défaut"
+      state="$(_coolbash_t 'défaut')"
     fi
-    printf '  %-34s %-12s %-7s %s\n' "$name" "${val:-(vide)}" "$state" "$desc"
+    printf '  %-34s %-12s %-7s %s\n' "$name" "${val:-$(_coolbash_t '(vide)')}" "$state" "$(_coolbash_t "$desc")"
   done <<'COOLBASH_CONFIG'
 COOLBASH_MODE|normal|normal ou safe (défaut pour root) : shell minimal
+COOLBASH_LANG|(locale)|langue des messages : fr ou en (sinon d'après LANG, LC_ALL, LC_MESSAGES)
 COOLBASH_DISABLE||modules à ne pas charger, ex. "70-motd 33"
 COOLBASH_PROMPT_ICONS|nerd|nerd, basic (Unicode standard) ou 0
 COOLBASH_PROMPT_EMOJI|(aléatoire)|emoji de session, vide = aucun
@@ -139,41 +171,41 @@ _coolbash_cmd_doctor() {
     printf '  \e[31m✘\e[0m %s\n' "${COOLBASH_DOCTOR_LABEL}"
     ko=$((ko + 1))
   fi; }
-  _coolbash_opt() { if command -v "$1" >/dev/null 2>&1; then printf '  \e[32m✔\e[0m %-10s %s\n' "$1" "$2"; else printf '  \e[33m–\e[0m %-10s %s (absent)\n' "$1" "$2"; fi; }
-  printf 'CoolBash %s — doctor\n\nRequis :\n' "${COOLBASH_VERSION}"
-  COOLBASH_DOCTOR_LABEL="bash ≥ 4.4 (${BASH_VERSION})"
+  _coolbash_opt() { if command -v "$1" >/dev/null 2>&1; then printf '  \e[32m✔\e[0m %-10s %s\n' "$1" "$(_coolbash_t "$2")"; else _coolbash_say '  \e[33m–\e[0m %-10s %s (absent)\n' "$1" "$(_coolbash_t "$2")"; fi; }
+  _coolbash_say 'CoolBash %s — doctor\n\nRequis :\n' "${COOLBASH_VERSION}"
+  COOLBASH_DOCTOR_LABEL="$(_coolbash_say 'bash ≥ 4.4 (%s)' "$BASH_VERSION")"
   _coolbash_req test "${BASH_VERSINFO[0]}${BASH_VERSINFO[1]}" -ge 44
   if grep -q '^# COOLBASH-COMPILED ' "${bashrc}" 2>/dev/null; then
     n="$(sed -n 's/^# COOLBASH-COMPILED //p' "${bashrc}" | head -1)"
-    COOLBASH_DOCTOR_LABEL="${bashrc} autonome (compilé, CoolBash ${n})"
+    COOLBASH_DOCTOR_LABEL="$(_coolbash_say '%s autonome (compilé, CoolBash %s)' "$bashrc" "$n")"
     _coolbash_req test "$n" = "${COOLBASH_VERSION}"
     [[ "$n" == "${COOLBASH_VERSION}" ]] || {
-      printf '               → recompile : coolbash compile --write (make install le fait en mode compiled)\n'
+      _coolbash_say '               → recompile : coolbash compile --write (make install le fait en mode compiled)\n'
       _coolbash_fix_add compile
     }
   else
-    COOLBASH_DOCTOR_LABEL="${bashrc} charge cli/coolbash"
+    COOLBASH_DOCTOR_LABEL="$(_coolbash_say '%s charge cli/coolbash' "$bashrc")"
     _coolbash_req grep -qF 'cli/coolbash' "${bashrc}"
     grep -qF 'cli/coolbash' "${bashrc}" 2>/dev/null || _coolbash_fix_add bashrc
   fi
-  COOLBASH_DOCTOR_LABEL="CLI installée : ${COOLBASH_PREFIX}/cli/coolbash"
+  COOLBASH_DOCTOR_LABEL="$(_coolbash_say 'CLI installée : %s/cli/coolbash' "$COOLBASH_PREFIX")"
   _coolbash_req test -x "${COOLBASH_PREFIX}/cli/coolbash"
   [[ -x "${COOLBASH_PREFIX}/cli/coolbash" ]] || _coolbash_fix_add install
   n=0
   for f in "${COOLBASH_MODULE_DIR}"/*.bash; do [[ -r "$f" ]] && n=$((n + 1)); done
-  COOLBASH_DOCTOR_LABEL="modules chargés : ${n} dans ${COOLBASH_MODULE_DIR}"
+  COOLBASH_DOCTOR_LABEL="$(_coolbash_say 'modules chargés : %s dans %s' "$n" "$COOLBASH_MODULE_DIR")"
   _coolbash_req test "$n" -gt 0
   ((n > 0)) || _coolbash_fix_add install
   n=0
   for f in "${COOLBASH_ROOT}"/share/fortunes/*.txt "${COOLBASH_PREFIX}"/fortunes/*.txt; do [[ -s "$f" ]] && n=$((n + 1)); done
-  COOLBASH_DOCTOR_LABEL="citations : ${n} thème(s) dans ${COOLBASH_ROOT}/share/fortunes (+ ${COOLBASH_PREFIX}/fortunes)"
+  COOLBASH_DOCTOR_LABEL="$(_coolbash_say 'citations : %s thème(s) dans %s/share/fortunes (+ %s/fortunes)' "$n" "$COOLBASH_ROOT" "$COOLBASH_PREFIX")"
   _coolbash_req test "$n" -gt 0
   ((n > 0)) || _coolbash_fix_add install
   loc="${LC_ALL:-${LANG:-}}"
-  COOLBASH_DOCTOR_LABEL="locale ${loc:-non définie} présente sur la machine"
+  COOLBASH_DOCTOR_LABEL="$(_coolbash_say 'locale %s présente sur la machine' "${loc:-$(_coolbash_t 'non définie')}")"
   # shellcheck disable=SC2016
   _coolbash_req bash -c 'locale -a 2>/dev/null | tr "[:upper:]" "[:lower:]" | tr -d "-" | grep -qx "$(echo "$1" | tr "[:upper:]" "[:lower:]" | tr -d "-")"' _ "${loc:-C}"
-  printf '\nOptionnels :\n'
+  _coolbash_say '\nOptionnels :\n'
   _coolbash_opt git "segment git du prompt"
   _coolbash_opt cowsay "MOTD"
   _coolbash_opt lolcat "MOTD (couleurs)"
@@ -181,29 +213,29 @@ _coolbash_cmd_doctor() {
   _coolbash_opt dircolors "couleurs ls"
   _coolbash_opt shellcheck "make lint"
   _coolbash_opt shfmt "make lint / make fmt (style)"
-  printf '               → coolbash deps : tout ce qui manque, et la commande pour l\x27installer\n'
+  _coolbash_say "               → coolbash deps : tout ce qui manque, et la commande pour l'installer\n"
   if command -v delta >/dev/null 2>&1 && ! git config --global --get core.pager >/dev/null 2>&1; then
-    printf '               → delta est installé : git config --global core.pager delta\n'
+    _coolbash_say '               → delta est installé : git config --global core.pager delta\n'
     _coolbash_fix_add delta
   fi
   # FR : icônes du prompt — 0 = Nerd Font présente, 1 = absente, 2 = fc-list absent.
   bash "${COOLBASH_ROOT}/cli/coolbash-font" status
   n=$?
   case "$n" in
-    0) printf '  \e[32m✔\e[0m %-10s %s\n' "police" "Nerd Font installée (icônes du prompt) — à sélectionner dans le profil du terminal" ;;
+    0) printf '  \e[32m✔\e[0m %-10s %s\n' "$(_coolbash_t police)" "$(_coolbash_t 'Nerd Font installée (icônes du prompt) — à sélectionner dans le profil du terminal')" ;;
     1)
-      printf '  \e[33m–\e[0m %-10s %s\n' "police" "Nerd Font absente : les icônes du prompt seront illisibles"
-      printf '               → lance « coolbash font », puis choisis la police dans ton terminal\n'
-      printf '               → ou sans police : export COOLBASH_PROMPT_ICONS=basic avant la ligne source du .bashrc\n'
+      printf '  \e[33m–\e[0m %-10s %s\n' "$(_coolbash_t police)" "$(_coolbash_t 'Nerd Font absente : les icônes du prompt seront illisibles')"
+      _coolbash_say '               → lance « coolbash font », puis choisis la police dans ton terminal\n'
+      _coolbash_say '               → ou sans police : export COOLBASH_PROMPT_ICONS=basic avant la ligne source du .bashrc\n'
       [[ "${COOLBASH_FONT:-1}" == 0 ]] || _coolbash_fix_add font
       ;;
-    *) printf '  \e[33m–\e[0m %-10s %s\n' "police" "indéterminé (fc-list absent) — sans Nerd Font : COOLBASH_PROMPT_ICONS=basic" ;;
+    *) printf '  \e[33m–\e[0m %-10s %s\n' "$(_coolbash_t police)" "$(_coolbash_t 'indéterminé (fc-list absent) — sans Nerd Font : COOLBASH_PROMPT_ICONS=basic')" ;;
   esac
   if [[ -n "${SSH_CONNECTION:-}${SSH_TTY:-}${SSH_CLIENT:-}" ]]; then
-    printf '               ⚠ session SSH : la police doit être sur la machine qui affiche le terminal, pas ici\n'
+    _coolbash_say '               ⚠ session SSH : la police doit être sur la machine qui affiche le terminal, pas ici\n'
   fi
   grep -q '^# COOLBASH-COMPILED ' "$bashrc" 2>/dev/null || _coolbash_doctor_bashrc "$bashrc"
-  printf '\nMode : %s%s\n' "${COOLBASH_MODE:-$([[ $EUID -eq 0 ]] && echo safe || echo normal)}" "${COOLBASH_DISABLE:+ · désactivés : ${COOLBASH_DISABLE}}"
+  _coolbash_say '\nMode : %s%s\n' "${COOLBASH_MODE:-$([[ $EUID -eq 0 ]] && echo safe || echo normal)}" "${COOLBASH_DISABLE:+ · $(_coolbash_t 'désactivés') : ${COOLBASH_DISABLE}}"
   unset -f _coolbash_req _coolbash_opt
   unset COOLBASH_DOCTOR_LABEL
   if ((fix)); then
@@ -215,7 +247,7 @@ _coolbash_cmd_doctor() {
       _coolbash_log "doctor --fix : terminé — relance coolbash doctor pour vérifier."
     fi
   elif ((${#fixes[@]})); then
-    printf '\n               → coolbash doctor --fix répare : %s\n' "${fixes[*]}"
+    _coolbash_say '\n               → coolbash doctor --fix répare : %s\n' "${fixes[*]}"
   fi
   unset -f _coolbash_fix_add
   ((ko == 0))
@@ -228,7 +260,7 @@ _coolbash_doctor_fix() {
     bashrc)
       [[ -s "$bashrc" ]] && ! ls "${bashrc}".avant-coolbash-* >/dev/null 2>&1 && command cp -a -- "$bashrc" "${bashrc}.avant-coolbash-$(printf '%(%Y-%m-%d)T' -1)"
       printf 'source "%s/cli/coolbash" init\n' "${COOLBASH_PREFIX}" >>"$bashrc" || return 1
-      _coolbash_log "réparé : ligne source ajoutée à ${bashrc}"
+      _coolbash_log 'réparé : ligne source ajoutée à %s' "$bashrc"
       ;;
     compile) _coolbash_cmd_compile --write ;;
     install)
@@ -259,19 +291,20 @@ _coolbash_fortune_files() {
 #      thèmes) ; --search mot [thème…] cherche dans les citations ; --stats compte
 #      par thème ; --add "texte" [thème] ajoute à un thème personnel.
 _coolbash_cmd_fortune() {
-  local text motd="${COOLBASH_MODULE_DIR}/70-motd.bash" f theme n total=0
+  local text motd="${COOLBASH_MODULE_DIR}/70-motd.bash" f theme n total=0 src
   local -a files
   [[ "${1:-}" == --theme ]] && shift
   if [[ "${1:-}" == --stats ]]; then
     _coolbash_fortune_files files
-    printf 'CoolBash %s — citations par thème\n\n' "${COOLBASH_VERSION}"
+    _coolbash_say 'CoolBash %s — citations par thème\n\n' "${COOLBASH_VERSION}"
     for f in "${files[@]}"; do
       theme="${f##*/}"
       n=$(grep -c . "$f")
       total=$((total + n))
-      printf '  %-14s %6d  %s\n' "${theme%.txt}" "$n" "$([[ "$f" == "${COOLBASH_PREFIX}"/* ]] && printf 'perso (%s)' "$f" || printf 'embarqué')"
+      if [[ "$f" == "${COOLBASH_PREFIX}"/* ]]; then src="$(_coolbash_say 'perso (%s)' "$f")"; else src="$(_coolbash_t 'embarqué')"; fi
+      printf '  %-14s %6d  %s\n' "${theme%.txt}" "$n" "$src"
     done
-    printf '\n  %-14s %6d  (COOLBASH_FORTUNE : %s)\n' total "$total" "${COOLBASH_FORTUNE:-tous, les personnels comptent double}"
+    printf '\n  %-14s %6d  (COOLBASH_FORTUNE : %s)\n' total "$total" "${COOLBASH_FORTUNE:-$(_coolbash_t 'tous, les personnels comptent double')}"
     return 0
   fi
   if [[ "${1:-}" == --search ]]; then
@@ -292,10 +325,10 @@ _coolbash_cmd_fortune() {
       done < <(grep -i -- "$motif" "$f")
     done
     ((hits)) || {
-      _coolbash_error "aucune citation ne contient « $motif »"
+      _coolbash_error 'aucune citation ne contient « %s »' "$motif"
       return 1
     }
-    printf '\n  %d citation(s)\n' "$hits"
+    _coolbash_say '\n  %d citation(s)\n' "$hits"
     return 0
   fi
   # FR : --add "texte" [thème] → ~/.coolbash/fortunes/<thème>.txt (perso par défaut).
@@ -307,13 +340,13 @@ _coolbash_cmd_fortune() {
       return 1
     }
     [[ "$theme" =~ ^[a-z0-9_-]+$ ]] || {
-      _coolbash_error "thème invalide : $theme (minuscules, chiffres, - et _)"
+      _coolbash_error 'thème invalide : %s (minuscules, chiffres, - et _)' "$theme"
       return 1
     }
     file="${COOLBASH_PREFIX}/fortunes/${theme}.txt"
     mkdir -p "${COOLBASH_PREFIX}/fortunes" && printf '%s\n' "$text" >>"$file" || return 1
     n=$(grep -c . "$file")
-    _coolbash_log "ajoutée à ${file} — ${n} citation(s) dans le thème « ${theme} »"
+    _coolbash_log 'ajoutée à %s — %s citation(s) dans le thème « %s »' "$file" "$n" "$theme"
     return 0
   fi
   [[ -r "$motd" ]] || motd="${COOLBASH_ROOT}/modules/70-motd.bash"
@@ -324,7 +357,7 @@ _coolbash_cmd_fortune() {
   # shellcheck disable=SC2034
   [[ $# -gt 0 ]] && COOLBASH_FORTUNE="$*"
   if _coolbash_fortune text; then printf '%s\n' "$text"; else
-    _coolbash_error "aucune citation (thèmes : ${*:-tous})"
+    _coolbash_error 'aucune citation (thèmes : %s)' "${*:-$(_coolbash_t tous)}"
     return 1
   fi
 }
@@ -372,7 +405,7 @@ _coolbash_cmd_changelog() {
       repo="${COOLBASH_REPO:-$(cat "${COOLBASH_PREFIX}/.repo" 2>/dev/null)}"
       repo="${repo:-${COOLBASH_ROOT}}"
       [[ -d "${repo}/.git" ]] || {
-        _coolbash_error "pas de clone git (${repo}) : coolbash update d'abord"
+        _coolbash_error "pas de clone git (%s) : coolbash update d'abord" "$repo"
         return 1
       }
       git -C "$repo" show origin/main:CHANGELOG.md 2>/dev/null | _coolbash_changelog_filter "${COOLBASH_VERSION}" ""
@@ -427,7 +460,7 @@ _coolbash_cmd_bench() {
   }
   local -a run
   if command -v script >/dev/null 2>&1; then run=(script -qec "bash -ic true" /dev/null); else run=(bash -ic true); fi
-  printf 'CoolBash %s — bench : %d démarrage(s) de shell interactif (%s)\n' "$COOLBASH_VERSION" "$n" "${run[0]}"
+  _coolbash_say 'CoolBash %s — bench : %d démarrage(s) de shell interactif (%s)\n' "$COOLBASH_VERSION" "$n" "${run[0]}"
   for ((i = 1; i <= n; i++)); do
     t0="${EPOCHREALTIME//[.,]/}"
     env -u COOLBASH_MOTD_SHOWN COOLBASH_STARTUP_TIME=0 "${run[@]}" >/dev/null 2>&1
@@ -437,7 +470,7 @@ _coolbash_cmd_bench() {
     ((ms < min)) && min=$ms
     ((ms > max)) && max=$ms
   done
-  printf '  moyenne : %d ms   (min %d ms, max %d ms)\n\nPar module, du plus lourd au plus léger :\n' $((total / n)) "$min" "$max"
+  _coolbash_say '  moyenne : %d ms   (min %d ms, max %d ms)\n\nPar module, du plus lourd au plus léger :\n' $((total / n)) "$min" "$max"
   env -u COOLBASH_MOTD_SHOWN COOLBASH_STARTUP_TIME=verbose "${run[@]}" 2>/dev/null \
     | sed 's/\x1b\[[0-9;]*m//g' | grep -aE '^ +[0-9]{2}-[a-z-]+ +[0-9]+ ms' | sort -k2 -n -r
 }
@@ -470,14 +503,14 @@ _coolbash_cmd_theme() {
   cur="${COOLBASH_PROMPT_THEME:-${cur:-coolbash}}"
   if [[ "${1:-}" == --preview ]]; then
     [[ " $COOLBASH_THEMES " == *" ${2:-} "* ]] || {
-      _coolbash_error "thème inconnu : ${2:-} (disponibles : $COOLBASH_THEMES)"
+      _coolbash_error 'thème inconnu : %s (disponibles : %s)' "${2:-}" "$COOLBASH_THEMES"
       return 1
     }
     _coolbash_theme_preview "$2" "${3:+full}"
     return 0
   fi
   if [[ -z "${1:-}" ]]; then
-    printf 'Thèmes du prompt (actuel : %s) — coolbash theme <nom>\n\n' "$cur"
+    _coolbash_say 'Thèmes du prompt (actuel : %s) — coolbash theme <nom>\n\n' "$cur"
     for t in $COOLBASH_THEMES; do
       printf '  %-10s ' "$t"
       [[ "$t" == "$cur" ]] && printf '● ' || printf '  '
@@ -486,11 +519,11 @@ _coolbash_cmd_theme() {
     return 0
   fi
   [[ " $COOLBASH_THEMES " == *" $1 "* ]] || {
-    _coolbash_error "thème inconnu : $1 (disponibles : $COOLBASH_THEMES)"
+    _coolbash_error 'thème inconnu : %s (disponibles : %s)' "$1" "$COOLBASH_THEMES"
     return 1
   }
   mkdir -p "${COOLBASH_PREFIX}" && printf '%s\n' "$1" >|"$file" || return 1
-  _coolbash_log "thème « $1 » enregistré dans ${file} — ouvre un terminal, ou : source ~/.bashrc"
+  _coolbash_log 'thème « %s » enregistré dans %s — ouvre un terminal, ou : source ~/.bashrc' "$1" "$file"
 }
 
 # FR : coolbash sync [--update] [--overrides] <hôte…> — pousse tes fichiers
@@ -505,7 +538,7 @@ _coolbash_cmd_sync() {
       --update) update=1 ;;
       --overrides) overrides=1 ;;
       -*)
-        _coolbash_error "option inconnue : $a"
+        _coolbash_error 'option inconnue : %s' "$a"
         return 1
         ;;
       *) hosts+=("$a") ;;
@@ -531,7 +564,7 @@ _coolbash_cmd_sync() {
     fi
     if ((update)); then ssh "$h" 'bash ~/.coolbash/cli/coolbash update' || rc=1; fi
   done
-  ((${#src[@]} == 0 && overrides == 0)) && _coolbash_log "rien à synchroniser (pas de fortunes/, motd.txt ni theme dans ${COOLBASH_PREFIX})"
+  ((${#src[@]} == 0 && overrides == 0)) && _coolbash_log 'rien à synchroniser (pas de fortunes/, motd.txt ni theme dans %s)' "$COOLBASH_PREFIX"
   return "$rc"
 }
 
@@ -586,7 +619,7 @@ _coolbash_bashrc_why() {
 _coolbash_doctor_bashrc() {
   local file="$1" line ln=0 hits=0 why
   [[ -r "$file" ]] || return 0
-  printf '\nTon %s :\n' "$file"
+  _coolbash_say '\nTon %s :\n' "$file"
   while IFS= read -r line || [[ -n "$line" ]]; do
     ln=$((ln + 1))
     [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
@@ -594,12 +627,12 @@ _coolbash_doctor_bashrc() {
     _coolbash_bashrc_why "$line" why
     [[ -n "$why" ]] || continue
     hits=$((hits + 1))
-    printf '  \e[33m–\e[0m ligne %-4s %s\n               → %s\n' "$ln" "${line:0:60}" "$why"
+    _coolbash_say '  \e[33m–\e[0m ligne %-4s %s\n               → %s\n' "$ln" "${line:0:60}" "$(_coolbash_t "$why")"
   done <"$file"
   if ((hits == 0)); then
-    printf '  \e[32m✔\e[0m rien à déplacer : tout passe par CoolBash\n'
+    _coolbash_say '  \e[32m✔\e[0m rien à déplacer : tout passe par CoolBash\n'
   else
-    printf '               → coolbash tidy fait le tri (aperçu), coolbash tidy --apply l\x27applique\n'
+    _coolbash_say "               → coolbash tidy fait le tri (aperçu), coolbash tidy --apply l'applique\n"
   fi
   return 0
 }
@@ -615,11 +648,11 @@ _coolbash_cmd_tidy() {
   local line why keep=() move=() drop=() conv found_source=0 dir
   [[ "${1:-}" == --apply ]] && apply=1
   [[ -r "$bashrc" ]] || {
-    _coolbash_error "pas de ${bashrc}"
+    _coolbash_error 'pas de %s' "$bashrc"
     return 1
   }
   grep -q '^# COOLBASH-COMPILED ' "$bashrc" && {
-    _coolbash_error "${bashrc} est compilé (autonome) : rien à ranger — coolbash setup pour changer de mode"
+    _coolbash_error '%s est compilé (autonome) : rien à ranger — coolbash setup pour changer de mode' "$bashrc"
     return 1
   }
   while IFS= read -r line || [[ -n "$line" ]]; do
@@ -655,21 +688,21 @@ _coolbash_cmd_tidy() {
   done <"$bashrc"
   ((found_source)) || keep+=("source \"${COOLBASH_PREFIX}/cli/coolbash\" init")
   if ((${#move[@]} == 0 && ${#drop[@]} == 0)); then
-    _coolbash_log "${bashrc} est déjà rangé : rien à faire"
+    _coolbash_log '%s est déjà rangé : rien à faire' "$bashrc"
     return 0
   fi
   printf 'coolbash tidy — %s\n\n' "$bashrc"
   if ((${#drop[@]})); then
-    printf '\e[33mRetirées\e[0m (un module s\x27en charge) :\n'
+    _coolbash_say "\e[33mRetirées\e[0m (un module s'en charge) :\n"
     printf '  – %s\n' "${drop[@]}"
   fi
   if ((${#move[@]})); then
-    printf '\n\e[36mDéplacées\e[0m vers %s :\n' "$ov"
+    _coolbash_say '\n\e[36mDéplacées\e[0m vers %s :\n' "$ov"
     printf '  + %s\n' "${move[@]}"
   fi
-  printf '\n\e[32mConservé\e[0m dans %s : %d ligne(s) (commentaires et la ligne source)\n' "$bashrc" "${#keep[@]}"
+  _coolbash_say '\n\e[32mConservé\e[0m dans %s : %d ligne(s) (commentaires et la ligne source)\n' "$bashrc" "${#keep[@]}"
   if ((! apply)); then
-    printf '\nAperçu seulement — coolbash tidy --apply pour l\x27appliquer (sauvegarde automatique).\n'
+    _coolbash_say "\nAperçu seulement — coolbash tidy --apply pour l'appliquer (sauvegarde automatique).\n"
     return 0
   fi
   local backup
@@ -686,7 +719,7 @@ _coolbash_cmd_tidy() {
     ((${#move[@]})) && printf '%s\n' "${move[@]}"
   } >|"${ov}.new" && mv -f "${ov}.new" "$ov" || return 1
   printf '%s\n' "${keep[@]}" >|"${bashrc}.new" && mv -f "${bashrc}.new" "$bashrc" || return 1
-  _coolbash_log "rangé — sauvegarde : ${backup} ; recharge : source ~/.bashrc"
+  _coolbash_log 'rangé — sauvegarde : %s ; recharge : source ~/.bashrc' "$backup"
 }
 
 # FR : coolbash allow [chemin] / deny [chemin] — autoriser (ou retirer) le hook
@@ -715,7 +748,7 @@ _coolbash_cmd_allow() {
     [[ -r "$file" ]] && grep -v -- "^${hook}	" "$file"
     printf '%s\t%s\n' "$hook" "$fp"
   } >|"${file}.new" && mv -f "${file}.new" "$file" || return 1
-  _coolbash_log "autorisé : ${hook} (chargé au prochain prompt, défait en quittant le dossier)"
+  _coolbash_log 'autorisé : %s (chargé au prochain prompt, défait en quittant le dossier)' "$hook"
 }
 _coolbash_cmd_deny() {
   local hook file="${COOLBASH_PREFIX}/allowed"
@@ -727,7 +760,7 @@ _coolbash_cmd_deny() {
     grep -v -- "^${hook}	" "$file" >|"${file}.new"
     mv -f "${file}.new" "$file"
   }
-  _coolbash_log "retiré : ${hook}"
+  _coolbash_log 'retiré : %s' "$hook"
 }
 
 # FR : coolbash compile [--write | fichier] — un ~/.bashrc autonome : réglages
@@ -757,7 +790,9 @@ _coolbash_compile_emit() {
   fi
   printf '\n# ===== fonctions de la CLI =====\n'
   declare -f _coolbash_log _coolbash_error _coolbash_disabled _coolbash_shell_age_ms _coolbash_startup_report \
-    _coolbash_update_due _coolbash_update_check _coolbash_cmd_config _coolbash_shell_function _coolbash_quiet_apply
+    _coolbash_update_due _coolbash_update_check _coolbash_cmd_config _coolbash_shell_function _coolbash_quiet_apply \
+    _coolbash_lang_init _coolbash_t _coolbash_say
+  printf 'declare -gA COOLBASH_MSG\n_coolbash_lang_init "${COOLBASH_PREFIX}/share/lang"\n'
   printf '\n_coolbash_quiet_apply\n'
   printf '\n_coolbash_t0="${EPOCHREALTIME:-}"\n_coolbash_verbose=0\n'
   printf '[[ "${COOLBASH_STARTUP_TIME:-1}" == verbose && -n "$_coolbash_t0" ]] && _coolbash_verbose=1\n'
@@ -799,7 +834,7 @@ _coolbash_cmd_compile() {
     _coolbash_error "compilation échouée"
     return 1
   fi
-  _coolbash_log "compilé : ${out} (CoolBash ${COOLBASH_VERSION}, $(grep -c '' "$out") lignes) — recharge : source ${out}"
+  _coolbash_log 'compilé : %s (CoolBash %s, %s lignes) — recharge : source %s' "$out" "$COOLBASH_VERSION" "$(grep -c '' "$out")" "$out"
 }
 
 # FR : coolbash deps [--install] — les outils optionnels absents et la commande
@@ -862,7 +897,7 @@ _coolbash_cmd_deps() {
     pm=brew col=8 cmd="brew install"
   fi
   [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && gui=1
-  printf 'CoolBash %s — dépendances optionnelles%s\n\n' "$COOLBASH_VERSION" "${pm:+ (gestionnaire : $pm)}"
+  _coolbash_say 'CoolBash %s — dépendances optionnelles%s\n\n' "$COOLBASH_VERSION" "${pm:+ ($(_coolbash_t gestionnaire) : $pm)}"
   while IFS= read -r line; do
     IFS='|' read -r tool role _ <<<"$line"
     case "$tool" in
@@ -871,7 +906,7 @@ _coolbash_cmd_deps() {
       xclip) [[ -n "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]] || continue ;;
     esac
     if command -v "$tool" >/dev/null 2>&1; then
-      printf '  \e[32m✔\e[0m %-12s %s\n' "$tool" "$role"
+      printf '  \e[32m✔\e[0m %-12s %s\n' "$tool" "$(_coolbash_t "$role")"
       continue
     fi
     n=$((n + 1))
@@ -879,16 +914,16 @@ _coolbash_cmd_deps() {
     if [[ -n "$pm" ]]; then
       pkg="$(printf '%s' "$line" | cut -d'|' -f"$col")"
       if [[ "$pkg" == - ]]; then
-        printf '  \e[33m–\e[0m %-12s %s  (pas de paquet %s)\n' "$tool" "$role" "$pm"
+        _coolbash_say '  \e[33m–\e[0m %-12s %s  (pas de paquet %s)\n' "$tool" "$(_coolbash_t "$role")" "$pm"
       elif ! _coolbash_pkg_exists "$pm" "$pkg"; then
-        printf '  \e[33m–\e[0m %-12s %s  (%s : pas dans tes dépôts)\n' "$tool" "$role" "$pkg"
+        _coolbash_say '  \e[33m–\e[0m %-12s %s  (%s : pas dans tes dépôts)\n' "$tool" "$(_coolbash_t "$role")" "$pkg"
         unknown+=("$pkg")
       else
-        printf '  \e[31m✘\e[0m %-12s %s  → %s\n' "$tool" "$role" "$pkg"
+        printf '  \e[31m✘\e[0m %-12s %s  → %s\n' "$tool" "$(_coolbash_t "$role")" "$pkg"
         [[ " ${pkgs[*]} " == *" $pkg "* ]] || pkgs+=("$pkg")
       fi
     else
-      printf '  \e[31m✘\e[0m %-12s %s\n' "$tool" "$role"
+      printf '  \e[31m✘\e[0m %-12s %s\n' "$tool" "$(_coolbash_t "$role")"
     fi
   done < <(_coolbash_deps_table)
   printf '\n'
@@ -897,25 +932,25 @@ _coolbash_cmd_deps() {
     return 0
   fi
   [[ -n "$pm" ]] || {
-    _coolbash_error "gestionnaire de paquets non reconnu : installe à la main : ${missing[*]}"
+    _coolbash_error 'gestionnaire de paquets non reconnu : installe à la main : %s' "${missing[*]}"
     return 1
   }
   if ((${#pkgs[@]} == 0)); then
-    _coolbash_log "rien à installer par ${pm} pour ce qui manque.${unknown:+ Hors dépôts : ${unknown[*]}}"
+    _coolbash_log 'rien à installer par %s pour ce qui manque.%s' "$pm" "${unknown:+ $(_coolbash_t 'Hors dépôts') : ${unknown[*]}}"
     return 0
   fi
   printf '  %s %s\n' "$cmd" "${pkgs[*]}"
   if [[ "$pm" == pacman ]] && command -v yay >/dev/null 2>&1; then
-    printf '  %sAUR :%s yay -S c-lolcat  (lolcat en C, 120 ms de moins par shell)\n' $'\e[2m' $'\e[0m'
+    _coolbash_say '  %sAUR :%s yay -S c-lolcat  (lolcat en C, 120 ms de moins par shell)\n' $'\e[2m' $'\e[0m'
   fi
-  printf '  %sPolice :%s coolbash font · %sNeo-cowsay (Go, 3 ms) :%s https://github.com/Code-Hex/Neo-cowsay/releases\n' $'\e[2m' $'\e[0m' $'\e[2m' $'\e[0m'
-  printf '  %sImages :%s kitten icat vient avec le terminal kitty ; une seule méthode suffit à img (chafa va partout)\n' $'\e[2m' $'\e[0m'
+  _coolbash_say '  %sPolice :%s coolbash font · %sNeo-cowsay (Go, 3 ms) :%s https://github.com/Code-Hex/Neo-cowsay/releases\n' $'\e[2m' $'\e[0m' $'\e[2m' $'\e[0m'
+  _coolbash_say '  %sImages :%s kitten icat vient avec le terminal kitty ; une seule méthode suffit à img (chafa va partout)\n' $'\e[2m' $'\e[0m'
   if ((install)); then
     printf '\n'
     # shellcheck disable=SC2086
     $cmd "${pkgs[@]}"
   else
-    printf '\n  coolbash deps --install pour lancer cette commande.\n'
+    _coolbash_say '\n  coolbash deps --install pour lancer cette commande.\n'
   fi
 }
 
@@ -988,14 +1023,15 @@ _coolbash_startup_report() {
   ms="${total:-$init}"
   [[ -n "$ms" ]] || return 0
   if ((ms < 250)); then color='\e[32m'; elif ((ms < 700)); then color='\e[33m'; else color='\e[31m'; fi
-  printf "⚡ démarrage ${color}%s ms\e[0m" "$ms"
+  printf '%s' "$(_coolbash_t '⚡ démarrage')"
+  printf " ${color}%s ms\e[0m" "$ms"
   [[ -n "$total" && -n "$init" ]] && printf ' · CoolBash %s ms' "$init"
   printf '\n'
   if ((ms >= 250)); then
     if [[ -n "$total" && -n "$init" ]] && ((total - init > init)); then
-      printf "   → l'essentiel vient d'ailleurs : /etc/bash.bashrc, ~/.profile ou le reste du ~/.bashrc\n"
+      _coolbash_say "   → l'essentiel vient d'ailleurs : /etc/bash.bashrc, ~/.profile ou le reste du ~/.bashrc\n"
     elif [[ "${COOLBASH_STARTUP_TIME:-1}" != verbose ]]; then
-      printf '   → COOLBASH_STARTUP_TIME=verbose détaille le temps par module\n'
+      _coolbash_say '   → COOLBASH_STARTUP_TIME=verbose détaille le temps par module\n'
     fi
   fi
 }
@@ -1088,7 +1124,7 @@ _coolbash_cmd_init() {
     _coolbash_disabled "$f" && continue
     tm="${EPOCHREALTIME:-}"
     # shellcheck disable=SC1090
-    source "$f" || _coolbash_error "module en échec : $f"
+    source "$f" || _coolbash_error 'module en échec : %s' "$f"
     if ((verbose)); then
       name="${f##*/}"
       printf '   %-22s %4d ms\n' "${name%.bash}" $(((10#${EPOCHREALTIME//[.,]/} - 10#${tm//[.,]/}) / 1000))
@@ -1106,31 +1142,35 @@ _coolbash_cmd_init() {
   return 0
 }
 
-# FR : coolbash help <commande> — l'aide détaillée d'une sous-commande.
+# FR : coolbash help <commande> — l'aide détaillée d'une sous-commande (traduite).
+_coolbash_lines() {
+  local l
+  for l in "$@"; do printf '%s\n' "$(_coolbash_t "$l")"; done
+}
 _coolbash_cmd_help_topic() {
   case "$1" in
-    install) echo "coolbash install — installe (ou réinstalle) CoolBash dans ~/.coolbash et ajoute la ligne source au ~/.bashrc (sauvegardé la première fois). Installe la Nerd Font sauf COOLBASH_FONT=0." ;;
-    update) echo "coolbash update — git pull du clone, suite de tests, nouveautés depuis l'ancienne version, puis install. Annonce « x.y.z → a.b.c », « déjà à jour », ou l'échec (rien n'est installé si les tests échouent). Installé par paquet (pacman, apt) : la mise à jour vient du gestionnaire de paquets, puis coolbash install." ;;
-    deps) echo "coolbash deps [--install] — les outils optionnels absents (cowsay, lolcat, fzf, rsync, tldr, delta, shellcheck, shfmt, presse-papiers, notifications…) avec le paquet correspondant pour pacman, apt, dnf, zypper, apk ou brew, et la commande à lancer ; --install l'exécute." ;;
-    font) echo "coolbash font — installe (ou réessaie) la JetBrainsMono Nerd Font utilisée par les icônes du prompt. À sélectionner ensuite dans le profil du terminal." ;;
-    verify | lint) echo "coolbash verify — bash -n, shellcheck et shfmt sur tout le dépôt (make lint)." ;;
-    test) echo "coolbash test — la suite de tests complète (make test)." ;;
-    uninstall) echo "coolbash uninstall — supprime ~/.coolbash et la police installée, puis restaure le ~/.bashrc d'avant CoolBash s'il a été sauvegardé (sinon retire juste la ligne source)." ;;
-    init) echo "coolbash init — charge les modules dans le shell courant (c'est ce que fait la ligne source du ~/.bashrc)." ;;
-    version) echo "coolbash version — la version installée." ;;
-    doctor) echo "coolbash doctor [--fix] — diagnostic : bash, ~/.bashrc, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton ~/.bashrc refait à la main. --fix répare ce qui se répare sans question : ligne source absente, ~/.bashrc compilé d'une autre version, modules ou citations absents (make install), police (coolbash font), delta sans pager." ;;
-    changelog) echo "coolbash changelog [--since X.Y.Z | --next | --all | X.Y.Z] — ce qui a changé : sans argument la version installée ; --since X (ou X) tout depuis X ; --next ce que la mise à jour disponible apporterait ; --all tout, dans le pager. Affiché aussi par coolbash update, avant le questionnaire." ;;
-    config) echo "coolbash config — tous les réglages COOLBASH_* avec leur valeur effective (définie ou par défaut) et un mot d'explication. À définir avant la ligne source du ~/.bashrc, ou via coolbash setup." ;;
-    fortune) printf '%s\n' "coolbash fortune [--theme] [thème…] — une citation, au hasard ou dans les thèmes cités (dev unix sysadmin lois corporate absurde humour-noir moralistes proverbes sciences cinema chuck, et les tiens dans ~/.coolbash/fortunes/, qui comptent double dans le tirage)." "coolbash fortune --search <mot> [thème…] — les citations qui contiennent le mot, avec leur thème." "coolbash fortune --stats — le nombre de citations par thème." "coolbash fortune --add \"texte\" [thème] — ajoute une citation au thème (perso par défaut)." ;;
-    bench) echo "coolbash bench [N] — N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module du plus lourd au plus léger." ;;
-    theme) echo "coolbash theme [nom] — sans argument, la liste des palettes (coolbash nord dracula solarized gruvbox mono) avec un aperçu ; avec, l'enregistre dans ~/.coolbash/theme et l'applique au shell courant. theme --preview <nom> [--full] : l'aperçu seul (une ligne, ou le prompt complet)." ;;
-    sync) echo "coolbash sync [--update] [--overrides] user@host… — pousse fortunes/, motd.txt et theme vers ~/.coolbash d'autres machines (rsync sur SSH). --overrides ajoute 90-local-overrides.bash, --update y lance coolbash update." ;;
-    allow | deny) echo "coolbash allow | deny — autorise (ou retire) le hook .coolbash.bash du projet courant : sourcé à l'entrée du dossier, défait à la sortie ; modifié, il redevient non autorisé." ;;
-    setup) echo "coolbash setup [--defaults] — configuration interactive, lancée aussi à la fin de install/update (reprend la configuration existante et ne pose que les questions nouvelles) : palette, icônes, emoji, segments du prompt, seuils, MOTD (lignes, thèmes de citations), temps de démarrage, mises à jour, nvm, hooks, garde-fou git, j, suggestions, fzf, port de serve, mode. Écrit ~/.coolbash/config.bash (seuls les choix hors défaut), sourcé par init avant les modules. --defaults accepte tout." ;;
-    compile) echo "coolbash compile [--write | fichier] — génère un ~/.bashrc autonome : réglages de config.bash, modules inlinés dans l'ordre (chacun dans une fonction), fonction coolbash, vérification de mise à jour, temps de démarrage. Sans argument : sur la sortie standard ; --write remplace ~/.bashrc (sauvegardé) ; make install le régénère quand setup a choisi le mode compiled." ;;
-    tidy) echo "coolbash tidy [--apply] — range le ~/.bashrc : retire ce qu'un module prend en charge, convertit export PATH en path_prepend/append, déplace alias et fonctions dans 90-local-overrides.bash. Sans --apply, aperçu seulement ; avec, sauvegarde d'abord." ;;
-    quiet) echo "coolbash quiet [on|off|status] — mode présentation : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage, ni prompt transient — pour une démo, une capture, un enregistrement. Appliqué au shell courant et aux suivants (fichier ~/.coolbash/quiet) ; quiet off pour revenir." ;;
-    help) echo "coolbash help [commande] — cette aide, ou le détail d'une commande." ;;
+    install) _coolbash_lines "coolbash install — installe (ou réinstalle) CoolBash dans ~/.coolbash et ajoute la ligne source au ~/.bashrc (sauvegardé la première fois). Installe la Nerd Font sauf COOLBASH_FONT=0." ;;
+    update) _coolbash_lines "coolbash update — git pull du clone, suite de tests, nouveautés depuis l'ancienne version, puis install. Annonce « x.y.z → a.b.c », « déjà à jour », ou l'échec (rien n'est installé si les tests échouent). Installé par paquet (pacman, apt) : la mise à jour vient du gestionnaire de paquets, puis coolbash install." ;;
+    deps) _coolbash_lines "coolbash deps [--install] — les outils optionnels absents (cowsay, lolcat, fzf, rsync, tldr, delta, shellcheck, shfmt, presse-papiers, notifications…) avec le paquet correspondant pour pacman, apt, dnf, zypper, apk ou brew, et la commande à lancer ; --install l'exécute." ;;
+    font) _coolbash_lines "coolbash font — installe (ou réessaie) la JetBrainsMono Nerd Font utilisée par les icônes du prompt. À sélectionner ensuite dans le profil du terminal." ;;
+    verify | lint) _coolbash_lines "coolbash verify — bash -n, shellcheck et shfmt sur tout le dépôt (make lint)." ;;
+    test) _coolbash_lines "coolbash test — la suite de tests complète (make test)." ;;
+    uninstall) _coolbash_lines "coolbash uninstall — supprime ~/.coolbash et la police installée, puis restaure le ~/.bashrc d'avant CoolBash s'il a été sauvegardé (sinon retire juste la ligne source)." ;;
+    init) _coolbash_lines "coolbash init — charge les modules dans le shell courant (c'est ce que fait la ligne source du ~/.bashrc)." ;;
+    version) _coolbash_lines "coolbash version — la version installée." ;;
+    doctor) _coolbash_lines "coolbash doctor [--fix] — diagnostic : bash, ~/.bashrc, modules, citations, locale, outils optionnels, Nerd Font, et ce que ton ~/.bashrc refait à la main. --fix répare ce qui se répare sans question : ligne source absente, ~/.bashrc compilé d'une autre version, modules ou citations absents (make install), police (coolbash font), delta sans pager." ;;
+    changelog) _coolbash_lines "coolbash changelog [--since X.Y.Z | --next | --all | X.Y.Z] — ce qui a changé : sans argument la version installée ; --since X (ou X) tout depuis X ; --next ce que la mise à jour disponible apporterait ; --all tout, dans le pager. Affiché aussi par coolbash update, avant le questionnaire." ;;
+    config) _coolbash_lines "coolbash config — tous les réglages COOLBASH_* avec leur valeur effective (définie ou par défaut) et un mot d'explication. À définir avant la ligne source du ~/.bashrc, ou via coolbash setup." ;;
+    fortune) _coolbash_lines "coolbash fortune [--theme] [thème…] — une citation, au hasard ou dans les thèmes cités (dev unix sysadmin lois corporate absurde humour-noir moralistes proverbes sciences cinema chuck, et les tiens dans ~/.coolbash/fortunes/, qui comptent double dans le tirage)." "coolbash fortune --search <mot> [thème…] — les citations qui contiennent le mot, avec leur thème." "coolbash fortune --stats — le nombre de citations par thème." "coolbash fortune --add \"texte\" [thème] — ajoute une citation au thème (perso par défaut)." ;;
+    bench) _coolbash_lines "coolbash bench [N] — N ouvertures de shell interactif (20 par défaut), moyenne, min, max, puis le coût de chaque module du plus lourd au plus léger." ;;
+    theme) _coolbash_lines "coolbash theme [nom] — sans argument, la liste des palettes (coolbash nord dracula solarized gruvbox mono) avec un aperçu ; avec, l'enregistre dans ~/.coolbash/theme et l'applique au shell courant. theme --preview <nom> [--full] : l'aperçu seul (une ligne, ou le prompt complet)." ;;
+    sync) _coolbash_lines "coolbash sync [--update] [--overrides] user@host… — pousse fortunes/, motd.txt et theme vers ~/.coolbash d'autres machines (rsync sur SSH). --overrides ajoute 90-local-overrides.bash, --update y lance coolbash update." ;;
+    allow | deny) _coolbash_lines "coolbash allow | deny — autorise (ou retire) le hook .coolbash.bash du projet courant : sourcé à l'entrée du dossier, défait à la sortie ; modifié, il redevient non autorisé." ;;
+    setup) _coolbash_lines "coolbash setup [--defaults] — configuration interactive, lancée aussi à la fin de install/update (reprend la configuration existante et ne pose que les questions nouvelles) : palette, icônes, emoji, segments du prompt, seuils, MOTD (lignes, thèmes de citations), temps de démarrage, mises à jour, nvm, hooks, garde-fou git, j, suggestions, fzf, port de serve, mode. Écrit ~/.coolbash/config.bash (seuls les choix hors défaut), sourcé par init avant les modules. --defaults accepte tout." ;;
+    compile) _coolbash_lines "coolbash compile [--write | fichier] — génère un ~/.bashrc autonome : réglages de config.bash, modules inlinés dans l'ordre (chacun dans une fonction), fonction coolbash, vérification de mise à jour, temps de démarrage. Sans argument : sur la sortie standard ; --write remplace ~/.bashrc (sauvegardé) ; make install le régénère quand setup a choisi le mode compiled." ;;
+    tidy) _coolbash_lines "coolbash tidy [--apply] — range le ~/.bashrc : retire ce qu'un module prend en charge, convertit export PATH en path_prepend/append, déplace alias et fonctions dans 90-local-overrides.bash. Sans --apply, aperçu seulement ; avec, sauvegarde d'abord." ;;
+    quiet) _coolbash_lines "coolbash quiet [on|off|status] — mode présentation : ni MOTD, ni emoji, ni heure sous la commande, ni temps de démarrage, ni prompt transient — pour une démo, une capture, un enregistrement. Appliqué au shell courant et aux suivants (fichier ~/.coolbash/quiet) ; quiet off pour revenir." ;;
+    help) _coolbash_lines "coolbash help [commande] — cette aide, ou le détail d'une commande." ;;
     *) return 1 ;;
   esac
 }
@@ -1164,7 +1204,7 @@ _coolbash_logo() {
 _coolbash_cmd_help() {
   if [[ -n "${1:-}" ]]; then
     _coolbash_cmd_help_topic "$1" || {
-      _coolbash_error "commande inconnue : $1"
+      _coolbash_error 'commande inconnue : %s' "$1"
       return 1
     }
     return 0
@@ -1178,12 +1218,12 @@ _coolbash_cmd_help() {
   mode="source"
   grep -q '^# COOLBASH-COMPILED ' "${COOLBASH_BASHRC:-${HOME}/.bashrc}" 2>/dev/null && mode="compiled"
   # FR : _row commande description ; _sec titre de section.
-  _row() { printf '   %s%-11s%s %s\n' "$B" "$1" "$R" "$2"; }
-  _sec() { printf '\n %s▸ %s%s\n' "$T" "$1" "$R"; }
+  _row() { printf '   %s%-11s%s %s\n' "$B" "$1" "$R" "$(_coolbash_t "$2")"; }
+  _sec() { printf '\n %s▸ %s%s\n' "$T" "$(_coolbash_t "$1")" "$R"; }
   printf '\n'
   _coolbash_logo
-  printf '\n  %sCoolBash %s%s — un bash moderne, rapide et documenté  %s(mode %s · thème %s)%s\n' "$B" "$COOLBASH_VERSION" "$R" "$D" "$mode" "$theme" "$R"
-  printf '\n  %sUsage :%s coolbash <commande> [options]      %scoolbash help <commande> pour le détail%s\n' "$B" "$R" "$D" "$R"
+  _coolbash_say '\n  %sCoolBash %s%s — un bash moderne, rapide et documenté  %s(mode %s · thème %s)%s\n' "$B" "$COOLBASH_VERSION" "$R" "$D" "$mode" "$theme" "$R"
+  _coolbash_say '\n  %sUsage :%s coolbash <commande> [options]      %scoolbash help <commande> pour le détail%s\n' "$B" "$R" "$D" "$R"
   _sec "Installation"
   _row install "Installe dans ~/.coolbash, la police, la ligne source (sauvegarde du .bashrc)"
   _row update "git pull, tests, install ; annonce « x.y.z → a.b.c » ou l'échec"
@@ -1209,7 +1249,7 @@ _coolbash_cmd_help() {
   _row test "La suite de tests"
   _row version "La version installée"
   _row help "Cette aide ; help <commande> pour le détail"
-  printf '\n  %sDans le shell :%s j bd h hstats · gsw gwip gunwip gfix gopen · todo remind retry · copy paste copypath · backup whoport serve cheat please · img\n\n' "$B" "$R"
+  _coolbash_say '\n  %sDans le shell :%s j bd h hstats · gsw gwip gunwip gfix gopen · todo remind retry · copy paste copypath · backup whoport serve cheat please · img\n\n' "$B" "$R"
   unset -f _row _sec
 }
 

@@ -14,7 +14,7 @@ PKG_FILES := cli modules share Makefile install.sh CHANGELOG.md packaging $(wild
 
 install:
 	@echo "[CoolBash] Installing to $(PREFIX)..."
-	@mkdir -p "$(PREFIX)/modules" "$(PREFIX)/cli" "$(PREFIX)/share/fortunes"
+	@mkdir -p "$(PREFIX)/modules" "$(PREFIX)/cli" "$(PREFIX)/share/fortunes" "$(PREFIX)/share/lang"
 	@# FR : `-ef` évite de copier un fichier sur lui-même quand PREFIX est le clone
 	@#      (cas install.sh) ; 90-local-overrides appartient à l'utilisateur et
 	@#      n'est jamais écrasé.
@@ -37,6 +37,12 @@ install:
 	@# FR : citations du MOTD (un fichier par thème). Les thèmes personnels vivent
 	@#      dans $(PREFIX)/fortunes/ et ne sont pas touchés.
 	@for f in share/fortunes/*.txt; do \
+	  dest="$(PREFIX)/$$f"; \
+	  [[ "$$f" -ef "$$dest" ]] && continue; \
+	  cp "$$f" "$$dest.new" && mv -f "$$dest.new" "$$dest"; \
+	done
+	@# FR : les messages traduits (share/lang/*.bash).
+	@for f in share/lang/*.bash; do \
 	  dest="$(PREFIX)/$$f"; \
 	  [[ "$$f" -ef "$$dest" ]] && continue; \
 	  cp "$$f" "$$dest.new" && mv -f "$$dest.new" "$$dest"; \
@@ -111,12 +117,12 @@ uninstall:
 font:
 	@COOLBASH_PREFIX="$(PREFIX)" bash cli/coolbash-font install
 
-SH_FILES := cli/coolbash cli/coolbash-font cli/coolbash-setup install.sh modules/*.bash tests/*.sh scripts/hooks/* packaging/coolbash-wrapper
+SH_FILES := cli/coolbash cli/coolbash-font cli/coolbash-setup install.sh modules/*.bash share/lang/*.bash tests/*.sh scripts/hooks/* packaging/coolbash-wrapper
 
 # --- paquets ------------------------------------------------------------------------
 # FR : `make dist` → dist/coolbash-X.Y.Z.tar.gz (l'archive source) ; `make pkg-deb` →
-#      dist/coolbash_X.Y.Z_all.deb (dpkg-deb, sinon ar + tar : un .deb n'est que
-#      cela) ; `make pkg-arch` → dist/arch/coolbash-X.Y.Z-1-any.pkg.tar.zst (makepkg,
+#      dist/coolbash_X.Y.Z_all.deb (dpkg-deb en gzip — installable par tout dpkg —,
+#      sinon ar + tar : un .deb n'est que cela) ; `make pkg-arch` → dist/arch/coolbash-X.Y.Z-1-any.pkg.tar.zst (makepkg,
 #      depuis packaging/arch/PKGBUILD.in). Les deux installent /usr/share/coolbash
 #      et /usr/bin/coolbash ; chaque utilisateur fait ensuite `coolbash install`.
 dist:
@@ -139,7 +145,7 @@ pkg-deb: stage
 	@sed 's/@VERSION@/$(VERSION)/' packaging/deb/control.in >| "$(DIST)/root/DEBIAN/control"
 	@deb="$(DIST)/coolbash_$(VERSION)_all.deb"; \
 	if command -v dpkg-deb >/dev/null 2>&1; then \
-	  dpkg-deb --build --root-owner-group "$(DIST)/root" "$$deb" >/dev/null; \
+	  dpkg-deb -Zgzip --build --root-owner-group "$(DIST)/root" "$$deb" >/dev/null; \
 	else \
 	  tmp="$(DIST)/deb-build"; rm -rf "$$tmp"; mkdir -p "$$tmp"; \
 	  tar -C "$(DIST)/root" --owner=0 --group=0 -czf "$$tmp/data.tar.gz" ./usr; \

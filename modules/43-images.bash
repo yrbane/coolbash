@@ -143,13 +143,13 @@ img() {
   while [[ "${1:-}" == -w || "${1:-}" == -h ]]; do
     if [[ "$1" == -w ]]; then cols="${2:-}"; else rows="${2:-}"; fi
     [[ "${2:-}" =~ ^[0-9]+$ ]] || {
-      echo "usage : img [-w colonnes] [-h lignes] <fichier…>" >&2
+      _coolbash_say 'usage : img [-w colonnes] [-h lignes] <fichier…>\n' >&2
       return 1
     }
     shift 2
   done
   (($#)) || {
-    echo "usage : img [-w colonnes] [-h lignes] <fichier…>" >&2
+    _coolbash_say 'usage : img [-w colonnes] [-h lignes] <fichier…>\n' >&2
     return 1
   }
   # FR : sans taille : la largeur du terminal, moins une marge.
@@ -158,12 +158,12 @@ img() {
     auto=1
   fi
   _coolbash_img_backend backend || {
-    echo "img : aucune méthode d'affichage pour ce terminal — coolbash deps (chafa, libsixel, imagemagick)" >&2
+    _coolbash_say "img : aucune méthode d'affichage pour ce terminal — coolbash deps (chafa, libsixel, imagemagick)\n" >&2
     return 1
   }
   for f in "$@"; do
     [[ -r "$f" ]] || {
-      echo "img : $f introuvable" >&2
+      _coolbash_say 'img : %s introuvable\n' "$f" >&2
       rc=1
       continue
     }
@@ -173,7 +173,7 @@ img() {
     else
       "_coolbash_img_${backend}" "$f" "$cols" "$rows"
     fi || {
-      echo "img : échec avec la méthode ${backend} — COOLBASH_IMG=chafa pour forcer le repli" >&2
+      _coolbash_say 'img : échec avec la méthode %s — COOLBASH_IMG=chafa pour forcer le repli\n' "$backend" >&2
       rc=1
     }
   done

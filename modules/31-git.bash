@@ -41,7 +41,7 @@ gunwip() {
   local subject
   subject="$(git log -1 --format=%s 2>/dev/null)"
   [[ "$subject" == WIP* ]] || {
-    echo "gunwip : le dernier commit n'est pas un WIP (« ${subject:-aucun} »)" >&2
+    _coolbash_say "gunwip : le dernier commit n'est pas un WIP (« %s »)\n" "${subject:-aucun}" >&2
     return 1
   }
   git reset -q --soft HEAD~1 && git reset -q && git status -sb
@@ -52,11 +52,11 @@ gunwip() {
 gfix() {
   local target="${1:-}"
   [[ -n "$target" ]] || {
-    echo "usage : gfix <commit>  (indexe d'abord la correction : git add …)" >&2
+    _coolbash_say "usage : gfix <commit>  (indexe d'abord la correction : git add …)\n" >&2
     return 1
   }
   git diff --cached --quiet && {
-    echo "gfix : rien d'indexé — git add la correction d'abord" >&2
+    _coolbash_say "gfix : rien d'indexé — git add la correction d'abord\n" >&2
     return 1
   }
   # FR : un commit racine n'a pas de parent : --root.
@@ -79,7 +79,7 @@ gsw() {
     [[ -z "$motif" || "$line" == *"$motif"* ]] && cands+=("$line")
   done < <(git branch -a --format='%(refname:short)' 2>/dev/null)
   ((${#cands[@]})) || {
-    echo "gsw : aucune branche ne correspond à « $motif »" >&2
+    _coolbash_say 'gsw : aucune branche ne correspond à « %s »\n' "$motif" >&2
     return 1
   }
   if ((${#cands[@]} == 1)); then
@@ -87,7 +87,7 @@ gsw() {
   elif [[ -t 0 ]] && command -v fzf >/dev/null 2>&1; then
     chosen="$(printf '%s\n' "${cands[@]}" | fzf --height 40% --reverse --prompt 'branche > ' --preview 'git log --oneline -5 {}')" || return 1
   else
-    echo "gsw : plusieurs branches correspondent (fzf absent) :" >&2
+    _coolbash_say 'gsw : plusieurs branches correspondent (fzf absent) :\n' >&2
     printf '  %s\n' "${cands[@]}" >&2
     return 1
   fi
@@ -124,7 +124,7 @@ gopen() {
   }
   target="${1:-}"
   url="$(git remote get-url origin 2>/dev/null)" || {
-    echo "gopen : pas de remote origin" >&2
+    _coolbash_say 'gopen : pas de remote origin\n' >&2
     return 1
   }
   # FR : git@hôte:user/repo(.git) → https://hôte/user/repo ; ssh://git@hôte/… aussi.
@@ -167,10 +167,10 @@ git() {
     local branch reply
     branch="$(command git branch --show-current 2>/dev/null)"
     if [[ "$branch" == main || "$branch" == master ]]; then
-      printf '\e[31m⚠ git push --force sur %s\e[0m — confirmer ? [o/N] ' "$branch" >&2
+      _coolbash_say '\e[31m⚠ git push --force sur %s\e[0m — confirmer ? [o/N] ' "$branch" >&2
       read -r reply
       [[ "$reply" =~ ^[oOyY]$ ]] || {
-        echo "git : push --force annulé (préfère --force-with-lease, alias gpf)" >&2
+        _coolbash_say 'git : push --force annulé (préfère --force-with-lease, alias gpf)\n' >&2
         return 1
       }
     fi

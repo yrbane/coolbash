@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.34.0 — 2026-10-08 · « In English, too »
+### Ajouté
+- **Messages en anglais** quand la langue de l'utilisateur n'est pas le français (`LC_ALL`,
+  `LC_MESSAGES`, `LANG` ; `COOLBASH_LANG=fr|en` force ; `C`/`POSIX` = français) : fonctions du
+  shell, MOTD, temps de démarrage, CLI (aide, `help <commande>`, `config`, `doctor`, `deps`,
+  `fortune`, `theme`, `tidy`, `changelog`, `quiet`…) et questionnaire `setup`. Le source reste
+  en français ; `share/lang/en.bash` est une table « texte français → traduction », plus de
+  300 entrées, dont `tests/test_lang.sh` vérifie que chaque clé existe encore dans le source.
+  Un texte absent de la table reste en français : rien ne casse. Les citations restent en
+  français. Le `~/.bashrc` compilé charge la table lui aussi.
+### Corrigé
+- `make pkg-deb` : `dpkg-deb` compresse en gzip (`-Zgzip`) — le `.deb` s'installe sur tout dpkg,
+  et la CI (0.33.0) ne tombe plus sur du zstd inattendu.
+- `00-core` n'impose plus `LC_ALL=fr_FR.UTF-8` quand `LANG` est défini (un `LANG=en_US` était
+  écrasé) : la locale par défaut ne vaut que si ni `LANG` ni `LC_ALL` n'est défini.
+
 ## 0.33.0 — 2026-10-08 · « En paquets »
 ### Ajouté
 - **Paquets** : `make pkg-deb` → `coolbash_X.Y.Z_all.deb` (`dpkg-deb`, sinon `ar` + `tar`),

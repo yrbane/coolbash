@@ -17,10 +17,34 @@ fi
 export COOLBASH_MODE
 _coolbash_safe() { [[ "${COOLBASH_MODE}" == "safe" ]]; }
 
+# FR : messages traduits (share/lang) — déjà chargés quand on vient de la CLI ou
+#      d'un ~/.bashrc compilé ; sinon (module sourcé seul : tests) depuis ici.
+#      Avant la locale : la langue est celle que l'utilisateur a choisie.
+if ! declare -F _coolbash_t >/dev/null 2>&1; then
+  COOLBASH_LANG_DIR="${BASH_SOURCE[0]%/*}/../share/lang"
+  [[ -r "${COOLBASH_LANG_DIR}/_lang.bash" ]] || COOLBASH_LANG_DIR="${COOLBASH_PREFIX:-$HOME/.coolbash}/share/lang"
+  # shellcheck disable=SC1091
+  [[ -r "${COOLBASH_LANG_DIR}/_lang.bash" ]] && source "${COOLBASH_LANG_DIR}/_lang.bash"
+  unset COOLBASH_LANG_DIR
+fi
+declare -F _coolbash_lang_init >/dev/null 2>&1 && _coolbash_lang_init
+# FR : sans share/lang (CLI copiée seule) : les messages restent en français.
+if ! declare -F _coolbash_t >/dev/null 2>&1; then
+  _coolbash_t() { printf '%s' "$1"; }
+  _coolbash_say() {
+    local _cs_f="$1"
+    shift
+    # shellcheck disable=SC2059
+    printf "$_cs_f" "$@"
+  }
+fi
+
 # FR: Locale fr_FR.UTF-8 par défaut si elle existe sur la machine ; sinon repli
 #     sur C.UTF-8 (serveurs minimalistes, CI) pour éviter « setlocale: cannot
-#     change locale ». Une valeur déjà définie n'est jamais modifiée.
-if [[ -z "${LANG:-}" || -z "${LC_ALL:-}" ]]; then
+#     change locale ». Seulement si ni LANG ni LC_ALL n'est défini : un LANG
+#     choisi (en_US…) n'est jamais écrasé par un LC_ALL français (avant 0.34.0,
+#     il l'était).
+if [[ -z "${LANG:-}" && -z "${LC_ALL:-}" ]]; then
   if locale -a 2>/dev/null | grep -qiE '^fr_FR\.utf-?8$'; then
     COOLBASH_LOCALE="fr_FR.UTF-8"
   else

@@ -228,7 +228,7 @@ _coolbash_motd_update() {
   local v
   read -r v 2>/dev/null <"${COOLBASH_PREFIX:-$HOME/.coolbash}/.update-available" || return 0
   [[ -n "$v" && "$v" != "${COOLBASH_VERSION:-}" ]] || return 0
-  printf '\e[33m⇡ CoolBash %s disponible\e[0m (installée : %s) → coolbash update · coolbash changelog --next\n' "$v" "${COOLBASH_VERSION:-?}"
+  _coolbash_say '\e[33m⇡ CoolBash %s disponible\e[0m (installée : %s) → coolbash update · coolbash changelog --next\n' "$v" "${COOLBASH_VERSION:-?}"
 }
 
 # FR : ~/.coolbash/motd.png (ou .jpg) affiché par `img` (module 43-images) si le
@@ -249,10 +249,10 @@ _coolbash_motd_todo() {
   local lines=() i
   [[ -s "${COOLBASH_PREFIX:-$HOME/.coolbash}/todo.txt" ]] || return 0
   mapfile -t lines <"${COOLBASH_PREFIX:-$HOME/.coolbash}/todo.txt"
-  printf '\n\e[1mÀ faire\e[0m (todo) :\n'
+  _coolbash_say '\n\e[1mÀ faire\e[0m (todo) :\n'
   for i in "${!lines[@]}"; do
     ((i >= 5)) && {
-      printf '  … et %d autre(s)\n' $((${#lines[@]} - 5))
+      _coolbash_say '  … et %d autre(s)\n' $((${#lines[@]} - 5))
       break
     }
     printf '  \e[1m%2d\e[0m  %s\n' "$((i + 1))" "${lines[i]}"

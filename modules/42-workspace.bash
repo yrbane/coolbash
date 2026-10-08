@@ -75,7 +75,7 @@ _coolbash_hook_check() {
     source "$hook" && COOLBASH_HOOK_ACTIVE="$hook"
   elif [[ "$COOLBASH_HOOK_WARNED" != *"|$hook|"* ]]; then
     COOLBASH_HOOK_WARNED+="|$hook|"
-    printf '\e[33m⚑ %s trouvé mais non autorisé\e[0m — lis-le, puis : coolbash allow\n' "${hook/#$HOME/\~}" >&2
+    _coolbash_say '\e[33m⚑ %s trouvé mais non autorisé\e[0m — lis-le, puis : coolbash allow\n' "${hook/#$HOME/\~}" >&2
   fi
   return 0
 }
@@ -91,7 +91,7 @@ todo() {
     add | a)
       shift
       [[ -n "$*" ]] || {
-        echo 'usage : todo add "texte"' >&2
+        _coolbash_say 'usage : todo add "texte"\n' >&2
         return 1
       }
       mkdir -p "${file%/*}" && printf '%s\n' "$*" >>"$file" || return 1
@@ -99,12 +99,12 @@ todo() {
     done | d | rm)
       n="${2:-}"
       [[ "$n" =~ ^[0-9]+$ && "$n" -ge 1 ]] || {
-        echo "usage : todo ${1} <numéro>" >&2
+        _coolbash_say 'usage : todo %s <numéro>\n' "$1" >&2
         return 1
       }
       [[ -r "$file" ]] && mapfile -t lines <"$file"
       ((n <= ${#lines[@]})) || {
-        echo "todo : pas de tâche n° $n" >&2
+        _coolbash_say 'todo : pas de tâche n° %s\n' "$n" >&2
         return 1
       }
       [[ "$1" != rm ]] && printf '%s\t%s\n' "$(printf '%(%Y-%m-%d)T' -1)" "${lines[n - 1]}" >>"${file%.txt}.done"
@@ -113,13 +113,13 @@ todo() {
       ;;
     "" | list | ls) ;;
     *)
-      echo 'usage : todo [add "texte" | done N | rm N]' >&2
+      _coolbash_say 'usage : todo [add "texte" | done N | rm N]\n' >&2
       return 1
       ;;
   esac
   [[ -r "$file" ]] && mapfile -t lines <"$file"
   ((${#lines[@]})) || {
-    echo "todo : rien à faire ✔"
+    _coolbash_say 'todo : rien à faire ✔\n'
     return 0
   }
   for i in "${!lines[@]}"; do printf '  \e[1m%2d\e[0m  %s\n' "$((i + 1))" "${lines[i]}"; done
@@ -155,18 +155,18 @@ remind() {
     *) secs="$spec" ;;
   esac
   [[ "$secs" =~ ^[0-9]+$ ]] || {
-    echo 'usage : remind <30s|15m|2h> "texte"' >&2
+    _coolbash_say 'usage : remind <30s|15m|2h> "texte"\n' >&2
     return 1
   }
   tty="$(tty 2>/dev/null)" || tty=""
   (
     (
       sleep "$secs"
-      command -v notify-send >/dev/null 2>&1 && notify-send "⏰ Rappel" "$text" 2>/dev/null
-      [[ -w "$tty" ]] && printf '\a\e]777;notify;Rappel;%s\a\n\e[1;33m⏰ %s\e[0m\n' "$text" "$text" >"$tty" 2>/dev/null
+      command -v notify-send >/dev/null 2>&1 && notify-send "⏰ $(_coolbash_t 'Rappel')" "$text" 2>/dev/null
+      [[ -w "$tty" ]] && printf '\a\e]777;notify;%s;%s\a\n\e[1;33m⏰ %s\e[0m\n' "$(_coolbash_t 'Rappel')" "$text" "$text" >"$tty" 2>/dev/null
     ) &
   ) >/dev/null 2>&1
-  printf '⏰ dans %ss : %s\n' "$secs" "$text"
+  _coolbash_say '⏰ dans %ss : %s\n' "$secs" "$text"
 }
 
 # --- retry -------------------------------------------------------------------------------
@@ -175,18 +175,18 @@ retry() {
   local n="${1:-}" i delay=1 rc
   shift
   [[ "$n" =~ ^[0-9]+$ && "$n" -ge 1 && $# -ge 1 ]] || {
-    echo 'usage : retry <N> <commande…>' >&2
+    _coolbash_say 'usage : retry <N> <commande…>\n' >&2
     return 1
   }
   for ((i = 1; i <= n; i++)); do
     "$@" && return 0
     rc=$?
     ((i == n)) && break
-    printf 'retry : échec %d/%d (code %d), nouvel essai dans %ds\n' "$i" "$n" "$rc" "$delay" >&2
+    _coolbash_say 'retry : échec %d/%d (code %d), nouvel essai dans %ds\n' "$i" "$n" "$rc" "$delay" >&2
     sleep "$delay"
     ((delay < 60)) && delay=$((delay * 2))
   done
-  echo "retry : abandon après $n essais" >&2
+  _coolbash_say 'retry : abandon après %s essais\n' "$n" >&2
   return "$rc"
 }
 
@@ -228,7 +228,7 @@ paste() {
     xsel) xsel --clipboard --output ;;
     pb) pbpaste ;;
     *)
-      echo "paste : pas d'outil de presse-papiers ici (OSC 52 ne sait qu'écrire)" >&2
+      _coolbash_say "paste : pas d'outil de presse-papiers ici (OSC 52 ne sait qu'écrire)\n" >&2
       return 1
       ;;
   esac
@@ -236,7 +236,7 @@ paste() {
 copypath() {
   local p="${1:-.}"
   [[ -e "$p" ]] || {
-    echo "copypath : $p introuvable" >&2
+    _coolbash_say 'copypath : %s introuvable\n' "$p" >&2
     return 1
   }
   p="$(cd -- "$(dirname -- "$p")" && printf '%s/%s' "$PWD" "$(basename -- "$p")")"

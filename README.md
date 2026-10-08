@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.33.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.34.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -41,6 +41,7 @@ source ~/.bashrc
 ⚡ **Performant** — historique partagé sans rechargement complet, prompt léger, et le temps de démarrage affiché à chaque ouverture (`⚡ démarrage 412 ms · CoolBash 39 ms`).
 🔐 **Safe by default** — `umask`, `noclobber`, et alias protecteurs (`rm -i`, `cp -i`, `mv -i`).
 🐧 **Compatible serveurs** — fonctionne sans dépendances inutiles.
+🌍 **Bilingue** — messages en français, en anglais dès que `LANG` n'est pas français (`COOLBASH_LANG=en` force) ; les citations restent en français.
 
 ---
 
@@ -277,6 +278,7 @@ Variables lues au chargement (via `config.bash`, avant la ligne `source` du `.ba
 | Variable                        | Effet                                                                 |
 | ------------------------------- | --------------------------------------------------------------------- |
 | `COOLBASH_MODE=safe`            | Shell minimal : pas d'emoji, ni git dans le prompt, ni MOTD, ni completion différée. Défaut pour root. |
+| `COOLBASH_LANG`                 | Langue des messages : `fr` (défaut) ou `en` ; sinon d'après `LC_ALL`, `LC_MESSAGES`, `LANG` (`C`/`POSIX` = français). Le source est en français, `share/lang/en.bash` traduit ; un texte absent de la table reste en français |
 | `COOLBASH_DISABLE="70-motd 33"` | Modules à ne pas charger (nom complet, numéro seul ou nom sans numéro) |
 | `COOLBASH_PROMPT_MIN_MS`        | Durée minimale affichée dans le prompt (défaut `1000` ms)             |
 | `COOLBASH_PROMPT_GIT=0`         | Désactive le segment git                                              |

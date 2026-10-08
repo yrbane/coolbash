@@ -55,7 +55,7 @@ please() {
   cmd="$(HISTTIMEFORMAT='' builtin fc -ln -1 -1 2>/dev/null)"
   cmd="${cmd#"${cmd%%[![:space:]]*}"}"
   if [[ -z "$cmd" || "$cmd" == please* ]]; then
-    echo "please: aucune commande à relancer." >&2
+    _coolbash_say 'please: aucune commande à relancer.\n' >&2
     return 1
   fi
   printf 'sudo %s\n' "$cmd"

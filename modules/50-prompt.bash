@@ -557,7 +557,7 @@ _coolbash_prompt_notify() {
   ((min > 0 && ms >= min)) || return 0
   read -r n cmd <<<"$(HISTTIMEFORMAT='' builtin history 1 2>/dev/null)"
   dur="$(COOLBASH_PROMPT_MIN_MS=0 _coolbash_prompt_duration)"
-  printf '%s' '\[\a\e]777;notify;CoolBash;'"${cmd:-Commande terminée} · ${dur}"'\a\]'
+  printf '%s' '\[\a\e]777;notify;CoolBash;'"${cmd:-$(_coolbash_t 'Commande terminée')} · ${dur}"'\a\]'
 }
 
 # --- Construction du prompt --------------------------------------------------

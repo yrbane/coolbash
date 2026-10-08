@@ -18,6 +18,11 @@ set -u
 COOLBASH_PREFIX="${COOLBASH_PREFIX:-${HOME}/.coolbash}"
 CONFIG="${COOLBASH_PREFIX}/config.bash"
 CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/coolbash"
+# FR : questions traduites (share/lang), comme la CLI.
+# shellcheck disable=SC1091
+[[ -r "${CLI%/*}/../share/lang/_lang.bash" ]] && source "${CLI%/*}/../share/lang/_lang.bash"
+declare -F _coolbash_lang_init >/dev/null 2>&1 && _coolbash_lang_init "${CLI%/*}/../share/lang"
+declare -F _coolbash_t >/dev/null 2>&1 || _coolbash_t() { printf '%s' "$1"; }
 VERSION="$(sed -n 's/^COOLBASH_VERSION="\(.*\)"/\1/p' "$CLI" 2>/dev/null)"
 DEFAULTS=0
 [[ "${1:-}" == --defaults ]] && DEFAULTS=1
@@ -50,8 +55,8 @@ if [[ -r "$CONFIG" ]]; then
   done <"$CONFIG"
 fi
 
-_say() { printf '%b\n' "$*"; }
-_title() { printf '\n\e[1;36m%s\e[0m\n' "$*"; }
+_say() { printf '%b\n' "$(_coolbash_t "$*")"; }
+_title() { printf '\n\e[1;36m%s\e[0m\n' "$(_coolbash_t "$*")"; }
 
 # FR : _newer A B → vrai si la version A est strictement plus récente que B.
 _newer() {
@@ -90,19 +95,19 @@ _choice() {
   local -a vals=() labels=()
   for opt in "$@"; do
     vals+=("${opt%%|*}")
-    labels+=("${opt#*|}")
+    labels+=("$(_coolbash_t "${opt#*|}")")
   done
   for i in "${!vals[@]}"; do [[ "${vals[i]}" == "$cur" ]] && idx_cur=$((i + 1)); done
-  printf '\n%s\n' "$q"
+  printf '\n%s\n' "$(_coolbash_t "$q")"
   for i in "${!vals[@]}"; do
     n=$((i + 1))
-    if ((n == idx_cur)); then printf '  \e[1m%d) %s\e[0m  ← actuel\n' "$n" "${labels[i]}"; else printf '  %d) %s\n' "$n" "${labels[i]}"; fi
+    if ((n == idx_cur)); then _coolbash_say '  \e[1m%d) %s\e[0m  ← actuel\n' "$n" "${labels[i]}"; else printf '  %d) %s\n' "$n" "${labels[i]}"; fi
     if [[ -n "${PREVIEW:-}" ]]; then
       printf '       %s\n' "$("$PREVIEW" "${vals[i]}")"
     fi
   done
   while :; do
-    if [[ -n "${PREVIEW:-}" ]]; then printf 'Choix [%s] (v N : voir la palette N en entier) : ' "$idx_cur"; else printf 'Choix [%s] : ' "$idx_cur"; fi
+    if [[ -n "${PREVIEW:-}" ]]; then _coolbash_say 'Choix [%s] (v N : voir la palette N en entier) : ' "$idx_cur"; else _coolbash_say 'Choix [%s] : ' "$idx_cur"; fi
     if ((DEFAULTS)); then
       reply=""
       printf '\n'
@@ -124,9 +129,9 @@ _choice() {
 _yesno() {
   local var="$1" q="$2" def="$3" cur="${CURRENT[$1]:-$3}" reply val hint
   _skip "$var" && return 0
-  if [[ "$cur" == 1 ]]; then hint="O/n"; else hint="o/N"; fi
+  if [[ "$cur" == 1 ]]; then hint="$(_coolbash_t 'O/n')"; else hint="$(_coolbash_t 'o/N')"; fi
   printf '
-%s [%s] : ' "$q" "$hint"
+%s [%s] : ' "$(_coolbash_t "$q")" "$hint"
   if ((DEFAULTS)); then
     reply=""
     printf '\n'
@@ -144,14 +149,14 @@ _text() {
   local var="$1" q="$2" def="$3" re="${4:-.*}" cur="${CURRENT[$1]:-$3}" reply
   _skip "$var" && return 0
   printf '
-%s [%s] : ' "$q" "${cur:-vide}"
+%s [%s] : ' "$(_coolbash_t "$q")" "${cur:-$(_coolbash_t vide)}"
   if ((DEFAULTS)); then
     reply=""
     printf '\n'
   else read -r reply || reply=""; fi
   [[ -z "$reply" ]] && reply="$cur"
   [[ "$reply" =~ ^${re}$ ]] || {
-    _say "  valeur ignorée (attendu : ${re}), on garde « ${cur} »"
+    _coolbash_say '  valeur ignorée (attendu : %s), on garde « %s »\n' "$re" "$cur"
     reply="$cur"
   }
   if [[ "$reply" == "$def" ]]; then unset 'CHOSEN[$var]'; else CHOSEN[$var]="$reply"; fi
@@ -164,15 +169,15 @@ _multi() {
   _skip "$var" && return 0
   shift 3
   local -a words=("$@")
-  printf '\n%s\n' "$q"
+  printf '\n%s\n' "$(_coolbash_t "$q")"
   for i in "${!words[@]}"; do
     n=$((i + 1))
-    if [[ " $cur " == *" ${words[i]} "* ]]; then printf '  \e[1m%2d) %s\e[0m  ← actuel\n' "$n" "${words[i]}"; else printf '  %2d) %s\n' "$n" "${words[i]}"; fi
+    if [[ " $cur " == *" ${words[i]} "* ]]; then _coolbash_say '  \e[1m%2d) %s\e[0m  ← actuel\n' "$n" "${words[i]}"; else printf '  %2d) %s\n' "$n" "${words[i]}"; fi
   done
-  printf '  Numéros séparés par des espaces, 0 = aucun'
-  [[ -n "$def" ]] && printf ' (défaut : %s)' "$def"
+  _coolbash_say '  Numéros séparés par des espaces, 0 = aucun'
+  [[ -n "$def" ]] && _coolbash_say ' (défaut : %s)' "$def"
   printf '\n'
-  printf 'Choix [%s] : ' "${cur:-aucun}"
+  _coolbash_say 'Choix [%s] : ' "${cur:-$(_coolbash_t aucun)}"
   if ((DEFAULTS)); then
     reply=""
     printf '\n'
@@ -189,30 +194,30 @@ _multi() {
   if [[ "$val" == "$def" ]]; then unset 'CHOSEN[$var]'; else CHOSEN[$var]="$val"; fi
 }
 
-printf '\e[1mCoolBash %s — configuration interactive\e[0m\n' "$VERSION"
+_coolbash_say '\e[1mCoolBash %s — configuration interactive\e[0m\n' "$VERSION"
 
 # --- reprise d'une configuration existante ---------------------------------------
 if [[ -n "$CONFIG_VERSION" ]]; then
   if ((DEFAULTS)); then
     REUSE=1
   else
-    printf '\nUne configuration existe (CoolBash %s, %d réglage(s)).\n' "$CONFIG_VERSION" "${#CURRENT[@]}"
-    printf '  \e[1m1) La reprendre\e[0m — seules les questions apparues depuis la %s sont posées\n' "$CONFIG_VERSION"
-    printf '  2) Tout revoir\n'
-    printf 'Choix [1] : '
+    _coolbash_say '\nUne configuration existe (CoolBash %s, %d réglage(s)).\n' "$CONFIG_VERSION" "${#CURRENT[@]}"
+    _coolbash_say '  \e[1m1) La reprendre\e[0m — seules les questions apparues depuis la %s sont posées\n' "$CONFIG_VERSION"
+    _coolbash_say '  2) Tout revoir\n'
+    _coolbash_say 'Choix [1] : '
     read -r reply || reply=""
     [[ "$reply" == 2 ]] || REUSE=1
   fi
   if ((REUSE)); then
     for var in "${!CURRENT[@]}"; do CHOSEN[$var]="${CURRENT[$var]}"; done
     if ! _newer "$VERSION" "$CONFIG_VERSION"; then
-      _say "Configuration de la ${CONFIG_VERSION} reprise telle quelle : rien de nouveau à régler."
+      _coolbash_say 'Configuration de la %s reprise telle quelle : rien de nouveau à régler.\n' "$CONFIG_VERSION"
     else
-      _say "Configuration de la ${CONFIG_VERSION} reprise ; questions nouvelles jusqu'à la ${VERSION} :"
+      _coolbash_say "Configuration de la %s reprise ; questions nouvelles jusqu'à la %s :\n" "$CONFIG_VERSION" "$VERSION"
     fi
   fi
 else
-  _say "Entrée garde la valeur actuelle (← actuel). Le résultat va dans ${CONFIG}."
+  _coolbash_say 'Entrée garde la valeur actuelle (← actuel). Le résultat va dans %s.\n' "$CONFIG"
 fi
 
 _title "Prompt"
@@ -277,7 +282,7 @@ mkdir -p "${COOLBASH_PREFIX}" || exit 1
   printf '# pour tout voir.\n'
   for var in "${!CHOSEN[@]}"; do printf 'export %s="${%s:-%s}"\n' "$var" "$var" "${CHOSEN[$var]}"; done | sort
 } >|"${CONFIG}.new" && mv -f "${CONFIG}.new" "$CONFIG" || exit 1
-printf '\n\e[32m[CoolBash]\e[0m écrit : %s\n' "$CONFIG"
+_coolbash_say '\n\e[32m[CoolBash]\e[0m écrit : %s\n' "$CONFIG"
 
 # --- ~/.bashrc : compilé ou une ligne source --------------------------------------------
 BASHRC="${COOLBASH_BASHRC:-${HOME}/.bashrc}"
@@ -287,6 +292,6 @@ elif [[ -f "$BASHRC" ]] && grep -q '^# COOLBASH-COMPILED ' "$BASHRC"; then
   # FR : retour au mode source depuis un ~/.bashrc compilé : la ligne source suffit.
   cp -a "$BASHRC" "${BASHRC}.compile-$(printf '%(%Y-%m-%d-%H%M%S)T' -1)"
   printf 'source "%s/cli/coolbash" init\n' "${COOLBASH_PREFIX}" >|"$BASHRC"
-  printf '\e[32m[CoolBash]\e[0m %s repasse en mode source (l\x27ancien est gardé à côté)\n' "$BASHRC"
+  _coolbash_say "\e[32m[CoolBash]\e[0m %s repasse en mode source (l'ancien est gardé à côté)\n" "$BASHRC"
 fi
-_say "\nRecharge : source ~/.bashrc (ou ouvre un terminal)."
+_say 'Recharge : source ~/.bashrc (ou ouvre un terminal).'

@@ -73,7 +73,7 @@ j() {
   done < <(_coolbash_dirs_ranked "$motif")
   best="$(_coolbash_dirs_ranked "$motif" | head -1)"
   [[ -n "$best" ]] || {
-    echo "j : aucun dossier connu ne correspond à « $motif »" >&2
+    _coolbash_say 'j : aucun dossier connu ne correspond à « %s »\n' "$motif" >&2
     return 1
   }
   cd -- "$best" || return 1
@@ -92,7 +92,7 @@ _coolbash_prompt_command_add _coolbash_dirs_track
 bd() {
   local name="${1:-}" p="$PWD" part
   [[ -n "$name" ]] || {
-    echo "usage : bd <nom-de-dossier-parent>" >&2
+    _coolbash_say 'usage : bd <nom-de-dossier-parent>\n' >&2
     return 1
   }
   # FR : nom exact d'abord, puis préfixe, en remontant depuis le parent immédiat.
@@ -106,7 +106,7 @@ bd() {
       p="${p%/*}"
     done
   done
-  echo "bd : aucun dossier parent nommé « $name »" >&2
+  _coolbash_say 'bd : aucun dossier parent nommé « %s »\n' "$name" >&2
   return 1
 }
 
@@ -139,7 +139,7 @@ hstats() {
   local n="${1:-20}" line first total=0 c
   local -A count=()
   [[ -r "${HISTFILE:-$HOME/.bash_history}" ]] || {
-    echo "hstats : pas d'historique lisible" >&2
+    _coolbash_say "hstats : pas d'historique lisible\n" >&2
     return 1
   }
   while IFS= read -r line; do
@@ -152,7 +152,7 @@ hstats() {
     total=$((total + 1))
   done <"${HISTFILE:-$HOME/.bash_history}"
   ((total)) || return 0
-  printf 'Sur %d commandes :\n' "$total"
+  _coolbash_say 'Sur %d commandes :\n' "$total"
   for c in "${!count[@]}"; do printf '%d\t%s\n' "${count[$c]}" "$c"; done \
     | sort -rn | head -n "$n" \
     | while IFS=$'\t' read -r c first; do printf '  %5d  %3d %%  %s\n' "$c" $((c * 100 / total)) "$first"; done
@@ -165,17 +165,17 @@ hstats() {
 if [[ $- == *i* && "${COOLBASH_CNF:-1}" != 0 ]]; then
   command_not_found_handle() {
     local cmd="$1" pkg="" near
-    printf 'bash: %s : commande introuvable\n' "$cmd" >&2
+    _coolbash_say 'bash: %s : commande introuvable\n' "$cmd" >&2
     if command -v pacman >/dev/null 2>&1; then
       pkg="$(pacman -Fq "/usr/bin/$cmd" 2>/dev/null | head -3 | tr '\n' ' ')"
-      [[ -n "$pkg" ]] && printf '  → fournie par : %s  (sudo pacman -S %s)\n' "$pkg" "${pkg%% *}" >&2
+      [[ -n "$pkg" ]] && _coolbash_say '  → fournie par : %s  (sudo pacman -S %s)\n' "$pkg" "${pkg%% *}" >&2
     elif command -v apt-file >/dev/null 2>&1; then
       pkg="$(apt-file search -l "bin/$cmd" 2>/dev/null | head -3 | tr '\n' ' ')"
-      [[ -n "$pkg" ]] && printf '  → fournie par : %s  (sudo apt install %s)\n' "$pkg" "${pkg%% *}" >&2
+      [[ -n "$pkg" ]] && _coolbash_say '  → fournie par : %s  (sudo apt install %s)\n' "$pkg" "${pkg%% *}" >&2
     fi
     if [[ -z "$pkg" && ${#cmd} -ge 3 ]]; then
       near="$(compgen -c -- "${cmd:0:3}" 2>/dev/null | sort -u | head -5 | tr '\n' ' ')"
-      [[ -n "$near" ]] && printf '  → tu voulais dire : %s\n' "$near" >&2
+      [[ -n "$near" ]] && _coolbash_say '  → tu voulais dire : %s\n' "$near" >&2
     fi
     return 127
   }

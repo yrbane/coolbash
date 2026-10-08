@@ -113,14 +113,14 @@ timer() {
 backup() {
   local f stamp dest rc=0
   (($#)) || {
-    echo "usage : backup <fichier|dossier>…" >&2
+    _coolbash_say 'usage : backup <fichier|dossier>…\n' >&2
     return 1
   }
   printf -v stamp '%(%Y-%m-%d-%H%M)T' -1
   for f in "$@"; do
     f="${f%/}"
     [[ -e "$f" ]] || {
-      echo "backup : $f introuvable" >&2
+      _coolbash_say 'backup : %s introuvable\n' "$f" >&2
       rc=1
       continue
     }
@@ -136,7 +136,7 @@ backup() {
 whoport() {
   local port="${1:-}" proto local_addr users pid name cmd found=0
   [[ "$port" =~ ^[0-9]+$ ]] || {
-    echo "usage : whoport <port>" >&2
+    _coolbash_say 'usage : whoport <port>\n' >&2
     return 1
   }
   if command -v ss >/dev/null 2>&1; then
@@ -152,7 +152,7 @@ whoport() {
         pid="${users#*pid=}"
         pid="${pid%%,*}"
       fi
-      printf '%s/%-4s pid %-7s %s\n' "$port" "$proto" "${pid:-?}" "${name:-(autre utilisateur : sudo whoport)}"
+      printf '%s/%-4s pid %-7s %s\n' "$port" "$proto" "${pid:-?}" "${name:-$(_coolbash_t '(autre utilisateur : sudo whoport)')}"
       if [[ -n "$pid" && -r "/proc/$pid/cmdline" ]]; then
         cmd="$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null)"
         [[ -n "$cmd" ]] && printf '         %s\n' "$cmd"
@@ -161,11 +161,11 @@ whoport() {
   elif command -v lsof >/dev/null 2>&1; then
     lsof -nP -i ":$port" 2>/dev/null | tail -n +2 | grep . && found=1
   else
-    echo "whoport : ni ss ni lsof disponible" >&2
+    _coolbash_say 'whoport : ni ss ni lsof disponible\n' >&2
     return 1
   fi
   ((found)) || {
-    echo "whoport : port $port libre"
+    _coolbash_say 'whoport : port %s libre\n' "$port"
     return 1
   }
 }
@@ -189,23 +189,23 @@ _coolbash_free_port() {
 serve() {
   local dir="${1:-.}" port="${2:-}"
   [[ -d "$dir" ]] || {
-    echo "serve : $dir n'est pas un dossier" >&2
+    _coolbash_say "serve : %s n'est pas un dossier\n" "$dir" >&2
     return 1
   }
   if [[ -z "$port" ]]; then
     port="$(_coolbash_free_port "${COOLBASH_SERVE_PORT:-8000}")" || {
-      echo "serve : aucun port libre" >&2
+      _coolbash_say 'serve : aucun port libre\n' >&2
       return 1
     }
   fi
   if command -v python3 >/dev/null 2>&1; then
-    printf '\e[32m→ http://localhost:%s/\e[0m  (%s, python3, Ctrl-C pour arrêter)\n' "$port" "$dir"
+    _coolbash_say '\e[32m→ http://localhost:%s/\e[0m  (%s, python3, Ctrl-C pour arrêter)\n' "$port" "$dir"
     python3 -m http.server --directory "$dir" "$port"
   elif command -v php >/dev/null 2>&1; then
-    printf '\e[32m→ http://localhost:%s/\e[0m  (%s, php, Ctrl-C pour arrêter)\n' "$port" "$dir"
+    _coolbash_say '\e[32m→ http://localhost:%s/\e[0m  (%s, php, Ctrl-C pour arrêter)\n' "$port" "$dir"
     php -S "127.0.0.1:$port" -t "$dir"
   else
-    echo "serve : ni python3 ni php disponible" >&2
+    _coolbash_say 'serve : ni python3 ni php disponible\n' >&2
     return 1
   fi
 }
@@ -217,7 +217,7 @@ complete -c cheat
 cheat() {
   local cmd="${1:-}" line in=0 found=0
   [[ -n "$cmd" ]] || {
-    echo "usage : cheat <commande>" >&2
+    _coolbash_say 'usage : cheat <commande>\n' >&2
     return 1
   }
   if command -v tldr >/dev/null 2>&1; then
@@ -239,6 +239,6 @@ cheat() {
     done < <(MANWIDTH="${COLUMNS:-100}" command man "$cmd" 2>/dev/null)
     ((found)) && return 0
   fi
-  echo "cheat : pas de tldr ni de section EXAMPLES dans le man de $cmd — voici --help :" >&2
+  _coolbash_say 'cheat : pas de tldr ni de section EXAMPLES dans le man de %s — voici --help :\n' "$cmd" >&2
   "$cmd" --help 2>&1 | head -40
 }
