@@ -28,7 +28,16 @@ if [[ "${COOLBASH_HIST_SECRETS:-1}" != 0 ]]; then
 fi
 
 # FR: Append + lecture incrémentale = évite 'history -c; -r' à chaque prompt.
+# FR : bash < 4 (le 3.2 de macOS) : parti d'un historique vide (compte tout neuf),
+#      `history -a` n'écrit rien de toute la session — bogue de ce bash. Le fichier
+#      est alors réécrit en entier (history -w) : il ne contenait rien à perdre.
+COOLBASH_HIST_REWRITE=0
+((COOLBASH_BASH < 400)) && [[ ! -s "${HISTFILE:-$HOME/.bash_history}" ]] && COOLBASH_HIST_REWRITE=1
 _coolbash_history_sync() {
+  if ((COOLBASH_HIST_REWRITE)); then
+    builtin history -w
+    return
+  fi
   builtin history -a # FR: Ajoute les nouvelles lignes (session courante)
   builtin history -n # FR: Lit les nouvelles lignes (autres sessions)
 }

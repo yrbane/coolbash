@@ -11,7 +11,9 @@
 #     neofetch calculait tout (GPU, résolution, thème, police du terminal…)
 #     pour qu'on n'en garde que 6 lignes : de 0,5 à 2,7 s par shell. Les mêmes
 #     lignes sont lues dans /proc, /sys et /etc/os-release, sans un seul
-#     processus. Sans /proc (macOS), ce bloc est simplement absent.
+#     processus. macOS n'a pas /proc : un seul sysctl donne noyau, démarrage,
+#     mémoire, cœurs, charge et modèle ; vm_stat la mémoire libre, pmset la
+#     batterie (chemins absolus : rien ne dépend du PATH).
 
 # FR: Conditions d'affichage, testables sans terminal.
 _coolbash_motd_enabled() {
@@ -25,7 +27,7 @@ _coolbash_motd_enabled() {
 # FR : citations en français, une par ligne, un fichier par thème :
 #       - embarquées : <racine CoolBash>/share/fortunes/<thème>.txt
 #       - personnelles : ~/.coolbash/fortunes/<thème>.txt (jamais écrasées)
-#      Tirage en pur bash (mapfile + RANDOM) : zéro processus, là où le
+#      Tirage en pur bash (mapfile ou read + RANDOM) : zéro processus, là où le
 #      programme fortune coûtait 28 ms. COOLBASH_FORTUNE="dev chuck" limite aux
 #      thèmes cités ; chaque fichier retenu a le même poids, un thème répété pèse
 #      donc plus lourd. Un thème inconnu est ignoré ; aucun thème valide = tous —
@@ -46,7 +48,7 @@ _coolbash_fortune() {
   fi
   ((${#_cf_files[@]})) || return 1
   _cf_f="${_cf_files[RANDOM % ${#_cf_files[@]}]}"
-  mapfile -t _cf_lines <"$_cf_f"
+  _coolbash_readlines _cf_lines <"$_cf_f"
   _cf_n=${#_cf_lines[@]}
   ((_cf_n)) || return 1
   # FR : RANDOM s'arrête à 32767 — combiné pour couvrir les gros fichiers.
@@ -83,10 +85,17 @@ _coolbash_motd() {
 # FR : même présentation que « neofetch --stdout », en pur bash.
 _coolbash_motd_sysinfo() {
   local kernel os="" host="" up title line uptime
-  read -r kernel 2>/dev/null </proc/sys/kernel/osrelease || return 0
-  read -r up _ 2>/dev/null </proc/uptime || return 0
+  # FR : macOS — rempli par _coolbash_motd_darwin : mémoire (octets), cœurs, charge.
+  #      Local ici, donc visible de _coolbash_motd_mem et _load (portée dynamique).
+  local -a _coolbash_motd_sys=()
+  if [[ -r /proc/sys/kernel/osrelease ]]; then
+    read -r kernel 2>/dev/null </proc/sys/kernel/osrelease || return 0
+    read -r up _ 2>/dev/null </proc/uptime || return 0
+  else
+    _coolbash_motd_darwin || return 0
+  fi
   # FR : lu ligne à ligne plutôt que sourcé dans un sous-shell (≈ 1 ms de fork).
-  if [[ -r /etc/os-release ]]; then
+  if [[ -z "$os" && -r /etc/os-release ]]; then
     while IFS= read -r line; do
       [[ "$line" == PRETTY_NAME=* ]] && {
         os="${line#PRETTY_NAME=}"
@@ -96,7 +105,7 @@ _coolbash_motd_sysinfo() {
       }
     done </etc/os-release
   fi
-  read -r host 2>/dev/null </sys/class/dmi/id/product_name
+  [[ -n "$host" ]] || read -r host 2>/dev/null </sys/class/dmi/id/product_name
   title="${USER:-$LOGNAME}@${HOSTNAME%%.*}"
   printf '%s\n%s\n' "$title" "${title//?/-}"
   [[ -n "$os" ]] && printf 'OS: %s %s\n' "$os" "${HOSTTYPE:-}"
@@ -105,7 +114,10 @@ _coolbash_motd_sysinfo() {
   _coolbash_motd_uptime uptime "${up%.*}"
   printf 'Uptime: %s\n' "$uptime"
   # FR : la date par le printf intégré (pas de processus `date`).
-  _coolbash_motd_hidden date || printf 'Date: %(%Y-%m-%d %H:%M)T (%(%A)T)\n' -1 -1
+  _coolbash_motd_hidden date || {
+    _coolbash_date line '%Y-%m-%d %H:%M (%A)'
+    printf 'Date: %s\n' "$line"
+  }
   _coolbash_motd_hidden disk || _coolbash_motd_disk
   _coolbash_motd_hidden mem || _coolbash_motd_mem
   _coolbash_motd_hidden load || _coolbash_motd_load
@@ -115,6 +127,49 @@ _coolbash_motd_sysinfo() {
   _coolbash_motd_hidden update || _coolbash_motd_update
   _coolbash_motd_hidden note || _coolbash_motd_note
   _coolbash_motd_hidden todo || _coolbash_motd_todo
+}
+
+# FR : macOS — renseigne kernel, up, os et host de _coolbash_motd_sysinfo, et
+#      _coolbash_motd_sys=(mémoire en octets, cœurs, "l1 l5 l15"). Un seul
+#      processus (sysctl, LC_ALL=C : pas de virgule décimale) ; la version de
+#      macOS est lue dans SystemVersion.plist, sans sw_vers.
+_coolbash_motd_darwin() {
+  local line key="" name="" ver="" boot now i=0
+  [[ -x /usr/sbin/sysctl ]] || return 1
+  while IFS= read -r line; do
+    case "$i" in
+      0) kernel="$line" ;;
+      1)
+        boot="${line#*sec = }"
+        boot="${boot%%,*}"
+        ;;
+      2) _coolbash_motd_sys[0]="$line" ;;
+      3) _coolbash_motd_sys[1]="$line" ;;
+      4)
+        line="${line#\{ }"
+        _coolbash_motd_sys[2]="${line% \}}"
+        ;;
+      5) host="$line" ;;
+    esac
+    i=$((i + 1))
+  done < <(LC_ALL=C /usr/sbin/sysctl -n kern.osrelease kern.boottime hw.memsize hw.ncpu vm.loadavg hw.model 2>/dev/null)
+  [[ -n "$kernel" && "$boot" =~ ^[0-9]+$ ]] || return 1
+  _coolbash_date now %s
+  up=$((now - boot))
+  while IFS= read -r line; do
+    case "$line" in
+      *'<key>ProductName</key>'*) key=name ;;
+      *'<key>ProductVersion</key>'*) key=ver ;;
+      *'<string>'*)
+        line="${line#*<string>}"
+        line="${line%%</string>*}"
+        case "$key" in name) name="$line" ;; ver) ver="$line" ;; esac
+        key=""
+        ;;
+    esac
+  done 2>/dev/null </System/Library/CoreServices/SystemVersion.plist
+  os="${name:-macOS}${ver:+ $ver}"
+  return 0
 }
 
 # FR : COOLBASH_MOTD_HIDE="battery load" — lignes à ne pas afficher.
@@ -144,12 +199,33 @@ _coolbash_motd_human_kb() {
 }
 
 # FR : mémoire — /proc/meminfo (MemAvailable = ce que le noyau pourrait libérer).
+#      macOS : hw.memsize, et vm_stat pour le disponible (pages libres,
+#      inactives et spéculatives).
 _coolbash_motd_mem() {
-  local key val _ total="" avail="" used pcent
-  while read -r key val _; do
-    case "$key" in MemTotal:) total="$val" ;; MemAvailable:) avail="$val" ;; esac
-    [[ -n "$total" && -n "$avail" ]] && break
-  done 2>/dev/null </proc/meminfo
+  local key val _ total="" avail="" used pcent line page=4096 pages=0
+  if [[ -r /proc/meminfo ]]; then
+    while read -r key val _; do
+      case "$key" in MemTotal:) total="$val" ;; MemAvailable:) avail="$val" ;; esac
+      [[ -n "$total" && -n "$avail" ]] && break
+    done 2>/dev/null </proc/meminfo
+  elif [[ "${_coolbash_motd_sys[0]:-}" =~ ^[0-9]+$ && -x /usr/bin/vm_stat ]]; then
+    while IFS= read -r line; do
+      case "$line" in
+        *'page size of '*)
+          page="${line#*page size of }"
+          page="${page%% *}"
+          ;;
+        'Pages free:'* | 'Pages inactive:'* | 'Pages speculative:'*)
+          val="${line##* }"
+          val="${val%.}"
+          [[ "$val" =~ ^[0-9]+$ ]] && pages=$((pages + val))
+          ;;
+      esac
+    done < <(/usr/bin/vm_stat 2>/dev/null)
+    [[ "$page" =~ ^[0-9]+$ ]] || return 0
+    total=$((_coolbash_motd_sys[0] / 1024))
+    avail=$((pages * page / 1024))
+  fi
   [[ "$total" =~ ^[0-9]+$ && "$avail" =~ ^[0-9]+$ && "$total" -gt 0 ]] || return 0
   local color h_used h_total
   used=$((total - avail))
@@ -164,8 +240,15 @@ _coolbash_motd_mem() {
 #      Rouge si la charge 1 min dépasse le nombre de cœurs, jaune à partir de la moitié.
 _coolbash_motd_load() {
   local l1 l5 l15 _ cores=0 c color="" l1c
-  read -r l1 l5 l15 _ 2>/dev/null </proc/loadavg || return 0
-  for c in /sys/devices/system/cpu/cpu[0-9]*; do [[ -d "$c" ]] && cores=$((cores + 1)); done
+  if [[ -r /proc/loadavg ]]; then
+    read -r l1 l5 l15 _ 2>/dev/null </proc/loadavg || return 0
+    for c in /sys/devices/system/cpu/cpu[0-9]*; do [[ -d "$c" ]] && cores=$((cores + 1)); done
+  else
+    # FR : macOS — vm.loadavg et hw.ncpu, déjà lus par _coolbash_motd_darwin.
+    read -r l1 l5 l15 _ <<<"${_coolbash_motd_sys[2]:-}"
+    [[ "$l1" =~ ^[0-9]+\.[0-9]+$ ]] || return 0
+    [[ "${_coolbash_motd_sys[1]:-}" =~ ^[0-9]+$ ]] && cores="${_coolbash_motd_sys[1]}"
+  fi
   ((cores > 0)) || cores=1
   l1c="${l1/[.,]/}"
   l1c="${l1c#0}"
@@ -178,7 +261,28 @@ _coolbash_motd_load() {
 
 # FR : batterie — /sys/class/power_supply/BAT*. Rouge sous 20 % en décharge, jaune sous 40.
 _coolbash_motd_battery() {
-  local b cap status color=""
+  local b cap status color="" line
+  # FR : macOS — « -InternalBattery-0 (id=…)	27%; charging; 2:54 remaining » ;
+  #      un Mac de bureau n'a pas cette ligne.
+  if [[ "${OSTYPE:-}" == darwin* ]]; then
+    [[ -x /usr/bin/pmset ]] || return 0
+    while IFS= read -r line; do
+      [[ "$line" == *InternalBattery* && "$line" =~ ([0-9]+)%\;\ ([^\;]+) ]] || continue
+      cap="${BASH_REMATCH[1]}"
+      status="${BASH_REMATCH[2]}"
+      case "$status" in
+        discharging) status=Discharging ;;
+        charging) status=Charging ;;
+        charged) status=Full ;;
+        *) status="Not charging" ;;
+      esac
+      if [[ "$status" == Discharging ]]; then
+        if ((cap < 20)); then color='\e[31m'; elif ((cap < 40)); then color='\e[33m'; fi
+      fi
+      printf "Battery: ${color}%s%%\e[0m (%s)\n" "$cap" "$status"
+    done < <(/usr/bin/pmset -g batt 2>/dev/null)
+    return 0
+  fi
   for b in /sys/class/power_supply/BAT*; do
     read -r cap 2>/dev/null <"$b/capacity" || continue
     read -r status 2>/dev/null <"$b/status" || status="unknown"
@@ -248,7 +352,7 @@ _coolbash_motd_image() {
 _coolbash_motd_todo() {
   local lines=() i
   [[ -s "${COOLBASH_PREFIX:-$HOME/.coolbash}/todo.txt" ]] || return 0
-  mapfile -t lines <"${COOLBASH_PREFIX:-$HOME/.coolbash}/todo.txt"
+  _coolbash_readlines lines <"${COOLBASH_PREFIX:-$HOME/.coolbash}/todo.txt"
   _coolbash_say '\n\e[1mÀ faire\e[0m (todo) :\n'
   for i in "${!lines[@]}"; do
     ((i >= 5)) && {
@@ -263,7 +367,7 @@ _coolbash_motd_todo() {
 _coolbash_motd_note() {
   local file="${COOLBASH_PREFIX:-$HOME/.coolbash}/motd.txt" lines=()
   [[ -s "$file" ]] || return 0
-  mapfile -t lines <"$file"
+  _coolbash_readlines lines <"$file"
   printf '\n'
   printf '\e[36m%s\e[0m\n' "${lines[@]}"
 }
@@ -273,19 +377,37 @@ _coolbash_motd_note() {
 #      partir de 80 % et seulement les vrais périphériques (/dev/…, sauf loop) :
 #      pas de tmpfs, pas de snap.
 #      Sans df (PATH réduit), pas de ligne.
+#      macOS (APFS) : / est le volume système scellé (quelques Go, toujours) ; les
+#      données sont sur /System/Volumes/Data, affiché comme « / ». Les autres
+#      volumes système (VM, Preboot, simulateurs…) ne sont pas listés, et les
+#      tailles perdent leur « i » (466Gi → 466G).
 _coolbash_motd_disk() {
-  local fs size used _ pcent mount p color
+  local fs size used _ pcent mount p color data=0
+  local -a rows=()
   command -v df >/dev/null 2>&1 || return 0
+  _coolbash_readlines rows < <(df -Phl 2>/dev/null)
+  if [[ "${OSTYPE:-}" == darwin* ]]; then
+    for _ in "${rows[@]}"; do [[ "$_" == *" /System/Volumes/Data" ]] && data=1; done
+  fi
   while read -r fs size used _ pcent mount; do
     [[ "$pcent" =~ ^[0-9]+%$ ]] || continue
     p="${pcent%\%}"
+    if [[ "${OSTYPE:-}" == darwin* ]]; then
+      case "$mount" in
+        /) ((data)) && continue ;;
+        /System/Volumes/Data) mount=/ ;;
+        /System/Volumes/* | /private/var/* | /Library/Developer/*) continue ;;
+      esac
+      size="${size%i}"
+      used="${used%i}"
+    fi
     # FR : / toujours (même overlay, en conteneur) ; sinon un vrai périphérique à ≥ 80 %.
     if [[ "$mount" != / ]]; then
       [[ "$fs" == /dev/* && "$fs" != /dev/loop* && "$p" -ge 80 ]] || continue
     fi
     _coolbash_motd_pcent_color color "$p"
     printf "Disk (%s): %s used of %s (${color}%s\e[0m)\n" "$mount" "$used" "$size" "$pcent"
-  done < <(df -Phl 2>/dev/null)
+  done < <(printf '%s\n' "${rows[@]}")
   return 0
 }
 

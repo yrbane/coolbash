@@ -129,8 +129,8 @@ jobs:
           name: coolbash-arch
           path: dist/arch/*.pkg.tar.*
 
-  # FR : macOS — pas de /proc, df BSD, bash 3.2 en /bin/bash : ce job exerce les
-  #      replis. Lint complet, puis fumée : install, init, prompt, doctor, MOTD.
+  # FR : macOS — pas de /proc, outils BSD, bash 3.2 en /bin/bash : lint complet,
+  #      suite de tests, puis fumée : install, init, prompt, doctor, MOTD.
   macos:
     runs-on: macos-latest
     steps:
@@ -143,13 +143,21 @@ jobs:
         run: |
           bash --version | head -1
           make lint SHELL="$(brew --prefix)/bin/bash"
-      - name: Fumée — install, init, prompt, doctor, MOTD sans /proc
+      - name: Suite de tests — bash de Homebrew
+        run: make test
+      - name: Suite de tests — /bin/bash 3.2 (celui de macOS)
         run: |
-          COOLBASH_FONT=0 make install SHELL="$(brew --prefix)/bin/bash"
-          bash -c 'source ~/.coolbash/cli/coolbash init; type -t mkcd j gsw todo copy >/dev/null && echo "fonctions OK"'
-          bash -ic '_coolbash_prompt_build; printf "PS1=%s\n" "$PS1"' 2>/dev/null | grep -q 'PS1=.* at ' && echo "prompt OK"
-          bash -c 'MOTD_DISABLE= HOME="$HOME" ; source ~/.coolbash/cli/coolbash init; _coolbash_motd_sysinfo; _coolbash_motd_disk; echo "MOTD OK"'
-          bash ~/.coolbash/cli/coolbash doctor || true
-          bash ~/.coolbash/cli/coolbash fortune dev
-          bash ~/.coolbash/cli/coolbash version
+          /bin/bash --version | head -1
+          /bin/bash tests/run.sh
+      - name: Fumée sous /bin/bash 3.2 — install, init, prompt, doctor, MOTD sans /proc
+        run: |
+          export PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+          COOLBASH_FONT=0 make install 2>&1 | tee "$RUNNER_TEMP/install.log"
+          ! grep -E 'invalid option|bad substitution|unbound variable|syntax error' "$RUNNER_TEMP/install.log"
+          /bin/bash -c 'source ~/.coolbash/cli/coolbash init; type -t mkcd j gsw todo copy >/dev/null && echo "fonctions OK"'
+          /bin/bash -ic '_coolbash_prompt_build; printf "PS1=%s\n" "$PS1"' 2>/dev/null | grep -q 'PS1=.* at ' && echo "prompt OK"
+          /bin/bash -c 'MOTD_DISABLE= HOME="$HOME" ; source ~/.coolbash/cli/coolbash init; _coolbash_motd_sysinfo; _coolbash_motd_disk; echo "MOTD OK"'
+          /bin/bash ~/.coolbash/cli/coolbash doctor || true
+          /bin/bash ~/.coolbash/cli/coolbash fortune dev
+          /bin/bash ~/.coolbash/cli/coolbash version
 

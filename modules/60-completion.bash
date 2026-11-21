@@ -18,6 +18,13 @@ _coolbash_completion_load() {
   elif [[ -r /etc/bash_completion ]]; then
     # shellcheck disable=SC1091
     . /etc/bash_completion 2>/dev/null || true
+  elif [[ -r /opt/homebrew/share/bash-completion/bash_completion ]]; then
+    # FR : macOS — brew install bash-completion@2 (Apple Silicon, puis Intel).
+    # shellcheck disable=SC1091
+    . /opt/homebrew/share/bash-completion/bash_completion 2>/dev/null || true
+  elif [[ -r /usr/local/share/bash-completion/bash_completion ]]; then
+    # shellcheck disable=SC1091
+    . /usr/local/share/bash-completion/bash_completion 2>/dev/null || true
   fi
   # FR: alias `g` → completion git.
   declare -F _git >/dev/null 2>&1 && complete -o default -o nospace -F _git g
@@ -36,7 +43,10 @@ _coolbash_completion_lazy() {
   return 124
 }
 
-if ! _coolbash_safe; then
+# FR : `complete -D` et le retour 124 datent de bash 4.1 : avant (le 3.2 de macOS),
+#      pas de chargement différé — les completions de CoolBash (coolbash, j, bd,
+#      todo, gsw…) restent, celles de bash-completion sont à charger soi-même.
+if ! _coolbash_safe && ((COOLBASH_BASH >= 401)); then
   complete -D -F _coolbash_completion_lazy
 fi
 

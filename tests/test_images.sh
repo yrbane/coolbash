@@ -20,7 +20,7 @@ im() {
 # FR : un PNG 1×1 (68 octets) décodé depuis base64 — zéro dépendance.
 png="${COOLBASH_TEST_TMP}/pixel.png"
 printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' | base64 -d >"${png}"
-b64="$(base64 -w0 "${png}")"
+b64="$(base64 <"${png}" | tr -d '\n')"
 fb="${COOLBASH_TEST_TMP}/fbimg"
 mkdir -p "${fb}"
 for b in bash base64 env grep sed cat head tail tr cut wc od; do ln -sf "$(command -v "$b")" "${fb}/$b"; done
@@ -70,7 +70,7 @@ assert_contains "kitty : -w 40 -h 10, dans l'ordre voulu" "$(im -u TMUX COOLBASH
 assert_contains "kitty sous tmux : enveloppe passthrough" "$(im COOLBASH_IMG=kitty TMUX=/tmp/x PATH="${fb}" "img '${png}'" | cat -v)" '^[Ptmux;^[^[_G'
 big="${COOLBASH_TEST_TMP}/big.png"
 head -c 5000 /dev/urandom >"${big}" # FR : > 4096 octets une fois en base64 ; seul le suffixe .png compte ici
-n="$(im -u TMUX COOLBASH_IMG=kitty PATH="${fb}" "img '${big}'" | grep -ao 'm=1;' | wc -l)"
+n="$(im -u TMUX COOLBASH_IMG=kitty PATH="${fb}" "img '${big}'" | grep -ao 'm=1;' | t_count)"
 assert_eq "kitty : au-delà de 4096 octets, plusieurs morceaux (m=1 puis m=0)" "1" "$([[ "${n}" -ge 1 ]] && echo 1 || echo 0)"
 
 # --- protocole iTerm2 --------------------------------------------------------------

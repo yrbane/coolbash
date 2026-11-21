@@ -36,7 +36,7 @@ unalias gwip gunwip gfix gsw gopen git 2>/dev/null
 #      dernier commit n'est pas un WIP : on ne défait jamais un vrai commit.
 gwip() {
   _coolbash_fn_help gwip "$@" && return
-  git add -A && git commit -q --no-verify -m "WIP [skip ci]: $(printf '%(%Y-%m-%d %H:%M)T' -1)" && git log -1 --oneline
+  git add -A && git commit -q --no-verify -m "WIP [skip ci]: $(date '+%Y-%m-%d %H:%M')" && git log -1 --oneline
 }
 gunwip() {
   _coolbash_fn_help gunwip "$@" && return
@@ -114,7 +114,7 @@ _coolbash_gsw_complete() {
 complete -F _coolbash_gsw_complete gsw
 _coolbash_gfix_complete() {
   local cur="${COMP_WORDS[COMP_CWORD]}"
-  mapfile -t COMPREPLY < <(git log --format=%h -20 2>/dev/null | grep -- "^${cur}")
+  _coolbash_readlines COMPREPLY < <(git log --format=%h -20 2>/dev/null | grep -- "^${cur}")
 }
 complete -F _coolbash_gfix_complete gfix
 

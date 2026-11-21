@@ -59,7 +59,11 @@ lazy="$(MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -c '
     declare -F _init_completion >/dev/null || declare -F _comp_initialize >/dev/null || echo "bash-completion non chargé"
   fi
 ' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/60-completion.bash" 2>&1)"
-assert_eq "le chargeur différé charge puis se retire (retour 124 = réessayer la completion)" "rc=124" "${lazy}"
+if t_bash_ge 401; then
+  assert_eq "le chargeur différé charge puis se retire (retour 124 = réessayer la completion)" "rc=124" "${lazy}"
+else
+  assert_eq "bash < 4.1 : pas de chargeur différé, et aucune erreur" "pas de chargeur -D" "${lazy}"
+fi
 
 # --- 0.8.1 : correctifs des modules -----------------------------------------
 # shellcheck disable=SC2016
@@ -82,7 +86,7 @@ out="$(mod 00-core.bash 'shopt -s expand_aliases; alias please="sudo !!"; alias 
 assert_eq "recharger par-dessus d'anciens alias homonymes : aucune erreur, fonctions en place" "function function function" "$(printf '%s' "${out}" | tr '\n' ' ')"
 
 # FR : le chemin des gems Ruby était figé (3.4.0) et ajouté même absent.
-assert_eq "PATH : aucun dossier de gems inexistant" "0" "$(PATH=/usr/bin:/bin mod 20-path-and-colors.bash 'echo "$PATH"' | tr ':' '\n' | grep -c 'gem/ruby')"
+assert_eq "PATH : aucun dossier de gems inexistant" "0" "$(PATH="${BASH%/*}:/usr/bin:/bin" mod 20-path-and-colors.bash 'echo "$PATH"' | tr ':' '\n' | grep -c 'gem/ruby')"
 mkdir -p "${COOLBASH_TEST_TMP}/.local/share/gem/ruby/9.9.0/bin"
 assert_contains "PATH : dossier de gems détecté quelle que soit la version" "$(mod 20-path-and-colors.bash 'echo "$PATH"')" "gem/ruby/9.9.0/bin"
 
@@ -94,12 +98,17 @@ assert_no_path "…aucun ~/.gitconfig créé au chargement" "${COOLBASH_TEST_TMP
 # FR : neofetch calculait tout (GPU, thème, police…) pour 6 lignes : jusqu'à 2,7 s.
 #      Les infos système sont lues dans /proc, /sys et /etc/os-release : zéro processus.
 sysinfo="$(mod 70-motd.bash 'PATH=/nonexistent; _coolbash_motd_sysinfo')"
-assert_contains "MOTD : titre user@host sans aucun processus" "${sysinfo}" "${USER:-$(id -un)}@${HOSTNAME}"
-assert_contains "MOTD : ligne OS depuis /etc/os-release" "${sysinfo}" "OS: $(
-  . /etc/os-release
-  echo "$PRETTY_NAME"
-)"
-assert_contains "MOTD : noyau depuis /proc" "${sysinfo}" "Kernel: $(uname -r)"
+assert_contains "MOTD : titre user@host sans aucun processus" "${sysinfo}" "${USER:-$(id -un)}@${HOSTNAME%%.*}"
+if t_darwin; then
+  assert_contains "MOTD macOS : ligne OS depuis SystemVersion.plist (sans sw_vers)" "${sysinfo}" "OS: macOS $(sw_vers -productVersion)"
+  assert_contains "MOTD macOS : le modèle (hw.model)" "${sysinfo}" "Host: $(sysctl -n hw.model)"
+else
+  assert_contains "MOTD : ligne OS depuis /etc/os-release" "${sysinfo}" "OS: $(
+    . /etc/os-release
+    echo "$PRETTY_NAME"
+  )"
+fi
+assert_contains "MOTD : noyau depuis /proc (macOS : sysctl)" "${sysinfo}" "Kernel: $(uname -r)"
 assert_eq "MOTD : uptime formaté (days/hours/mins)" "1" "$(printf '%s\n' "${sysinfo}" | grep -cE '^Uptime: ([0-9]+ days?, )?([0-9]+ hours?, )?[0-9]+ mins?$')"
 assert_contains "MOTD : la date du jour, par le printf intégré à bash" "${sysinfo}" "Date: $(date +%Y-%m-%d)"
 assert_not_contains "MOTD : sans df, pas de ligne disque (et pas d'erreur)" "${sysinfo}" "Disk"
@@ -113,7 +122,13 @@ strip_colors() { sed 's/\x1b\[[0-9;]*m//g'; }
 pure="$(mod 70-motd.bash 'PATH=/nonexistent; _coolbash_motd_sysinfo' | strip_colors)"
 assert_eq "MOTD : mémoire depuis /proc/meminfo, utilisée / totale (pourcentage)" "1" "$(printf '%s\n' "${pure}" | grep -cE '^Mem: [0-9]+\.[0-9][KMGT] used of [0-9]+\.[0-9][KMGT] \([0-9]+%\)$')"
 assert_eq "MOTD : charge depuis /proc/loadavg avec le nombre de cœurs" "1" "$(printf '%s\n' "${pure}" | grep -cE '^Load: [0-9]+\.[0-9]+ [0-9]+\.[0-9]+ [0-9]+\.[0-9]+ \([0-9]+ cores?\)$')"
-if compgen -G '/sys/class/power_supply/BAT*/capacity' >/dev/null; then
+if t_darwin; then
+  if pmset -g batt 2>/dev/null | grep -q InternalBattery; then
+    assert_eq "MOTD macOS : batterie depuis pmset (ce Mac en a une)" "1" "$(printf '%s\n' "${pure}" | grep -cE '^Battery: [0-9]+% \([A-Za-z ]+\)$')"
+  else
+    assert_not_contains "MOTD macOS : pas de batterie ici, pas de ligne" "${pure}" "Battery"
+  fi
+elif compgen -G '/sys/class/power_supply/BAT*/capacity' >/dev/null; then
   assert_eq "MOTD : batterie depuis /sys (cette machine en a une)" "1" "$(printf '%s\n' "${pure}" | grep -cE '^Battery: [0-9]+% \([A-Za-z ]+\)$')"
 else
   assert_not_contains "MOTD : pas de batterie ici, pas de ligne" "${pure}" "Battery"
@@ -128,7 +143,11 @@ rb="${COOLBASH_TEST_TMP}/reboot"
 mkdir -p "${rb}/modules/$(uname -r)" "${rb}/modules/9.9.9-other"
 assert_empty "reboot : modules du noyau courant présents, rien à dire" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/modules' '${rb}/absent'")"
 rm -r "${rb}/modules/$(uname -r)"
-assert_contains "reboot : les modules du noyau qui tourne ont disparu → Reboot required" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/modules' '${rb}/absent'" | strip_colors)" "Reboot required"
+if t_linux; then
+  assert_contains "reboot : les modules du noyau qui tourne ont disparu → Reboot required" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/modules' '${rb}/absent'" | strip_colors)" "Reboot required"
+else
+  t_skip "reboot : modules du noyau disparus (Linux seulement)"
+fi
 : >"${rb}/flag"
 assert_contains "reboot : fichier /var/run/reboot-required → Reboot required" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/nomodules' '${rb}/flag'" | strip_colors)" "Reboot required"
 assert_empty "reboot : sans dossier de modules ni drapeau (conteneur), rien" "$(mod 70-motd.bash "_coolbash_motd_reboot '${rb}/nomodules' '${rb}/absent'")"
@@ -175,13 +194,13 @@ assert_not_contains "note : COOLBASH_MOTD_HIDE=note la coupe" "$(mod 70-motd.bas
 rm "${COOLBASH_TEST_TMP}/.coolbash/motd.txt"
 
 # FR : ordre du MOTD — l'état de la machine, puis la vache en dernier (au-dessus du prompt).
-if command -v script >/dev/null 2>&1; then
+if t_has_tty; then
   fbo="${COOLBASH_TEST_TMP}/fbo"
   mkdir -p "${fbo}"
   printf '#!/bin/bash\nprintf "COW:"; cat\n' >|"${fbo}/cowsay"
   chmod +x "${fbo}/cowsay"
   order="$(env -u COOLBASH_MOTD_SHOWN MOTD_DISABLE= HOME="${COOLBASH_TEST_TMP}" COOLBASH_ROOT="${COOLBASH_TEST_ROOT}" PATH="${fbo}:/usr/bin:/bin" \
-    script -qec "bash --norc --noprofile -c 'source ${COOLBASH_TEST_ROOT}/modules/00-core.bash; source ${COOLBASH_TEST_ROOT}/modules/70-motd.bash'" /dev/null 2>/dev/null \
+    "${T_TTY}" "'${BASH}' --norc --noprofile -c 'source ${COOLBASH_TEST_ROOT}/modules/00-core.bash; source ${COOLBASH_TEST_ROOT}/modules/70-motd.bash'" 2>/dev/null \
     | sed 's/\x1b\[[0-9;]*m//g' | grep -naE '^Kernel:|^COW:' | cut -d: -f1,2 | tr '\n' ' ')"
   k="${order%%:Kernel*}"
   c="${order%%:COW*}"
@@ -268,7 +287,7 @@ assert_contains "…avec un code d'erreur" "${out}" "rc=3"
 # --- 35-toolchains : SDK dans le PATH seulement s'ils existent, nvm paresseux --
 th="${COOLBASH_TEST_TMP}/th"
 mkdir -p "${th}"
-tc() { MOTD_DISABLE=1 HOME="${th}" PATH=/usr/bin:/bin bash --norc --noprofile -c 'source "$1"; source "$2"; shift 2; eval "$*"' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/35-toolchains.bash" "$@" 2>&1; }
+tc() { MOTD_DISABLE=1 HOME="${th}" PATH=/usr/bin:/bin "${BASH}" --norc --noprofile -c 'source "$1"; source "$2"; shift 2; eval "$*"' _ "${COOLBASH_TEST_ROOT}/modules/00-core.bash" "${COOLBASH_TEST_ROOT}/modules/35-toolchains.bash" "$@" 2>&1; }
 assert_eq "aucun SDK installé : PATH inchangé, rien d'exporté" "/usr/bin:/bin||" "$(tc 'echo "$PATH|${PNPM_HOME-}|${ANDROID_HOME-}"')"
 mkdir -p "${th}/.cargo/bin" "${th}/.local/share/pnpm" "${th}/Android/Sdk/platform-tools" "${th}/Android/Sdk/emulator" "${th}/.foundry/bin"
 path="$(tc 'echo "$PATH"')"
@@ -296,7 +315,7 @@ assert_eq "premier appel à nvm : charge nvm.sh puis relaie les arguments" "vrai
 assert_eq "COOLBASH_NVM_LAZY=0 : chargement immédiat, comme avant" "1" "$(
   rm -f "${th}/nvm.loaded"
   COOLBASH_NVM_LAZY=0 tc 'true' >/dev/null
-  wc -l <"${th}/nvm.loaded"
+  t_count <"${th}/nvm.loaded"
 )"
 assert_eq "mode safe : ni nvm ni SDK" "/usr/bin:/bin" "$(COOLBASH_MODE=safe tc 'echo "$PATH"')"
 

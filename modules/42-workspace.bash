@@ -103,12 +103,15 @@ todo() {
         _coolbash_say 'usage : todo %s <numéro>\n' "$1" >&2
         return 1
       }
-      [[ -r "$file" ]] && mapfile -t lines <"$file"
+      [[ -r "$file" ]] && _coolbash_readlines lines <"$file"
       ((n <= ${#lines[@]})) || {
         _coolbash_say 'todo : pas de tâche n° %s\n' "$n" >&2
         return 1
       }
-      [[ "$1" != rm ]] && printf '%s\t%s\n' "$(printf '%(%Y-%m-%d)T' -1)" "${lines[n - 1]}" >>"${file%.txt}.done"
+      [[ "$1" != rm ]] && {
+        _coolbash_date i '%Y-%m-%d'
+        printf '%s\t%s\n' "$i" "${lines[n - 1]}" >>"${file%.txt}.done"
+      }
       unset 'lines[n-1]'
       if ((${#lines[@]})); then printf '%s\n' "${lines[@]}" >|"$file"; else rm -f "$file"; fi
       ;;
@@ -118,7 +121,7 @@ todo() {
       return 1
       ;;
   esac
-  [[ -r "$file" ]] && mapfile -t lines <"$file"
+  [[ -r "$file" ]] && _coolbash_readlines lines <"$file"
   ((${#lines[@]})) || {
     _coolbash_say 'todo : rien à faire ✔\n'
     return 0
@@ -131,8 +134,8 @@ _coolbash_todo_complete() {
   local cur="${COMP_WORDS[COMP_CWORD]}" file="${COOLBASH_PREFIX:-$HOME/.coolbash}/todo.txt" n i line
   COMPREPLY=()
   if ((COMP_CWORD == 1)); then
-    mapfile -t COMPREPLY < <(compgen -W "add done rm list" -- "$cur")
-  elif ((COMP_CWORD == 2)) && [[ "${COMP_WORDS[1]}" == @(done|rm|d) && -r "$file" ]]; then
+    _coolbash_readlines COMPREPLY < <(compgen -W "add done rm list" -- "$cur")
+  elif ((COMP_CWORD == 2)) && [[ "${COMP_WORDS[1]}" =~ ^(done|rm|d)$ && -r "$file" ]]; then
     # FR : pas `read -r _` : bash réécrit $_ après chaque commande (boucle sans fin).
     n=0
     while IFS= read -r line || [[ -n "$line" ]]; do n=$((n + 1)); done <"$file"

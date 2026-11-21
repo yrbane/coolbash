@@ -28,14 +28,27 @@ if ! declare -F _coolbash_t >/dev/null 2>&1; then
   unset COOLBASH_LANG_DIR
 fi
 declare -F _coolbash_lang_init >/dev/null 2>&1 && _coolbash_lang_init
-# FR : sans share/lang (CLI copiée seule) : les messages restent en français.
+# FR : sans share/lang (CLI copiée seule) : les messages restent en français, et
+#      le socle de compatibilité est réduit à ses replis portables (bash 3.2).
 if ! declare -F _coolbash_t >/dev/null 2>&1; then
+  COOLBASH_BASH=$((BASH_VERSINFO[0] * 100 + BASH_VERSINFO[1]))
   _coolbash_t() { printf '%s' "$1"; }
   _coolbash_say() {
     local _cs_f="$1"
     shift
     # shellcheck disable=SC2059
     printf "$_cs_f" "$@"
+  }
+  _coolbash_date() { printf -v "$1" '%s' "$(PATH="${PATH}:/usr/bin:/bin" date "+$2")"; }
+  _coolbash_lower() { printf -v "$1" '%s' "$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')"; }
+  _coolbash_readlines() {
+    local _rl_line _rl_n=0
+    eval "$1=()"
+    while IFS= read -r _rl_line || [[ -n "$_rl_line" ]]; do
+      eval "$1[_rl_n]=\$_rl_line"
+      _rl_n=$((_rl_n + 1))
+    done
+    return 0
   }
 fi
 
@@ -65,7 +78,9 @@ umask 027
 set -o noclobber
 
 # FR: Qualité de vie Bash.
-shopt -s autocd cdspell dirspell checkjobs extglob globstar histappend cmdhist checkwinsize
+shopt -s cdspell extglob histappend cmdhist checkwinsize
+# FR : autocd, dirspell, checkjobs et globstar datent de bash 4.0.
+((COOLBASH_BASH >= 400)) && shopt -s autocd dirspell checkjobs globstar
 
 # FR: Readline/completion (insensible à la casse, montre tout si ambigu).
 # bind 'set completion-ignore-case on'

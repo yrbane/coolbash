@@ -104,6 +104,14 @@ up() {
 timer() {
   _coolbash_fn_help timer "$@" && return
   local start end rc ms
+  # FR : bash < 5 n'a pas EPOCHREALTIME : le mot-clé `time` fait le même travail
+  #      (son rapport va sur la sortie standard, les erreurs de la commande restent
+  #      sur la sortie d'erreur).
+  if [[ -z "${EPOCHREALTIME:-}" ]]; then
+    local TIMEFORMAT='⏱  %3Rs'
+    { time "$@" 2>&3; } 3>&2 2>&1
+    return
+  fi
   start="${EPOCHREALTIME//[.,]/}"
   "$@"
   rc=$?
@@ -123,7 +131,7 @@ backup() {
     _coolbash_say 'usage : backup <fichier|dossier>…\n' >&2
     return 1
   }
-  printf -v stamp '%(%Y-%m-%d-%H%M)T' -1
+  _coolbash_date stamp '%Y-%m-%d-%H%M'
   for f in "$@"; do
     f="${f%/}"
     [[ -e "$f" ]] || {

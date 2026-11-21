@@ -20,7 +20,13 @@ startup_i() {
 out="$(startup_i)"
 assert_contains "un shell interactif affiche son temps de démarrage" "${out}" "démarrage"
 assert_eq "le temps total est un nombre de ms" "1" "$(printf '%s\n' "${out}" | grep -cE 'démarrage .*[0-9]+ ms')"
-assert_eq "la part de CoolBash est indiquée à côté" "1" "$(printf '%s\n' "${out}" | grep -cE 'CoolBash [0-9]+ ms')"
+# FR : le total (âge du processus) vient de /proc : sans lui (macOS), la ligne
+#      n'affiche que la part de CoolBash.
+if t_linux; then
+  assert_eq "la part de CoolBash est indiquée à côté" "1" "$(printf '%s\n' "${out}" | grep -cE 'CoolBash [0-9]+ ms')"
+else
+  t_skip "la part de CoolBash à côté du total (âge du processus : /proc, Linux seulement)"
+fi
 
 # --- shell non interactif : muet -----------------------------------------------
 out="$(MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" COOLBASH_MODULE_DIR="${COOLBASH_TEST_ROOT}/modules" \
@@ -51,6 +57,11 @@ else
 fi
 
 # --- âge du processus : mesure Linux ---------------------------------------------
+if ! t_linux; then
+  t_skip "âge du processus (/proc, Linux seulement)"
+  assert_contains "config connaît COOLBASH_STARTUP_TIME" "$("${BASH}" "${CLI}" config 2>&1)" "COOLBASH_STARTUP_TIME"
+  t_done
+fi
 out="$(printf 'sleep 1\nsource "%s" init\n' "${CLI}" \
   | MOTD_DISABLE=1 HOME="${COOLBASH_TEST_TMP}" COOLBASH_MODULE_DIR="${COOLBASH_TEST_ROOT}/modules" \
     bash --norc --noprofile -i 2>/dev/null | grep 'démarrage' | grep -oE '[0-9]+ ms' | head -1 | grep -oE '[0-9]+')"

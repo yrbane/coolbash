@@ -20,15 +20,15 @@ chmod +x "${fb}/tmux"
 #      sans `script`, sans tty : le module doit alors rester muet.
 tm() {
   rm -f "${log}"
-  if command -v script >/dev/null 2>&1; then
+  if t_has_tty; then
     env -u TMUX -u SSH_CONNECTION -u SSH_TTY "$@" HOME="${COOLBASH_TEST_TMP}" PATH="${fb}:${PATH}" TERM=xterm \
-      script -qec "bash --norc --noprofile -ic 'source \"${CORE}\"; source \"${TM}\"; echo shell-still-here'" /dev/null 2>/dev/null | tr -d '\r'
+      "${T_TTY}" "bash --norc --noprofile -ic 'source \"${CORE}\"; source \"${TM}\"; echo shell-still-here'" 2>/dev/null | tr -d '\r'
   else
     env -u TMUX -u SSH_CONNECTION -u SSH_TTY "$@" HOME="${COOLBASH_TEST_TMP}" PATH="${fb}:${PATH}" TERM=xterm \
       bash --norc --noprofile -ic 'source "$1"; source "$2"; echo shell-still-here' _ "${CORE}" "${TM}" 2>/dev/null
   fi
 }
-if command -v script >/dev/null 2>&1; then
+if t_has_tty; then
   out="$(tm SSH_CONNECTION='1 2 3 4' COOLBASH_TMUX_SSH=1)"
   assert_contains "SSH + COOLBASH_TMUX_SSH=1 + terminal : exec tmux new-session -A" "$(cat "${log}" 2>/dev/null)" "tmux:new-session -A -s main"
   assert_not_contains "…le shell est remplacé (exec)" "${out}" "shell-still-here"

@@ -101,7 +101,11 @@ assert_eq "copy depuis stdin" "depuis stdin" "$(
 )"
 assert_eq "paste relit" "depuis stdin" "$(ws -u SSH_CONNECTION -u SSH_TTY WAYLAND_DISPLAY=w PATH="${fb}:${PATH}" 'paste')"
 assert_eq "en SSH : OSC 52 avec le texte en base64" "$(printf '\e]52;c;%s\a' "$(printf 'x' | base64)")" "$(ws SSH_CONNECTION=1 WAYLAND_DISPLAY=w PATH="${fb}:${PATH}" 'copy x')"
-assert_contains "sans aucun outil : OSC 52 aussi" "$(ws -u SSH_CONNECTION -u SSH_TTY -u WAYLAND_DISPLAY -u DISPLAY 'copy x' | cat -v)" "^[]52;c;"
+# FR : PATH réduit à l'essentiel — sous macOS, pbcopy est toujours dans /usr/bin.
+nb="${COOLBASH_TEST_TMP}/nbclip"
+mkdir -p "${nb}"
+for b in bash base64 tr cat; do ln -sf "$(type -P "$b")" "${nb}/$b"; done
+assert_contains "sans aucun outil : OSC 52 aussi" "$(ws -u SSH_CONNECTION -u SSH_TTY -u WAYLAND_DISPLAY -u DISPLAY PATH="${nb}" 'copy x' | cat -v)" "^[]52;c;"
 assert_eq "copypath : chemin absolu dans le presse-papiers et affiché" "${proj}/.coolbash.bash" "$(cd "${proj}" && ws -u SSH_CONNECTION -u SSH_TTY WAYLAND_DISPLAY=w PATH="${fb}:${PATH}" 'copypath .coolbash.bash')"
 assert_eq "copypath fichier absent → erreur" "1" "$(ws 'copypath /nulle/part >/dev/null 2>&1; echo $?')"
 

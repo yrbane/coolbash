@@ -28,7 +28,11 @@ assert_eq "safe : MOTD désactivé" "off" "$(MOTD_DISABLE='' COOLBASH_MODE=safe 
 assert_eq "normal : MOTD activé" "on" "$(MOTD_DISABLE='' run '_coolbash_motd_enabled && echo on || echo off')"
 assert_eq "MOTD_DISABLE reste honoré" "off" "$(MOTD_DISABLE=1 run '_coolbash_motd_enabled && echo on || echo off')"
 assert_eq "safe : pas de chargeur de completion différé" "" "$(COOLBASH_MODE=safe run 'complete -p -D 2>/dev/null')"
-assert_contains "normal : chargeur de completion différé en place" "$(run 'complete -p -D 2>/dev/null')" "_coolbash_completion_lazy"
+if t_bash_ge 401; then
+  assert_contains "normal : chargeur de completion différé en place" "$(run 'complete -p -D 2>/dev/null')" "_coolbash_completion_lazy"
+else
+  t_skip "chargeur de completion différé (complete -D : bash ≥ 4.1)"
+fi
 
 # --- COOLBASH_DISABLE --------------------------------------------------------
 assert_eq "COOLBASH_DISABLE=70-motd : le module n'est pas chargé" "" "$(COOLBASH_DISABLE="70-motd" run 'declare -F _coolbash_motd')"

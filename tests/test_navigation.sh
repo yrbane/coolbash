@@ -62,10 +62,21 @@ fb="${COOLBASH_TEST_TMP}/fbnav"
 mkdir -p "${fb}"
 printf '#!/bin/bash\n[[ "$1" == -Fq ]] && echo "extra/foobar-tools"\n' >|"${fb}/pacman"
 chmod +x "${fb}/pacman"
-cnf="$(printf 'source "%s"; source "%s"\nfoobar --version\necho "rc=$?"\n' "${CORE}" "${NAV}" | env PATH="${fb}:/usr/bin:/bin" HOME="${COOLBASH_TEST_TMP}" COOLBASH_PREFIX="${PFX}" bash --norc --noprofile -i 2>&1)"
-assert_contains "commande introuvable : message" "${cnf}" "foobar"
-assert_contains "…et le paquet qui la fournit (pacman -F)" "${cnf}" "extra/foobar-tools"
-assert_contains "…code retour 127, comme bash" "${cnf}" "rc=127"
+if t_bash_ge 400; then
+  cnf="$(printf 'source "%s"; source "%s"\nfoobar --version\necho "rc=$?"\n' "${CORE}" "${NAV}" | env PATH="${fb}:/usr/bin:/bin" HOME="${COOLBASH_TEST_TMP}" COOLBASH_PREFIX="${PFX}" "${BASH}" --norc --noprofile -i 2>&1)"
+  assert_contains "commande introuvable : message" "${cnf}" "foobar"
+  assert_contains "…et le paquet qui la fournit (pacman -F)" "${cnf}" "extra/foobar-tools"
+  assert_contains "…code retour 127, comme bash" "${cnf}" "rc=127"
+  # FR : Homebrew : la liste « formule:exécutables » de son cache, sans lancer brew.
+  mkdir -p "${fb}/brewcache/api/internal" "${fb}/brewbin"
+  printf 'aalib:aafire aainfo\nfoobar-kit(1.2):foo foobar\n' >|"${fb}/brewcache/api/internal/executables.txt"
+  printf '#!/bin/sh\nexit 1\n' >|"${fb}/brewbin/brew"
+  chmod +x "${fb}/brewbin/brew"
+  cnf="$(printf 'source "%s"; source "%s"\nfoobar --version\n' "${CORE}" "${NAV}" | env PATH="${fb}/brewbin:/usr/bin:/bin" HOMEBREW_CACHE="${fb}/brewcache" HOME="${COOLBASH_TEST_TMP}" COOLBASH_PREFIX="${PFX}" "${BASH}" --norc --noprofile -i 2>&1)"
+  assert_contains "commande introuvable : la formule Homebrew qui la fournit" "${cnf}" "brew install foobar-kit"
+else
+  t_skip "commande introuvable : bash < 4.0 n'a pas command_not_found_handle"
+fi
 assert_eq "shell non interactif : pas de handler (scripts inchangés)" "0" "$(nav 'declare -F command_not_found_handle >/dev/null && echo 1 || echo 0')"
 assert_eq "COOLBASH_CNF=0 : pas de handler" "0" "$(printf 'source "%s"; source "%s"\ndeclare -F command_not_found_handle >/dev/null && echo 1 || echo 0\n' "${CORE}" "${NAV}" | COOLBASH_CNF=0 HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -i 2>/dev/null | tail -1)"
 

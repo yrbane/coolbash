@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2154,SC2178,SC2034  # FR : faux positifs des namerefs (local -n) et de PS0
+# shellcheck disable=SC2154,SC2034  # FR : variables posées par printf -v, lues par PS0/PS1
 #  ██████  ██████   █████  ███    ███ ██████  ███████
 #  ██   ██ ██   ██ ██   ██ ████  ████ ██   ██    █
 #  ██████  ██████  ██   ██ ██ ████ ██ ██████     █
@@ -7,9 +7,10 @@
 #  ██      ██   ██  █████  ██      ██ ██         █      MODULE: PROMPT
 # ─────────────────────────────────────────────────────────────────────────────
 # FR: Prompt dynamique (git, venv, durée, code retour, emoji, icônes).
-#     - Durée : PS0 + EPOCHREALTIME (bash ≥ 4.4), zéro trap DEBUG.
+#     - Durée : PS0 + EPOCHREALTIME (bash ≥ 5), PS0 + SECONDS (bash 4.4), ou
+#       l'horodatage de l'historique (bash 3.2 → 4.3, sans PS0) — zéro trap DEBUG.
 #     - Git : un seul `git status --porcelain=v2 --branch`, sans verrou optionnel.
-#     - PS0 : heure de départ en gris + commande dans le titre du terminal.
+#     - PS0 (bash ≥ 4.4) : heure de départ en gris + commande dans le titre du terminal.
 #     - Icônes : Nerd Font par défaut, repli « basic » (Unicode standard) ou 0.
 #     - Hôte : icône et couleur selon le contexte (local, SSH, conteneur).
 #     - Terminal : OSC 7 (dossier courant), OSC 133 (marques de prompt : saut de
@@ -30,17 +31,15 @@
 #                COOLBASH_PROMPT_OSC133=0 (pas de marques de prompt),
 #                COOLBASH_PROMPT_SHLVL=0 (pas de niveau de shell).
 
-if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
-  return 0
-fi
-
 # --- Couleurs & symboles -----------------------------------------------------
-declare -gA COOLBASH_PROMPT_COLOR COOLBASH_PROMPT_SYM
+# FR : une variable par couleur et par icône — COOLBASH_PROMPT_COLOR_<nom>,
+#      COOLBASH_PROMPT_SYM_<nom> — plutôt que deux tableaux associatifs, que le
+#      bash 3.2 de macOS n'a pas.
 
 # FR : jeu d'icônes du prompt. Trois modes :
-#      - nerd  : glyphes Nerd Font (zones privées Unicode, écrits en `\uXXXX`
-#                pour rester lisibles dans le source) — il faut une Nerd Font
-#                dans le terminal ;
+#      - nerd  : glyphes Nerd Font (zones privées Unicode, écrits en octets
+#                UTF-8 `\xNN` : lisibles dans le source, et bash < 4.2 ne
+#                connaît pas `\uXXXX`) — il faut une Nerd Font dans le terminal ;
 #      - basic : symboles Unicode standard, rendus par n'importe quelle police ;
 #      - 0     : aucune icône.
 #      Défaut : 0 sur la console (TERM=linux), basic en mode safe, nerd sinon —
@@ -50,7 +49,7 @@ declare -gA COOLBASH_PROMPT_COLOR COOLBASH_PROMPT_SYM
 #      Une valeur explicite de COOLBASH_PROMPT_ICONS est toujours respectée ;
 #      une valeur inconnue retombe sur basic.
 _coolbash_prompt_init_icons() {
-  local -n s=COOLBASH_PROMPT_SYM
+  local k
   if [[ -z "${COOLBASH_PROMPT_ICONS:-}" ]]; then
     if [[ "${TERM:-}" == linux ]]; then
       COOLBASH_PROMPT_ICONS=0
@@ -71,22 +70,37 @@ _coolbash_prompt_init_icons() {
       #      nf-fa-hourglass_half, nf-fa-folder_open, nf-md-lock, nf-fa-clock_o,
       #      nf-fa-times_circle, nf-fa-cog, nf-fa-lock, nf-fa-plug, nf-fa-cube,
       #      nf-dev-php, nf-dev-nodejs_small, nf-fa-sitemap (niveau de shell).
-      s=([user]=$'\uf007' [host]=$'\uf108' [branch]=$'\ue725' [venv]=$'\ue73c'
-        [time]=$'\uf252' [path]=$'\uf07c' [root]=$'\U000f033e'
-        [clock]=$'\uf017' [err]=$'\uf057' [jobs]=$'\uf013' [ro]=$'\uf023'
-        [ssh]=$'\uf1e6' [container]=$'\uf1b2' [php]=$'\ue73d' [node]=$'\ue718'
-        [rust]=$'\ue7a8' [kube]=$'\U000f10fe' [aws]=$'\uf270' [shlvl]=$'\uf0e8')
+      COOLBASH_PROMPT_SYM_user=$'\xef\x80\x87'      # U+F007
+      COOLBASH_PROMPT_SYM_host=$'\xef\x84\x88'      # U+F108
+      COOLBASH_PROMPT_SYM_branch=$'\xee\x9c\xa5'    # U+E725
+      COOLBASH_PROMPT_SYM_venv=$'\xee\x9c\xbc'      # U+E73C
+      COOLBASH_PROMPT_SYM_time=$'\xef\x89\x92'      # U+F252
+      COOLBASH_PROMPT_SYM_path=$'\xef\x81\xbc'      # U+F07C
+      COOLBASH_PROMPT_SYM_root=$'\xf3\xb0\x8c\xbe'  # U+F033E
+      COOLBASH_PROMPT_SYM_clock=$'\xef\x80\x97'     # U+F017
+      COOLBASH_PROMPT_SYM_err=$'\xef\x81\x97'       # U+F057
+      COOLBASH_PROMPT_SYM_jobs=$'\xef\x80\x93'      # U+F013
+      COOLBASH_PROMPT_SYM_ro=$'\xef\x80\xa3'        # U+F023
+      COOLBASH_PROMPT_SYM_ssh=$'\xef\x87\xa6'       # U+F1E6
+      COOLBASH_PROMPT_SYM_container=$'\xef\x86\xb2' # U+F1B2
+      COOLBASH_PROMPT_SYM_php=$'\xee\x9c\xbd'       # U+E73D
+      COOLBASH_PROMPT_SYM_node=$'\xee\x9c\x98'      # U+E718
+      COOLBASH_PROMPT_SYM_rust=$'\xee\x9e\xa8'      # U+E7A8
+      COOLBASH_PROMPT_SYM_kube=$'\xf3\xb1\x83\xbe'  # U+F10FE
+      COOLBASH_PROMPT_SYM_aws=$'\xef\x89\xb0'       # U+F270
+      COOLBASH_PROMPT_SYM_shlvl=$'\xef\x83\xa8'     # U+F0E8
       ;;
     0)
-      s=([user]="" [host]="" [branch]="" [venv]="" [time]="" [path]="" [root]=""
-        [clock]="" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="" [container]="" [php]="" [node]=""
-        [rust]="" [kube]="" [aws]="" [shlvl]="⧉")
+      for k in user host branch venv time path root clock err jobs ro ssh container php node rust kube aws shlvl; do printf -v "COOLBASH_PROMPT_SYM_$k" ''; done
+      COOLBASH_PROMPT_SYM_err="✖" COOLBASH_PROMPT_SYM_jobs="⚙" COOLBASH_PROMPT_SYM_ro="⊘" COOLBASH_PROMPT_SYM_shlvl="⧉"
       ;;
     *)
       COOLBASH_PROMPT_ICONS=basic
-      s=([user]="" [host]="" [branch]="⎇" [venv]="⚗" [time]="⧗" [path]="" [root]="⚠"
-        [clock]="⏱" [err]="✖" [jobs]="⚙" [ro]="⊘" [ssh]="⇄" [container]="▣" [php]="" [node]=""
-        [rust]="" [kube]="⎈" [aws]="☁" [shlvl]="⧉")
+      for k in user host branch venv time path root clock err jobs ro ssh container php node rust kube aws shlvl; do printf -v "COOLBASH_PROMPT_SYM_$k" ''; done
+      COOLBASH_PROMPT_SYM_branch="⎇" COOLBASH_PROMPT_SYM_venv="⚗" COOLBASH_PROMPT_SYM_time="⧗" COOLBASH_PROMPT_SYM_root="⚠"
+      COOLBASH_PROMPT_SYM_clock="⏱" COOLBASH_PROMPT_SYM_err="✖" COOLBASH_PROMPT_SYM_jobs="⚙" COOLBASH_PROMPT_SYM_ro="⊘"
+      COOLBASH_PROMPT_SYM_ssh="⇄" COOLBASH_PROMPT_SYM_container="▣" COOLBASH_PROMPT_SYM_kube="⎈" COOLBASH_PROMPT_SYM_aws="☁"
+      COOLBASH_PROMPT_SYM_shlvl="⧉"
       ;;
   esac
 }
@@ -102,7 +116,6 @@ PROMPT_DIRTRIM="${PROMPT_DIRTRIM:-3}"
 #      les distingue d'un coup d'œil. En local, accent fixe. Les marqueurs de
 #      conteneur sont surchargeables (tests).
 _coolbash_prompt_init_host() {
-  local -n c=COOLBASH_PROMPT_COLOR
   local m h=0 i name="${HOSTNAME:-localhost}"
   COOLBASH_PROMPT_HOST_KIND=local
   for m in ${COOLBASH_PROMPT_CONTAINER_MARKERS:-/.dockerenv /run/.containerenv}; do
@@ -121,9 +134,9 @@ _coolbash_prompt_init_host() {
   if [[ "${COLORTERM:-}" =~ (24bit|truecolor) ]]; then
     local -a pal=("255 120 120" "255 180 80" "220 220 90" "120 220 120" "90 200 220" "150 150 255" "230 130 230" "255 150 190")
     # shellcheck disable=SC2086
-    _coolbash_prompt_rgb 'c[host_hash]' ${pal[h % 8]}
+    _coolbash_prompt_rgb COOLBASH_PROMPT_COLOR_host_hash ${pal[h % 8]}
   else
-    c[host_hash]="\[\e[$((31 + h % 6))m\]"
+    COOLBASH_PROMPT_COLOR_host_hash="\[\e[$((31 + h % 6))m\]"
   fi
 }
 
@@ -148,19 +161,18 @@ _coolbash_prompt_theme_palette() {
 }
 
 _coolbash_prompt_init_colors() {
-  local -n c=COOLBASH_PROMPT_COLOR
   local theme="${COOLBASH_PROMPT_THEME:-}" pal
   [[ -z "$theme" ]] && read -r theme 2>/dev/null <"${COOLBASH_PREFIX:-$HOME/.coolbash}/theme"
   theme="${theme:-coolbash}"
   [[ "$theme" == mono ]] || _coolbash_prompt_theme_palette "$theme" >/dev/null || theme=coolbash
   COOLBASH_PROMPT_THEME_ACTIVE="$theme"
-  c[reset]='\[\e[0m\]'
-  c[bold]='\[\e[1m\]'
-  c[path]='\[\e[1;34m\]'
-  c[time]='\[\e[0;36m\]'
+  COOLBASH_PROMPT_COLOR_reset='\[\e[0m\]'
+  COOLBASH_PROMPT_COLOR_bold='\[\e[1m\]'
+  COOLBASH_PROMPT_COLOR_path='\[\e[1;34m\]'
+  COOLBASH_PROMPT_COLOR_time='\[\e[0;36m\]'
   if [[ "$theme" == mono ]]; then
-    c[user]='' c[user_accent]='' c[git]='' c[info]='' c[root]='\[\e[1m\]' c[root_accent]='\[\e[1m\]'
-    c[path]='\[\e[1m\]' c[time]='' c[err]='\[\e[7m\]'
+    COOLBASH_PROMPT_COLOR_user='' COOLBASH_PROMPT_COLOR_user_accent='' COOLBASH_PROMPT_COLOR_git='' COOLBASH_PROMPT_COLOR_info='' COOLBASH_PROMPT_COLOR_root='\[\e[1m\]' COOLBASH_PROMPT_COLOR_root_accent='\[\e[1m\]'
+    COOLBASH_PROMPT_COLOR_path='\[\e[1m\]' COOLBASH_PROMPT_COLOR_time='' COOLBASH_PROMPT_COLOR_err='\[\e[7m\]'
     return 0
   fi
   if [[ "${COLORTERM:-}" =~ (24bit|truecolor) ]]; then
@@ -169,26 +181,26 @@ _coolbash_prompt_init_colors() {
     IFS='|' read -ra t <<<"$pal"
     # shellcheck disable=SC2086
     {
-      _coolbash_prompt_rgb 'c[user]' ${t[0]}
-      _coolbash_prompt_rgb 'c[user_accent]' ${t[1]}
-      _coolbash_prompt_rgb 'c[git]' ${t[2]}
-      _coolbash_prompt_rgb 'c[info]' ${t[3]}
-      _coolbash_prompt_bgrgb 'c[err]' ${t[4]}
-      _coolbash_prompt_rgb 'c[root]' ${t[5]}
-      _coolbash_prompt_rgb 'c[root_accent]' ${t[6]}
-      _coolbash_prompt_rgb 'c[path]' ${t[7]}
-      _coolbash_prompt_rgb 'c[time]' ${t[8]}
+      _coolbash_prompt_rgb COOLBASH_PROMPT_COLOR_user ${t[0]}
+      _coolbash_prompt_rgb COOLBASH_PROMPT_COLOR_user_accent ${t[1]}
+      _coolbash_prompt_rgb COOLBASH_PROMPT_COLOR_git ${t[2]}
+      _coolbash_prompt_rgb COOLBASH_PROMPT_COLOR_info ${t[3]}
+      _coolbash_prompt_bgrgb COOLBASH_PROMPT_COLOR_err ${t[4]}
+      _coolbash_prompt_rgb COOLBASH_PROMPT_COLOR_root ${t[5]}
+      _coolbash_prompt_rgb COOLBASH_PROMPT_COLOR_root_accent ${t[6]}
+      _coolbash_prompt_rgb COOLBASH_PROMPT_COLOR_path ${t[7]}
+      _coolbash_prompt_rgb COOLBASH_PROMPT_COLOR_time ${t[8]}
     }
-    c[err]+='\[\e[97m\]'
-    c[path]="${c[bold]}${c[path]}"
+    COOLBASH_PROMPT_COLOR_err+='\[\e[97m\]'
+    COOLBASH_PROMPT_COLOR_path="${COOLBASH_PROMPT_COLOR_bold}${COOLBASH_PROMPT_COLOR_path}"
   else
-    c[user]='\[\e[36m\]'
-    c[user_accent]='\[\e[35m\]'
-    c[git]='\[\e[33m\]'
-    c[info]='\[\e[34m\]'
-    c[err]='\[\e[41m\]\[\e[97m\]'
-    c[root]='\[\e[31m\]'
-    c[root_accent]='\[\e[91m\]'
+    COOLBASH_PROMPT_COLOR_user='\[\e[36m\]'
+    COOLBASH_PROMPT_COLOR_user_accent='\[\e[35m\]'
+    COOLBASH_PROMPT_COLOR_git='\[\e[33m\]'
+    COOLBASH_PROMPT_COLOR_info='\[\e[34m\]'
+    COOLBASH_PROMPT_COLOR_err='\[\e[41m\]\[\e[97m\]'
+    COOLBASH_PROMPT_COLOR_root='\[\e[31m\]'
+    COOLBASH_PROMPT_COLOR_root_accent='\[\e[91m\]'
   fi
 }
 _coolbash_prompt_init_colors
@@ -222,9 +234,29 @@ fi
 #         car l'heure du prompt date de son affichage, pas de l'Entrée.
 #      COOLBASH_PS0_EXTRA est ajouté tel quel à la fin (PS0 personnel).
 #      Pas de `\[ \]` ici : hors PS1/PS2, bash les imprimerait.
+#      Trois horloges, selon ce que le bash sait faire :
+#        realtime  bash ≥ 5.0 : PS0 + EPOCHREALTIME, à la microseconde ;
+#        seconds   bash 4.4   : PS0 + SECONDS, à la seconde ;
+#        history   bash < 4.4 (dont le 3.2 de macOS) : pas de PS0 — ni heure sous
+#                  la commande, ni titre, ni prompt transient. La durée vient de
+#                  l'horodatage que l'historique garde de chaque commande, à la
+#                  seconde ; une commande que l'historique ignore (doublon,
+#                  espace en tête) n'a pas de durée.
 COOLBASH_PROMPT_T0=0
 COOLBASH_PROMPT_LAST_MS=0
 COOLBASH_PROMPT_PS0_SINK=()
+if ((COOLBASH_BASH >= 500)) && [[ -n "${EPOCHREALTIME:-}" ]]; then
+  COOLBASH_PROMPT_CLOCK=realtime
+elif ((COOLBASH_BASH >= 404)); then
+  COOLBASH_PROMPT_CLOCK=seconds
+else
+  COOLBASH_PROMPT_CLOCK=history
+  COOLBASH_PROMPT_HIST_N=""
+  # FR : époque du lancement du shell : « maintenant » = cette base + SECONDS,
+  #      sans lancer date à chaque prompt.
+  _coolbash_date COOLBASH_PROMPT_EPOCH0 %s
+  COOLBASH_PROMPT_EPOCH0=$((COOLBASH_PROMPT_EPOCH0 - SECONDS))
+fi
 
 _coolbash_prompt_ps0_title() {
   local n cmd
@@ -277,8 +309,13 @@ _coolbash_prompt_transient() {
 }
 
 _coolbash_prompt_ps0_build() {
-  # shellcheck disable=SC2016
-  local ps0='${COOLBASH_PROMPT_PS0_SINK[$((COOLBASH_PROMPT_T0 = ${EPOCHREALTIME//[.,]/}))]:+}'
+  local ps0
+  # shellcheck disable=SC2016  # FR : PS0 est développé plus tard, à chaque Entrée
+  case "$COOLBASH_PROMPT_CLOCK" in
+    realtime) ps0='${COOLBASH_PROMPT_PS0_SINK[$((COOLBASH_PROMPT_T0 = ${EPOCHREALTIME//[.,]/}))]:+}' ;;
+    seconds) ps0='${COOLBASH_PROMPT_PS0_SINK[$((COOLBASH_PROMPT_T0 = SECONDS * 1000000 + 1))]:+}' ;;
+    *) return 0 ;;
+  esac
   # shellcheck disable=SC2016
   [[ "${COOLBASH_PROMPT_TRANSIENT:-0}" == 1 ]] && ps0+='$(_coolbash_prompt_transient)'
   if [[ "${COOLBASH_PS0_TITLE:-1}" != 0 ]] && _coolbash_prompt_term_has_title; then
@@ -317,7 +354,26 @@ _coolbash_prompt_osc133_wanted() {
 _coolbash_prompt_ps0_build
 
 _coolbash_prompt_elapsed() {
-  local now="${EPOCHREALTIME//[.,]/}"
+  local now n t _
+  case "$COOLBASH_PROMPT_CLOCK" in
+    realtime) now="${EPOCHREALTIME//[.,]/}" ;;
+    seconds) now=$((SECONDS * 1000000 + 1)) ;;
+    *)
+      # FR : « 501  1763711111 commande » — une entrée déjà vue au prompt précédent
+      #      (Entrée à vide) ne compte pas, ni la première (elle vient d'une autre session).
+      COOLBASH_PROMPT_LAST_MS=0
+      read -r n t _ <<<"$(HISTTIMEFORMAT='%s ' builtin history 1 2>/dev/null)"
+      [[ "$n" =~ ^[0-9]+$ && "$t" =~ ^[0-9]+$ ]] || return 0
+      if [[ -n "$COOLBASH_PROMPT_HIST_N" && "$n" != "$COOLBASH_PROMPT_HIST_N" ]]; then
+        now=$(((COOLBASH_PROMPT_EPOCH0 + SECONDS - t) * 1000))
+        # FR : l'historique date à la seconde : une commande de 0,2 s à cheval
+        #      sur deux secondes « dure » 1 s. En dessous de 2 s, on ne dit rien.
+        ((now >= 2000)) && COOLBASH_PROMPT_LAST_MS=$now
+      fi
+      COOLBASH_PROMPT_HIST_N="$n"
+      return 0
+      ;;
+  esac
   if ((COOLBASH_PROMPT_T0 > 0)); then
     COOLBASH_PROMPT_LAST_MS=$(((now - COOLBASH_PROMPT_T0) / 1000))
   else
@@ -331,6 +387,9 @@ _coolbash_prompt_duration() {
   ((ms >= min)) || return 0
   if ((ms >= 60000)); then
     printf '%dm%02ds' $((ms / 60000)) $((ms % 60000 / 1000))
+  elif [[ "${COOLBASH_PROMPT_CLOCK:-}" == history ]]; then
+    # FR : bash < 4.4 : mesure à la seconde près, pas de fausses décimales.
+    printf '%ds' $((ms / 1000))
   else
     printf '%d.%02ds' $((ms / 1000)) $((ms % 1000 / 10))
   fi
@@ -385,7 +444,7 @@ _coolbash_prompt_status() {
     137) what=KILL ;; 139) what=SEGV ;; 141) what=PIPE ;; 143) what=TERM ;;
     *) what="$ec" ;;
   esac
-  printf '%s %s' "${COOLBASH_PROMPT_SYM[err]:-✖}" "$what"
+  printf '%s %s' "${COOLBASH_PROMPT_SYM_err:-✖}" "$what"
 }
 
 _coolbash_prompt_venv() {
@@ -407,7 +466,7 @@ _coolbash_prompt_jobs() {
   ((${#j[@]})) || return 0
   # shellcheck disable=SC2207
   s=($(jobs -sp))
-  printf '%s %d' "${COOLBASH_PROMPT_SYM[jobs]:-⚙}" "${#j[@]}"
+  printf '%s %d' "${COOLBASH_PROMPT_SYM_jobs:-⚙}" "${#j[@]}"
   ((${#s[@]})) && printf ' ⏸%d' "${#s[@]}"
   return 0
 }
@@ -421,7 +480,7 @@ _coolbash_prompt_jobs() {
 _coolbash_prompt_shlvl() {
   [[ "${COOLBASH_PROMPT_SHLVL:-1}" == 0 ]] && return 0
   local d=$((${SHLVL:-1} - ${COOLBASH_SHLVL_BASE:-1}))
-  ((d > 0)) && printf '%s %d' "${COOLBASH_PROMPT_SYM[shlvl]:-⧉}" "$((d + 1))"
+  ((d > 0)) && printf '%s %d' "${COOLBASH_PROMPT_SYM_shlvl:-⧉}" "$((d + 1))"
   return 0
 }
 
@@ -430,43 +489,47 @@ _coolbash_prompt_shlvl() {
 #      nvm qui change de node est vu). Le résultat est écrit dans la variable
 #      passée en argument, pas sur stdout : une substitution `$(…)` perdrait
 #      le cache à chaque prompt. Désactivé en mode safe.
-declare -gA COOLBASH_PROMPT_TOOL_CACHE
+# FR : le cache = deux tableaux parallèles (binaire, version) : trois entrées au
+#      plus, et le bash 3.2 de macOS n'a pas de tableau associatif.
+COOLBASH_PROMPT_TOOL_BINS=()
+COOLBASH_PROMPT_TOOL_VERS=()
 _coolbash_prompt_tool_version() {
-  # FR : les locaux sont préfixés `_tvr_` — une nameref se résout dans la portée
-  #      courante, un local homonyme masquerait la variable de l'appelant.
-  local -n _tvr_valr_out="$2"
-  local _tvr_valr_tool="$1" _tvr_valr_bin _tvr_val
-  _tvr_valr_out=""
-  local _tvr_valr_cmd="$_tvr_valr_tool"
-  [[ "$_tvr_valr_tool" == rust ]] && _tvr_valr_cmd=rustc
-  _tvr_valr_bin="$(command -v "$_tvr_valr_cmd" 2>/dev/null)" || return 1
-  [[ -n "$_tvr_valr_bin" ]] || return 1
-  if [[ -z "${COOLBASH_PROMPT_TOOL_CACHE[$_tvr_valr_bin]+x}" ]]; then
-    case "$_tvr_valr_tool" in
-      php) _tvr_val="$("$_tvr_valr_bin" -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null)" ;;
-      node)
-        _tvr_val="$("$_tvr_valr_bin" --version 2>/dev/null)"
-        _tvr_val="${_tvr_val#v}"
-        _tvr_val="${_tvr_val%.*}"
-        ;;
-      rust)
-        # FR : « rustc 1.80.0 (abc 2024-07-21) » → 1.80
-        _tvr_val="$("$_tvr_valr_bin" --version 2>/dev/null)"
-        _tvr_val="${_tvr_val#rustc }"
-        _tvr_val="${_tvr_val%% *}"
-        _tvr_val="${_tvr_val%.*}"
-        ;;
-    esac
-    COOLBASH_PROMPT_TOOL_CACHE[$_tvr_valr_bin]="$_tvr_val"
-  fi
-  _tvr_valr_out="${COOLBASH_PROMPT_TOOL_CACHE[$_tvr_valr_bin]}"
+  # FR : les locaux sont préfixés `_tvr_` — la sortie est écrite dans la variable
+  #      nommée par $2, un local homonyme la masquerait.
+  local _tvr_tool="$1" _tvr_bin _tvr_val="" _tvr_i _tvr_cmd="$1"
+  printf -v "$2" ''
+  [[ "$_tvr_tool" == rust ]] && _tvr_cmd=rustc
+  _tvr_bin="$(command -v "$_tvr_cmd" 2>/dev/null)" || return 1
+  [[ -n "$_tvr_bin" ]] || return 1
+  for ((_tvr_i = 0; _tvr_i < ${#COOLBASH_PROMPT_TOOL_BINS[@]}; _tvr_i++)); do
+    [[ "${COOLBASH_PROMPT_TOOL_BINS[_tvr_i]}" == "$_tvr_bin" ]] || continue
+    printf -v "$2" '%s' "${COOLBASH_PROMPT_TOOL_VERS[_tvr_i]}"
+    return 0
+  done
+  case "$_tvr_tool" in
+    php) _tvr_val="$("$_tvr_bin" -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null)" ;;
+    node)
+      _tvr_val="$("$_tvr_bin" --version 2>/dev/null)"
+      _tvr_val="${_tvr_val#v}"
+      _tvr_val="${_tvr_val%.*}"
+      ;;
+    rust)
+      # FR : « rustc 1.80.0 (abc 2024-07-21) » → 1.80
+      _tvr_val="$("$_tvr_bin" --version 2>/dev/null)"
+      _tvr_val="${_tvr_val#rustc }"
+      _tvr_val="${_tvr_val%% *}"
+      _tvr_val="${_tvr_val%.*}"
+      ;;
+  esac
+  COOLBASH_PROMPT_TOOL_BINS[${#COOLBASH_PROMPT_TOOL_BINS[@]}]="$_tvr_bin"
+  COOLBASH_PROMPT_TOOL_VERS[${#COOLBASH_PROMPT_TOOL_VERS[@]}]="$_tvr_val"
+  printf -v "$2" '%s' "$_tvr_val"
 }
 # FR : rust-toolchain.toml (channel = "1.79.0") ou rust-toolchain (une ligne) du
 #      projet : la version voulue, sans lancer rustc. $1 = variable de sortie.
 _coolbash_prompt_rust_toolchain() {
-  local -n _rt_out="$1"
   local _rt_line _rt_v=""
-  _rt_out=""
+  printf -v "$1" ''
   if [[ -r rust-toolchain.toml ]]; then
     while IFS= read -r _rt_line; do
       [[ "$_rt_line" == *channel* ]] && {
@@ -480,17 +543,15 @@ _coolbash_prompt_rust_toolchain() {
   _rt_v="${_rt_v//[\"\' ]/}"
   [[ -n "$_rt_v" ]] || return 1
   [[ "$_rt_v" =~ ^[0-9]+\.[0-9]+ ]] && _rt_v="${BASH_REMATCH[0]}"
-  _rt_out="$_rt_v"
+  printf -v "$1" '%s' "$_rt_v"
 }
 
 # _coolbash_prompt_tools <variable de sortie>
 _coolbash_prompt_tools() {
-  local -n _tout="$1"
-  _tout=""
+  local _tout="" _tv _ttool _tfile _tsym
+  printf -v "$1" ''
   [[ "${COOLBASH_PROMPT_TOOLS:-1}" == 0 ]] && return 0
   _coolbash_safe && return 0
-  local -n _tsym=COOLBASH_PROMPT_SYM
-  local _tv _ttool _tfile
   for _ttool in php node rust; do
     case "$_ttool" in php) _tfile=composer.json ;; node) _tfile=package.json ;; rust) _tfile=Cargo.toml ;; esac
     [[ -f "$_tfile" ]] || continue
@@ -498,19 +559,20 @@ _coolbash_prompt_tools() {
       _coolbash_prompt_tool_version "$_ttool" _tv || continue
     fi
     [[ -n "$_tv" ]] || continue
-    _tout+="${_tout:+  }${_tsym[$_ttool]:-$_ttool} ${_tv}"
+    _tsym="COOLBASH_PROMPT_SYM_$_ttool"
+    _tout+="${_tout:+  }${!_tsym:-$_ttool} ${_tv}"
   done
+  printf -v "$1" '%s' "$_tout"
 }
 
 # FR : contexte cloud — Kubernetes (current-context du kubeconfig, lu en pur
 #      bash) et profil AWS (AWS_PROFILE ou AWS_VAULT). Rouge et gras quand le nom
 #      contient COOLBASH_PROMPT_PROD (« prod »). COOLBASH_PROMPT_CLOUD=0 cache.
-#      $1 = variable de sortie ; locaux préfixés _cl_ (nameref).
+#      $1 = variable de sortie ; locaux préfixés _cl_ pour ne pas la masquer.
 _coolbash_prompt_cloud() {
-  local -n _cl_out="$1"
-  _cl_out=""
+  local _cl_out="" _cl_sym
+  printf -v "$1" ''
   [[ "${COOLBASH_PROMPT_CLOUD:-1}" == 0 ]] && return 0
-  local -n _cl_s=COOLBASH_PROMPT_SYM _cl_c=COOLBASH_PROMPT_COLOR
   local _cl_file="${KUBECONFIG:-$HOME/.kube/config}" _cl_line _cl_ctx="" _cl_aws="${AWS_PROFILE:-${AWS_VAULT:-}}" _cl_seg _cl_col _cl_kind _cl_val
   _cl_file="${_cl_file%%:*}"
   if [[ -r "$_cl_file" ]]; then
@@ -526,10 +588,12 @@ _coolbash_prompt_cloud() {
     _cl_kind="${_cl_seg%%:*}"
     _cl_val="${_cl_seg#*:}"
     [[ -n "$_cl_val" ]] || continue
-    _cl_col="${_cl_c[info]}"
-    [[ "$_cl_val" == *"${COOLBASH_PROMPT_PROD:-prod}"* ]] && _cl_col="${_cl_c[root]}${_cl_c[bold]}"
-    _cl_out+="${_cl_out:+  }${_cl_col}${_cl_s[$_cl_kind]:-$_cl_kind} ${_cl_val}${_cl_c[reset]}"
+    _cl_col="${COOLBASH_PROMPT_COLOR_info}"
+    [[ "$_cl_val" == *"${COOLBASH_PROMPT_PROD:-prod}"* ]] && _cl_col="${COOLBASH_PROMPT_COLOR_root}${COOLBASH_PROMPT_COLOR_bold}"
+    _cl_sym="COOLBASH_PROMPT_SYM_$_cl_kind"
+    _cl_out+="${_cl_out:+  }${_cl_col}${!_cl_sym:-$_cl_kind} ${_cl_val}${COOLBASH_PROMPT_COLOR_reset}"
   done
+  printf -v "$1" '%s' "$_cl_out"
 }
 
 # --- Terminal : OSC 7 et notification ----------------------------------------
@@ -564,60 +628,59 @@ _coolbash_prompt_notify() {
 _coolbash_prompt_build() {
   local ec=$?
   _coolbash_prompt_elapsed
-  local -n c=COOLBASH_PROMPT_COLOR s=COOLBASH_PROMPT_SYM
   local who host chevron clock hicon hcolor ro="" git="" venv="" tools="" cloud="" dur="" jobs="" lvl="" err="" seg mark_a="" mark_b=""
-  # FR : `${s[x]:+${s[x]} }` — icône suivie d'une espace, ou rien du tout
+  # FR : `${COOLBASH_PROMPT_SYM_x:+${COOLBASH_PROMPT_SYM_x} }` — icône suivie d'une espace, ou rien du tout
   #      (mode 0) : jamais d'espace orpheline. L'icône d'hôte (écran, prise,
   #      cube) déborde de sa cellule : deux espaces, sinon elle touche le nom.
   #      L'heure garde ses crochets seulement sans icône.
   clock='[\t]'
-  [[ -n "${s[clock]}" ]] && clock="${s[clock]} \t"
+  [[ -n "${COOLBASH_PROMPT_SYM_clock}" ]] && clock="${COOLBASH_PROMPT_SYM_clock} \t"
   case "${COOLBASH_PROMPT_HOST_KIND:-local}" in
     ssh)
-      hicon="${s[ssh]}"
-      hcolor="${c[host_hash]}"
+      hicon="${COOLBASH_PROMPT_SYM_ssh}"
+      hcolor="${COOLBASH_PROMPT_COLOR_host_hash}"
       ;;
     container)
-      hicon="${s[container]}"
-      hcolor="${c[host_hash]}"
+      hicon="${COOLBASH_PROMPT_SYM_container}"
+      hcolor="${COOLBASH_PROMPT_COLOR_host_hash}"
       ;;
     *)
-      hicon="${s[host]}"
-      hcolor="${c[user_accent]}"
+      hicon="${COOLBASH_PROMPT_SYM_host}"
+      hcolor="${COOLBASH_PROMPT_COLOR_user_accent}"
       ;;
   esac
   if [[ $EUID -eq 0 ]]; then
-    who="${c[root]}${c[bold]}${s[root]:+${s[root]} }root${c[reset]}"
-    [[ "${COOLBASH_PROMPT_HOST_KIND:-local}" == local ]] && hcolor="${c[root_accent]}"
-    chevron="${c[root]}#${c[reset]}"
+    who="${COOLBASH_PROMPT_COLOR_root}${COOLBASH_PROMPT_COLOR_bold}${COOLBASH_PROMPT_SYM_root:+${COOLBASH_PROMPT_SYM_root} }root${COOLBASH_PROMPT_COLOR_reset}"
+    [[ "${COOLBASH_PROMPT_HOST_KIND:-local}" == local ]] && hcolor="${COOLBASH_PROMPT_COLOR_root_accent}"
+    chevron="${COOLBASH_PROMPT_COLOR_root}#${COOLBASH_PROMPT_COLOR_reset}"
   else
-    who="${c[user]}${c[bold]}${s[user]:+${s[user]} }\u${c[reset]}"
+    who="${COOLBASH_PROMPT_COLOR_user}${COOLBASH_PROMPT_COLOR_bold}${COOLBASH_PROMPT_SYM_user:+${COOLBASH_PROMPT_SYM_user} }\u${COOLBASH_PROMPT_COLOR_reset}"
     # FR : chevron rouge après un échec — le repère le plus rapide.
-    if ((ec == 0)); then chevron="${c[user]}\$${c[reset]}"; else chevron="${c[root]}\$${c[reset]}"; fi
+    if ((ec == 0)); then chevron="${COOLBASH_PROMPT_COLOR_user}\$${COOLBASH_PROMPT_COLOR_reset}"; else chevron="${COOLBASH_PROMPT_COLOR_root}\$${COOLBASH_PROMPT_COLOR_reset}"; fi
   fi
-  host="${hcolor} ${hicon:+${hicon}  }\h${c[reset]}"
-  [[ -w "$PWD" ]] || ro="${s[ro]:+${s[ro]} }"
+  host="${hcolor} ${hicon:+${hicon}  }\h${COOLBASH_PROMPT_COLOR_reset}"
+  [[ -w "$PWD" ]] || ro="${COOLBASH_PROMPT_SYM_ro:+${COOLBASH_PROMPT_SYM_ro} }"
   local wpath='\w'
   if [[ "${COOLBASH_PROMPT_PATH_FISH:-1}" != 0 ]]; then
     _coolbash_prompt_path_fish seg
     [[ -n "$seg" ]] && wpath="$seg"
   fi
   seg="$(_coolbash_prompt_git)"
-  [[ -n "$seg" ]] && git=" ${c[git]}${s[branch]:+${s[branch]} }${seg}${c[reset]}"
+  [[ -n "$seg" ]] && git=" ${COOLBASH_PROMPT_COLOR_git}${COOLBASH_PROMPT_SYM_branch:+${COOLBASH_PROMPT_SYM_branch} }${seg}${COOLBASH_PROMPT_COLOR_reset}"
   seg="$(_coolbash_prompt_venv)"
-  [[ -n "$seg" ]] && venv=" ${c[info]}${s[venv]:+${s[venv]} }${seg}${c[reset]}"
+  [[ -n "$seg" ]] && venv=" ${COOLBASH_PROMPT_COLOR_info}${COOLBASH_PROMPT_SYM_venv:+${COOLBASH_PROMPT_SYM_venv} }${seg}${COOLBASH_PROMPT_COLOR_reset}"
   _coolbash_prompt_tools seg
-  [[ -n "$seg" ]] && tools=" ${c[info]}${seg}${c[reset]}"
+  [[ -n "$seg" ]] && tools=" ${COOLBASH_PROMPT_COLOR_info}${seg}${COOLBASH_PROMPT_COLOR_reset}"
   _coolbash_prompt_cloud seg
   [[ -n "$seg" ]] && cloud=" ${seg}"
   seg="$(_coolbash_prompt_duration)"
-  [[ -n "$seg" ]] && dur=" ${c[info]}${s[time]:+${s[time]} }${seg}${c[reset]}"
+  [[ -n "$seg" ]] && dur=" ${COOLBASH_PROMPT_COLOR_info}${COOLBASH_PROMPT_SYM_time:+${COOLBASH_PROMPT_SYM_time} }${seg}${COOLBASH_PROMPT_COLOR_reset}"
   seg="$(_coolbash_prompt_jobs)"
-  [[ -n "$seg" ]] && jobs=" ${c[info]}${seg}${c[reset]}"
+  [[ -n "$seg" ]] && jobs=" ${COOLBASH_PROMPT_COLOR_info}${seg}${COOLBASH_PROMPT_COLOR_reset}"
   seg="$(_coolbash_prompt_shlvl)"
-  [[ -n "$seg" ]] && lvl=" ${c[info]}${seg}${c[reset]}"
+  [[ -n "$seg" ]] && lvl=" ${COOLBASH_PROMPT_COLOR_info}${seg}${COOLBASH_PROMPT_COLOR_reset}"
   seg="$(_coolbash_prompt_status "$ec")"
-  [[ -n "$seg" ]] && err=" ${c[err]} ${seg} ${c[reset]}"
+  [[ -n "$seg" ]] && err=" ${COOLBASH_PROMPT_COLOR_err} ${seg} ${COOLBASH_PROMPT_COLOR_reset}"
   # FR : OSC 133 — D;code ferme la commande précédente, A ouvre le prompt, B le clôt.
   if _coolbash_prompt_osc133_wanted; then
     mark_a='\[\e]133;D;'"${ec}"'\a\e]133;A\a\]'
@@ -645,7 +708,7 @@ _coolbash_prompt_build() {
     [[ "${COOLBASH_PS1_OSC7:-1}" != 0 ]] && title+="$(_coolbash_prompt_osc7)"
     title+="$(_coolbash_prompt_notify)"
   fi
-  PS1="${mark_a}${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${c[time]}${clock}${c[reset]} ${who} at ${host}${git}${venv}${tools}${cloud}${dur}${jobs}${lvl}${err}"$'\n'"${c[bold]}${c[path]}${ro}${s[path]:+${s[path]} }${wpath}${c[reset]} ${chevron} ${mark_b}"
+  PS1="${mark_a}${title}"$'\n'"${COOLBASH_PROMPT_EMOJI:+${COOLBASH_PROMPT_EMOJI} }${COOLBASH_PROMPT_COLOR_time}${clock}${COOLBASH_PROMPT_COLOR_reset} ${who} at ${host}${git}${venv}${tools}${cloud}${dur}${jobs}${lvl}${err}"$'\n'"${COOLBASH_PROMPT_COLOR_bold}${COOLBASH_PROMPT_COLOR_path}${ro}${COOLBASH_PROMPT_SYM_path:+${COOLBASH_PROMPT_SYM_path} }${wpath}${COOLBASH_PROMPT_COLOR_reset} ${chevron} ${mark_b}"
 }
 
 # --- Enregistrement dans PROMPT_COMMAND (helper commun de 00-core) -----------
