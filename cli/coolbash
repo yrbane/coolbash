@@ -920,6 +920,7 @@ _coolbash_cmd_compile() {
 #      Avec pacman et apt, chaque paquet est vérifié dans les dépôts locaux
 #      (pacman -Si, apt-cache show) : un nom inconnu ferait échouer toute la
 #      commande (Debian 13 : tldr → tealdeer ; git-delta absent de bookworm).
+#      Avec brew, la vérification lit les listes de son cache (formules et alias).
 #      Table : commande|rôle|pacman|apt|dnf|zypper|apk|brew
 _coolbash_deps_table() {
   cat <<'DEPS'
@@ -928,9 +929,9 @@ cowsay|MOTD (la vache)|cowsay|cowsay|cowsay|cowsay|cowsay|cowsay
 lolcat|MOTD (couleurs)|lolcat|lolcat|lolcat|-|lolcat|lolcat
 fzf|Ctrl-R, Ctrl-T, Alt-C, gsw|fzf|fzf|fzf|fzf|fzf|fzf
 rsync|coolbash sync|rsync|rsync|rsync|rsync|rsync|rsync
-python3|serve (serveur HTTP)|python|python3|python3|python3|python3|python
+python3|serve (serveur HTTP)|python|python3|python3|python3|python3|python3
 ss|whoport|iproute2|iproute2|iproute|iproute2|iproute2|-
-tldr|cheat (exemples)|tldr|tealdeer|tealdeer|tealdeer|tealdeer|tldr
+tldr|cheat (exemples)|tldr|tealdeer|tealdeer|tealdeer|tealdeer|tealdeer
 delta|pager git (doctor le propose)|git-delta|git-delta|git-delta|git-delta|git-delta|git-delta
 fc-list|détection de la Nerd Font|fontconfig|fontconfig|fontconfig|fontconfig|fontconfig|-
 xz|installation de la police|xz|xz-utils|xz|xz|xz|-
@@ -947,11 +948,20 @@ timg|img (repli en caractères)|-|timg|timg|-|-|timg
 DEPS
 }
 # FR : le paquet existe-t-il dans les dépôts configurés ? Sans réseau. Seulement
-#      pacman et apt savent répondre vite ; les autres : on suppose que oui.
+#      pacman et apt savent répondre vite, brew a ses listes en cache (formule
+#      retirée = toute la commande échoue : « No available formula ») ; sans
+#      ces listes, et pour les autres : on suppose que oui.
 _coolbash_pkg_exists() {
   case "$1" in
     pacman) pacman -Si "$2" >/dev/null 2>&1 ;;
     apt) apt-cache show "$2" >/dev/null 2>&1 ;;
+    brew)
+      local api="${HOMEBREW_CACHE:-$HOME/Library/Caches/Homebrew}/api"
+      [[ -r "$api/formula_names.txt" ]] || api="${HOMEBREW_CACHE:-$HOME/.cache/Homebrew}/api"
+      [[ -r "$api/formula_names.txt" ]] || return 0
+      grep -qxF -- "$2" "$api/formula_names.txt" && return 0
+      [[ -r "$api/formula_aliases.txt" ]] && grep -q -- "^$2|" "$api/formula_aliases.txt"
+      ;;
     *) return 0 ;;
   esac
 }

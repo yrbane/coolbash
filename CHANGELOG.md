@@ -14,6 +14,7 @@
 - `make install` lancé avec le `/bin/bash` 3.2 de macOS affichait des dizaines d'erreurs (`declare: -g: invalid option`, `bad substitution`, `declare: -A: invalid option`, `COOLBASH_MODE: unbound variable`) puis « Installation complete ✅ » : l'installation, `coolbash setup`, la CLI, les modules et un `~/.bashrc` compilé tournent maintenant sous ce bash.
 - La fonction `coolbash` lance la CLI avec le bash du shell courant (`$BASH`), pas le premier `bash` du PATH : `doctor` et `bench` parlent du shell réellement utilisé.
 - Historique sous bash 3.2 : parti d'un historique vide, `history -a` n'écrivait rien de la session (bogue de ce bash) — le fichier est alors réécrit par `history -w`.
+- `coolbash deps --install` sous Homebrew : la formule `tldr` n'existe plus (« No available formula with the name "tldr" », rien n'était installé) — c'est `tealdeer`. Chaque formule est maintenant vérifiée dans les listes du cache de brew, comme avec pacman et apt : un nom inconnu est signalé et écarté de la commande.
 - `img` : `base64 -w0` (GNU) est remplacé par `base64 | tr -d '\n'` — le `base64` de macOS refusait l'option, aucune image ne s'affichait dans iTerm2 ni kitty.
 - `coolbash bench` sous macOS : le `script` de BSD n'a pas `-c`.
 - Complétion de `coolbash sync` : `sed` de BSD ne connaît pas `\+`, aucun hôte n'était proposé.
