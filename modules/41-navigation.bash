@@ -30,7 +30,7 @@ _coolbash_dirs_track() {
   local file="${COOLBASH_PREFIX:-$HOME/.coolbash}/dirs" lines=()
   [[ -d "${file%/*}" ]] || return 0
   printf '%s\n' "$PWD" >>"$file" 2>/dev/null || return 0
-  mapfile -t lines <"$file"
+  _coolbash_readlines lines <"$file"
   if ((${#lines[@]} > 1000)); then
     printf '%s\n' "${lines[@]: -500}" >|"$file" 2>/dev/null
   fi
@@ -39,36 +39,43 @@ _coolbash_dirs_track() {
 
 # FR : $1 = motif (vide = tous), sortie = chemins triés par score décroissant.
 _coolbash_dirs_ranked() {
-  local file="${COOLBASH_PREFIX:-$HOME/.coolbash}/dirs" motif="${1,,}" d i n
-  local -A score=()
-  local -a lines=()
+  local file="${COOLBASH_PREFIX:-$HOME/.coolbash}/dirs" score d out
   [[ -r "$file" ]] || return 1
-  mapfile -t lines <"$file"
-  n=${#lines[@]}
-  for ((i = 0; i < n; i++)); do
-    d="${lines[i]}"
-    [[ -n "$motif" && "${d,,}" != *"$motif"* ]] && continue
-    # FR : 10 points par visite, jusqu'à 100 de bonus pour la plus récente.
-    score[$d]=$((${score[$d]:-0} + 10 + 100 * (i + 1) / n))
-  done
-  ((${#score[@]})) || return 1
-  for d in "${!score[@]}"; do
-    [[ -d "$d" ]] && printf '%s\t%s\n' "${score[$d]}" "$d"
-  done | sort -rn | cut -f2-
+  # FR : 10 points par visite, jusqu'à 100 de bonus pour la plus récente. Le
+  #      cumul par dossier se fait dans awk : bash 3.2 (macOS) n'a pas de tableau
+  #      associatif. Motif passé par l'environnement (awk -v interprète les « \ »).
+  out="$(
+    COOLBASH_AWK_MOTIF="${1:-}" awk '
+      BEGIN { m = tolower(ENVIRON["COOLBASH_AWK_MOTIF"]) }
+      { line[NR] = $0 }
+      END {
+        for (i = 1; i <= NR; i++) {
+          d = line[i]
+          if (m != "" && index(tolower(d), m) == 0) continue
+          s[d] += 10 + int(100 * i / NR)
+        }
+        for (d in s) printf "%d\t%s\n", s[d], d
+      }' "$file" | while IFS=$'\t' read -r score d; do
+      [[ -d "$d" ]] && printf '%s\t%s\n' "$score" "$d"
+    done | sort -rn | cut -f2-
+  )"
+  [[ -n "$out" ]] || return 1
+  printf '%s\n' "$out"
 }
 
 j() {
   _coolbash_fn_help j "$@" && return
-  local motif="${1:-}" best base
+  local motif="${1:-}" best base lmotif
   if [[ -z "$motif" ]]; then
     _coolbash_dirs_ranked | head -15
     return
   fi
   # FR : un motif qui correspond au nom du dossier lui-même prime sur un
   #      motif noyé dans le chemin.
+  _coolbash_lower lmotif "$motif"
   while IFS= read -r best; do
-    base="${best##*/}"
-    [[ "${base,,}" == *"${motif,,}"* ]] && {
+    _coolbash_lower base "${best##*/}"
+    [[ "$base" == *"$lmotif"* ]] && {
       cd -- "$best" && return 0
     }
   done < <(_coolbash_dirs_ranked "$motif")
@@ -140,35 +147,44 @@ h() {
 #      Les lignes « #epoch » de l'horodatage sont ignorées ; sudo est transparent.
 hstats() {
   _coolbash_fn_help hstats "$@" && return
-  local n="${1:-20}" line first total=0 c
-  local -A count=()
+  local n="${1:-20}" first total=0 c
   [[ -r "${HISTFILE:-$HOME/.bash_history}" ]] || {
     _coolbash_say "hstats : pas d'historique lisible\n" >&2
     return 1
   }
-  while IFS= read -r line; do
-    [[ "$line" =~ ^#[0-9]+$ || -z "${line//[[:space:]]/}" ]] && continue
-    read -r first _ <<<"$line"
-    [[ "$first" == sudo ]] && {
-      read -r _ first _ <<<"$line"
+  # FR : le décompte par commande se fait dans awk (pas de tableau associatif en
+  #      bash 3.2) : première ligne = le total, puis « nombre<TAB>commande ».
+  {
+    read -r total
+    ((total)) || return 0
+    _coolbash_say 'Sur %d commandes :\n' "$total"
+    sort -rn | head -n "$n" \
+      | while IFS=$'\t' read -r c first; do printf '  %5d  %3d %%  %s\n' "$c" $((c * 100 / total)) "$first"; done
+  } < <(awk '
+    /^#[0-9]+$/ || NF == 0 { next }
+    {
+      c = $1
+      if (c == "sudo" && NF > 1) c = $2
+      n[c]++
+      t++
     }
-    count[$first]=$((${count[$first]:-0} + 1))
-    total=$((total + 1))
-  done <"${HISTFILE:-$HOME/.bash_history}"
-  ((total)) || return 0
-  _coolbash_say 'Sur %d commandes :\n' "$total"
-  for c in "${!count[@]}"; do printf '%d\t%s\n' "${count[$c]}" "$c"; done \
-    | sort -rn | head -n "$n" \
-    | while IFS=$'\t' read -r c first; do printf '  %5d  %3d %%  %s\n' "$c" $((c * 100 / total)) "$first"; done
+    END {
+      print t + 0
+      for (c in n) printf "%d\t%s\n", n[c], c
+    }' "${HISTFILE:-$HOME/.bash_history}")
 }
 
 # --- commande introuvable -------------------------------------------------------------
 # FR : bash appelle command_not_found_handle avec la commande et ses arguments.
 #      Seulement en shell interactif (un script garde le comportement d'origine),
-#      et sans réseau : pacman -F lit sa base locale, apt-file la sienne.
+#      et sans réseau : pacman -F lit sa base locale, apt-file la sienne, et
+#      Homebrew (macOS, Linuxbrew) tient la liste « formule:exécutables » dans son
+#      cache — lue par awk, sans lancer brew (une seconde de Ruby à chaque faute
+#      de frappe). bash < 4.0 (le /bin/bash de macOS) n'appelle pas ce crochet.
 if [[ $- == *i* && "${COOLBASH_CNF:-1}" != 0 ]]; then
   command_not_found_handle() {
-    local cmd="$1" pkg="" near
+    local cmd="$1" pkg="" near brewdb="${HOMEBREW_CACHE:-$HOME/Library/Caches/Homebrew}/api/internal/executables.txt"
+    [[ -r "$brewdb" ]] || brewdb="${HOMEBREW_CACHE:-$HOME/.cache/Homebrew}/api/internal/executables.txt"
     _coolbash_say 'bash: %s : commande introuvable\n' "$cmd" >&2
     if command -v pacman >/dev/null 2>&1; then
       pkg="$(pacman -Fq "/usr/bin/$cmd" 2>/dev/null | head -3 | tr '\n' ' ')"
@@ -176,6 +192,11 @@ if [[ $- == *i* && "${COOLBASH_CNF:-1}" != 0 ]]; then
     elif command -v apt-file >/dev/null 2>&1; then
       pkg="$(apt-file search -l "bin/$cmd" 2>/dev/null | head -3 | tr '\n' ' ')"
       [[ -n "$pkg" ]] && _coolbash_say '  → fournie par : %s  (sudo apt install %s)\n' "$pkg" "${pkg%% *}" >&2
+    elif [[ -r "$brewdb" ]] && command -v brew >/dev/null 2>&1; then
+      pkg="$(COOLBASH_AWK_CMD="$cmd" awk -F: '
+        { n = split($2, e, " "); for (i = 1; i <= n; i++) if (e[i] == ENVIRON["COOLBASH_AWK_CMD"]) { sub(/\(.*/, "", $1); print $1; break } }
+      ' "$brewdb" 2>/dev/null | head -3 | tr '\n' ' ')"
+      [[ -n "$pkg" ]] && _coolbash_say '  → fournie par : %s  (brew install %s)\n' "$pkg" "${pkg%% *}" >&2
     fi
     if [[ -z "$pkg" && ${#cmd} -ge 3 ]]; then
       near="$(compgen -c -- "${cmd:0:3}" 2>/dev/null | sort -u | head -5 | tr '\n' ' ')"

@@ -14,38 +14,62 @@ export MOTD_DISABLE=1
 # FR : exécute du bash après chargement de 00-core puis 50-prompt.
 with_prompt() { HOME="${COOLBASH_TEST_TMP}" COLORTERM='' bash --norc --noprofile -c 'source "$1"; source "$2"; shift 2; eval "$*"' _ "${CORE}" "${PROMPT}" "$@" 2>&1; }
 
+# FR : AGE2 — « la dernière commande a duré 2 s », selon l'horloge du bash testé :
+#      EPOCHREALTIME (≥ 5.0), SECONDS (4.4) ou l'horodatage de l'historique (< 4.4,
+#      sans PS0 : le 3.2 de macOS).
+if t_bash_ge 500; then
+  AGE2='COOLBASH_PROMPT_T0=$(( ${EPOCHREALTIME//[.,]/} - 2000000 ))'
+elif t_bash_ge 404; then
+  AGE2='COOLBASH_PROMPT_T0=$(( (SECONDS - 2) * 1000000 + 1 ))'
+else
+  AGE2='set -o history; history -s "make test"; read -r _ COOLBASH_T _ <<<"$(HISTTIMEFORMAT="%s " builtin history 1)"; COOLBASH_PROMPT_HIST_N=0; COOLBASH_PROMPT_EPOCH0=$((COOLBASH_T + 2 - SECONDS))'
+fi
+if t_bash_ge 404; then DUR2='2.0'; else DUR2='2s'; fi
+# FR : ps0_test « libellé » commande… — une assertion sur PS0, ignorée sans PS0 (bash < 4.4).
+ps0_test() {
+  if t_bash_ge 404; then "${@:2}"; else t_skip "$1 — pas de PS0 avant bash 4.4"; fi
+}
+
 # --- 1. Plus aucun trap DEBUG, la durée passe par PS0 -----------------------
 assert_empty "aucun trap DEBUG après chargement" "$(with_prompt 'trap -p DEBUG')"
-assert_contains "PS0 mesure le départ via EPOCHREALTIME" "$(with_prompt 'printf %s "$PS0"')" "EPOCHREALTIME"
-assert_contains "PS0 muet si horodatage, titre et OSC 133 désactivés" "$(COOLBASH_PS0_STAMP=0 COOLBASH_PS0_TITLE=0 COOLBASH_PROMPT_OSC133=0 with_prompt 'printf "[%s]" "${PS0@P}"')" "[]"
-stamp="$(TERM=dumb with_prompt 'printf "%s" "${PS0@P}"')"
-assert_contains "PS0 affiche l'heure de départ (⏱)" "${stamp}" "⏱"
-assert_eq "…au format HH:MM:SS, en gris, suivi d'un retour à la ligne" "1" "$(printf '%s' "${stamp}" | grep -cE $'\e\[2m  ⏱ [0-9]{2}:[0-9]{2}:[0-9]{2}\e\[0m$')"
-assert_contains "PS0 met la commande dans le titre du terminal (xterm)" "$(TERM=xterm-256color with_prompt 'printf %s "$PS0"')" "_coolbash_prompt_ps0_title"
+if t_bash_ge 500; then
+  assert_contains "PS0 mesure le départ via EPOCHREALTIME" "$(with_prompt 'printf %s "$PS0"')" "EPOCHREALTIME"
+else
+  t_skip "PS0 mesure le départ via EPOCHREALTIME — bash < 5"
+fi
+ps0_test "PS0 muet si horodatage, titre et OSC 133 désactivés" assert_contains "PS0 muet si horodatage, titre et OSC 133 désactivés" "$(COOLBASH_PS0_STAMP=0 COOLBASH_PS0_TITLE=0 COOLBASH_PROMPT_OSC133=0 with_prompt 'printf "[%s]" "${PS0@P}"')" "[]"
+stamp=""
+t_bash_ge 404 && stamp="$(TERM=dumb with_prompt 'printf "%s" "${PS0@P}"')"
+ps0_test "PS0 affiche l'heure de départ (⏱)" assert_contains "PS0 affiche l'heure de départ (⏱)" "${stamp}" "⏱"
+ps0_test "…au format HH:MM:SS, en gris, suivi d'un retour à la ligne" assert_eq "…au format HH:MM:SS, en gris, suivi d'un retour à la ligne" "1" "$(printf '%s' "${stamp}" | grep -cE $'\e\[2m  ⏱ [0-9]{2}:[0-9]{2}:[0-9]{2}\e\[0m$')"
+ps0_test "PS0 met la commande dans le titre du terminal (xterm)" assert_contains "PS0 met la commande dans le titre du terminal (xterm)" "$(TERM=xterm-256color with_prompt 'printf %s "$PS0"')" "_coolbash_prompt_ps0_title"
 assert_eq "…mais pas sur un terminal sans titre (dumb)" "0" "$(TERM=dumb with_prompt 'printf %s "$PS0"' | grep -c ps0_title)"
 assert_eq "…sauf si PROMPT_COMMAND pose déjà un titre (Arch)" "0" "$(TERM=xterm with_prompt 'PROMPT_COMMAND="printf \"\\033]0;x\\007\"; $PROMPT_COMMAND"; _coolbash_prompt_build; printf %s "$PS1"' | grep -c ']0;')"
 assert_contains "PS1 remet le titre à user@host: dossier" "$(TERM=xterm with_prompt '_coolbash_prompt_build; printf %s "$PS1"')" '\e]0;\u@\h: \w\a'
-assert_contains "COOLBASH_PS0_EXTRA est conservé en fin de PS0" "$(COOLBASH_PS0_EXTRA='MON-PS0' with_prompt 'printf %s "$PS0"')" "MON-PS0"
+ps0_test "COOLBASH_PS0_EXTRA est conservé en fin de PS0" assert_contains "COOLBASH_PS0_EXTRA est conservé en fin de PS0" "$(COOLBASH_PS0_EXTRA='MON-PS0' with_prompt 'printf %s "$PS0"')" "MON-PS0"
 assert_eq "aucun \\[ \\] dans PS0 (bash les imprimerait)" "0" "$(with_prompt 'printf %s "$PS0"' | grep -cF '\[')"
 title="$(printf 'source "%s"; source "%s"\ntrue\n' "${CORE}" "${PROMPT}" \
   | TERM=xterm HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -i 2>&1 | grep -c $'\e]0;true\a')"
-assert_eq "en shell interactif, le titre reçoit la commande saisie" "1" "${title}"
+ps0_test "en shell interactif, le titre reçoit la commande saisie" assert_eq "en shell interactif, le titre reçoit la commande saisie" "1" "${title}"
 assert_contains "_coolbash_prompt_build est dans PROMPT_COMMAND" "$(with_prompt 'printf %s "${PROMPT_COMMAND[*]}"')" "_coolbash_prompt_build"
 
 # --- 2. Durée mesurée en shell interactif (PS0 réel) ------------------------
-ms="$(printf 'source "%s"; source "%s"\nsleep 0.6\necho "ms=$COOLBASH_PROMPT_LAST_MS"\n' "${CORE}" "${PROMPT}" \
+# FR : sans PS0 (bash < 4.4), la durée vient de l'historique, à la seconde près.
+if t_bash_ge 404; then nap=0.6 floor=550; else nap=2.6 floor=2000; fi
+ms="$(printf 'source "%s"; source "%s"\nsleep %s\necho "ms=$COOLBASH_PROMPT_LAST_MS"\n' "${CORE}" "${PROMPT}" "${nap}" \
   | HOME="${COOLBASH_TEST_TMP}" bash --norc --noprofile -i 2>/dev/null | grep -o 'ms=[0-9]*' | cut -d= -f2)"
-if [[ "${ms:-0}" -ge 550 && "${ms:-0}" -lt 5000 ]]; then
-  t_ok "la durée de « sleep 0.6 » est mesurée en ms (${ms} ms)"
+if [[ "${ms:-0}" -ge "${floor}" && "${ms:-0}" -lt 5000 ]]; then
+  t_ok "la durée de « sleep ${nap} » est mesurée en ms (${ms} ms)"
 else
   t_fail "durée mesurée incohérente : « ${ms} » ms"
 fi
 
 # --- 3. Formatage de la durée ------------------------------------------------
 assert_eq "durée < seuil : segment vide" "" "$(with_prompt 'COOLBASH_PROMPT_LAST_MS=500 _coolbash_prompt_duration')"
-assert_eq "1234 ms → 1.23s" "1.23s" "$(with_prompt 'COOLBASH_PROMPT_LAST_MS=1234 _coolbash_prompt_duration')"
-assert_eq "65000 ms → 1m05s" "1m05s" "$(with_prompt 'COOLBASH_PROMPT_LAST_MS=65000 _coolbash_prompt_duration')"
-assert_eq "seuil réglable (COOLBASH_PROMPT_MIN_MS)" "0.50s" "$(with_prompt 'COOLBASH_PROMPT_MIN_MS=100 COOLBASH_PROMPT_LAST_MS=500 _coolbash_prompt_duration')"
+assert_eq "1234 ms → 1.23s" "1.23s" "$(with_prompt 'COOLBASH_PROMPT_CLOCK=realtime; COOLBASH_PROMPT_LAST_MS=1234 _coolbash_prompt_duration')"
+assert_eq "65000 ms → 1m05s" "1m05s" "$(with_prompt 'COOLBASH_PROMPT_CLOCK=realtime; COOLBASH_PROMPT_LAST_MS=65000 _coolbash_prompt_duration')"
+assert_eq "seuil réglable (COOLBASH_PROMPT_MIN_MS)" "0.50s" "$(with_prompt 'COOLBASH_PROMPT_CLOCK=realtime; COOLBASH_PROMPT_MIN_MS=100 COOLBASH_PROMPT_LAST_MS=500 _coolbash_prompt_duration')"
+assert_eq "horloge « history » (bash < 4.4) : secondes entières, sans fausses décimales" "3s" "$(with_prompt 'COOLBASH_PROMPT_CLOCK=history; COOLBASH_PROMPT_LAST_MS=3000 _coolbash_prompt_duration')"
 
 # --- 4. Code retour ----------------------------------------------------------
 assert_eq "code 0 : rien" "" "$(with_prompt '_coolbash_prompt_status 0')"
@@ -54,7 +78,7 @@ assert_eq "code 130 : nom du signal (INT)" "✖ INT" "$(COOLBASH_PROMPT_ICONS=0 
 assert_eq "code 137 : KILL" "✖ KILL" "$(COOLBASH_PROMPT_ICONS=0 with_prompt '_coolbash_prompt_status 137')"
 assert_eq "code 143 : TERM" "✖ TERM" "$(COOLBASH_PROMPT_ICONS=0 with_prompt '_coolbash_prompt_status 143')"
 assert_eq "code 200 : signal inconnu, nombre conservé" "✖ 200" "$(COOLBASH_PROMPT_ICONS=0 with_prompt '_coolbash_prompt_status 200')"
-assert_eq "code 3, icônes nerd : glyphe + 3" $'\uf057 3' "$(COOLBASH_PROMPT_ICONS=nerd with_prompt '_coolbash_prompt_status 3')"
+assert_eq "code 3, icônes nerd : glyphe + 3" $'\xef\x81\x97 3' "$(COOLBASH_PROMPT_ICONS=nerd with_prompt '_coolbash_prompt_status 3')"
 
 # --- 5. Segment git : un seul appel, sans verrou -----------------------------
 git_seg() { (cd "$1" && with_prompt '_coolbash_prompt_git'); }
@@ -105,24 +129,31 @@ assert_empty "50-prompt ne définit que COOLBASH_*, PS0/PS1/PROMPT_COMMAND et _c
 # FR : les glyphes Nerd Font vivent dans les zones privées Unicode (PUA) ;
 #      un prompt sans icône Nerd Font n'en contient donc aucun.
 ps1_of() { with_prompt '_coolbash_prompt_build; printf %s "$PS1"'; }
-pua_count() { LC_ALL=C.UTF-8 grep -cP '[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}]'; }
+# FR : grep -P est GNU ; perl (présent partout où git l'est) prend le relais sous macOS.
+pua_count() {
+  if printf 'x' | grep -qP 'x' 2>/dev/null; then
+    LC_ALL=C.UTF-8 grep -cP '[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}]'
+  else
+    perl -CS -ne '$n++ if /[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}]/; END { print $n + 0, "\n" }'
+  fi
+}
 assert_eq "mode résolu par défaut : nerd" "nerd" "$(TERM=xterm-256color with_prompt 'echo "$COOLBASH_PROMPT_ICONS"')"
 assert_empty "nerd : toutes les icônes sont définies" \
-  "$(with_prompt 'for k in user host branch venv time path root clock err jobs ro ssh container php node; do [[ -n "${COOLBASH_PROMPT_SYM[$k]}" ]] || echo "$k"; done')"
-assert_contains "nerd : icône utilisateur devant \\u" "$(ps1_of)" $'\uf007 \\u'
-assert_contains "nerd : icône écran + deux espaces devant \\h (glyphe large)" "$(ps1_of)" $'\uf108  \\h'
-assert_contains "nerd : icône horloge devant l'heure, sans crochets" "$(ps1_of)" $'\uf017 \\t'
+  "$(with_prompt 'for k in user host branch venv time path root clock err jobs ro ssh container php node; do v="COOLBASH_PROMPT_SYM_$k"; [[ -n "${!v}" ]] || echo "$k"; done')"
+assert_contains "nerd : icône utilisateur devant \\u" "$(ps1_of)" $'\xef\x80\x87 \\u'
+assert_contains "nerd : icône écran + deux espaces devant \\h (glyphe large)" "$(ps1_of)" $'\xef\x84\x88  \\h'
+assert_contains "nerd : icône horloge devant l'heure, sans crochets" "$(ps1_of)" $'\xef\x80\x97 \\t'
 assert_contains "sans icône : heure entre crochets" "$(COOLBASH_PROMPT_ICONS=0 ps1_of)" '[\t]'
-assert_contains "nerd : icône dossier devant \\w" "$(ps1_of)" $'\uf07c \\w'
-assert_contains "nerd : icône branche devant le segment git" "$(cd "${COOLBASH_TEST_ROOT}" && ps1_of)" $'\ue725 '
-assert_contains "nerd : icône venv devant le nom du venv" "$(VIRTUAL_ENV=/x/.venv ps1_of)" $'\ue73c .venv'
+assert_contains "nerd : icône dossier devant \\w" "$(ps1_of)" $'\xef\x81\xbc \\w'
+assert_contains "nerd : icône branche devant le segment git" "$(cd "${COOLBASH_TEST_ROOT}" && ps1_of)" $'\xee\x9c\xa5 '
+assert_contains "nerd : icône venv devant le nom du venv" "$(VIRTUAL_ENV=/x/.venv ps1_of)" $'\xee\x9c\xbc .venv'
 assert_contains "nerd : icône sablier devant la durée" \
-  "$(with_prompt 'COOLBASH_PROMPT_T0=$(( ${EPOCHREALTIME//[.,]/} - 2000000 )); _coolbash_prompt_build; printf %s "$PS1"')" $'\uf252 2.0'
+  "$(with_prompt ''"${AGE2}"'; _coolbash_prompt_build; printf %s "$PS1"')" $'\xef\x89\x92 '"${DUR2}"
 assert_eq "COOLBASH_PROMPT_ICONS=0 : aucun glyphe zone privée" "0" "$(COOLBASH_PROMPT_ICONS=0 ps1_of | pua_count)"
 assert_eq "…ni symbole ⎇" "0" "$(COOLBASH_PROMPT_ICONS=0 ps1_of | grep -c '⎇')"
 assert_contains "…et pas d'espace orphelin devant \\u" "$(COOLBASH_PROMPT_ICONS=0 ps1_of)" '\[\e[1m\]\u'
 assert_contains "…ni devant \\w" "$(COOLBASH_PROMPT_ICONS=0 ps1_of)" '\[\e[1;34m\]\w'
-assert_eq "COOLBASH_PROMPT_ICONS=basic : ⎇ pour la branche" "⎇" "$(COOLBASH_PROMPT_ICONS=basic with_prompt 'printf %s "${COOLBASH_PROMPT_SYM[branch]}"')"
+assert_eq "COOLBASH_PROMPT_ICONS=basic : ⎇ pour la branche" "⎇" "$(COOLBASH_PROMPT_ICONS=basic with_prompt 'printf %s "${COOLBASH_PROMPT_SYM_branch}"')"
 assert_eq "basic : aucun glyphe zone privée" "0" "$(cd "${COOLBASH_TEST_ROOT}" && COOLBASH_PROMPT_ICONS=basic ps1_of | pua_count)"
 assert_eq "TERM=linux (console) : icônes désactivées" "0" "$(TERM=linux with_prompt 'echo "$COOLBASH_PROMPT_ICONS"')"
 assert_eq "…sauf réglage explicite" "nerd" "$(TERM=linux COOLBASH_PROMPT_ICONS=nerd with_prompt 'echo "$COOLBASH_PROMPT_ICONS"')"
@@ -134,26 +165,26 @@ assert_eq "PROMPT_DIRTRIM déjà défini : respecté" "5" "$(PROMPT_DIRTRIM=5 wi
 assert_contains "chevron dans la couleur utilisateur après un succès" "$(with_prompt 'true; _coolbash_prompt_build; printf %s "$PS1"')" '\[\e[36m\]$'
 assert_contains "chevron en rouge après un échec" "$(with_prompt 'false; _coolbash_prompt_build; printf %s "$PS1"')" '\[\e[31m\]$'
 assert_contains "un job en arrière-plan : segment ⚙ 1" \
-  "$(with_prompt 'sleep 3 & _coolbash_prompt_build; kill %1 2>/dev/null; printf %s "$PS1"')" $'\uf013 1'
-assert_eq "aucun job : pas de segment" "0" "$(ps1_of | grep -c $'\uf013')"
+  "$(with_prompt 'sleep 3 & _coolbash_prompt_build; kill %1 2>/dev/null; printf %s "$PS1"')" $'\xef\x80\x93 1'
+assert_eq "aucun job : pas de segment" "0" "$(ps1_of | grep -c $'\xef\x80\x93')"
 ro="${COOLBASH_TEST_TMP}/ro"
 mkdir -p "${ro}"
 chmod 500 "${ro}"
 if [[ -w "${ro}" ]]; then
   t_skip "dossier en lecture seule (root ou chmod inopérant)"
 else
-  assert_contains "dossier non inscriptible : cadenas devant le chemin" "$(cd "${ro}" && ps1_of)" $'\uf023 \uf07c \\w'
-  assert_eq "dossier inscriptible : pas de cadenas" "0" "$(cd "${COOLBASH_TEST_TMP}" && ps1_of | grep -c $'\uf023')"
+  assert_contains "dossier non inscriptible : cadenas devant le chemin" "$(cd "${ro}" && ps1_of)" $'\xef\x80\xa3 \xef\x81\xbc \\w'
+  assert_eq "dossier inscriptible : pas de cadenas" "0" "$(cd "${COOLBASH_TEST_TMP}" && ps1_of | grep -c $'\xef\x80\xa3')"
 fi
 chmod 700 "${ro}"
 
 # --- 9. Hôte : SSH, conteneur, couleur par machine ---------------------------
-assert_contains "en SSH : icône prise devant l'hôte" "$(SSH_CONNECTION='1 2 3 4' ps1_of)" $'\uf1e6  \\h'
-assert_contains "en local : icône écran, couleur d'accent fixe" "$(ps1_of)" $'\\[\\e[35m\\] \uf108  \\h'
+assert_contains "en SSH : icône prise devant l'hôte" "$(SSH_CONNECTION='1 2 3 4' ps1_of)" $'\xef\x87\xa6  \\h'
+assert_contains "en local : icône écran, couleur d'accent fixe" "$(ps1_of)" $'\\[\\e[35m\\] \xef\x84\x88  \\h'
 ssh_color() {
   local p
   p="$(SSH_CONNECTION=x HOSTNAME="$1" ps1_of)"
-  [[ "$p" =~ \\e\[(3[1-6])m\\\]\ $'\uf1e6' ]] && printf %s "${BASH_REMATCH[1]}"
+  [[ "$p" =~ \\e\[(3[1-6])m\\\]\ $'\xef\x87\xa6' ]] && printf %s "${BASH_REMATCH[1]}"
 }
 ssh_a="$(ssh_color alpha)"
 ssh_b="$(ssh_color alpha)"
@@ -162,8 +193,8 @@ assert_eq "en SSH : couleur d'hôte dérivée du nom, stable" "${ssh_a}" "${ssh_
 assert_eq "…et parmi les 6 couleurs de base sans TrueColor" "1" "$(printf '%s\n' "${ssh_a}" | grep -cE '^3[1-6]$')"
 marker="${COOLBASH_TEST_TMP}/dockerenv"
 : >"${marker}"
-assert_contains "conteneur détecté (marqueur) : icône cube" "$(COOLBASH_PROMPT_CONTAINER_MARKERS="${marker}" ps1_of)" $'\uf1b2  \\h'
-assert_eq "sans marqueur : pas de cube" "0" "$(COOLBASH_PROMPT_CONTAINER_MARKERS="${marker}.absent" ps1_of | grep -c $'\uf1b2')"
+assert_contains "conteneur détecté (marqueur) : icône cube" "$(COOLBASH_PROMPT_CONTAINER_MARKERS="${marker}" ps1_of)" $'\xef\x86\xb2  \\h'
+assert_eq "sans marqueur : pas de cube" "0" "$(COOLBASH_PROMPT_CONTAINER_MARKERS="${marker}.absent" ps1_of | grep -c $'\xef\x86\xb2')"
 
 # --- 10. Terminal : OSC 7 (dossier courant) et notification de fin ---------
 mkdir -p "${COOLBASH_TEST_TMP}/a b"
@@ -172,11 +203,11 @@ assert_contains "OSC 7 annonce le dossier courant en file://" "${osc7}" '\e]7;fi
 assert_contains "…chemin encodé (espace → %20)" "${osc7}" 'a%20b\a'
 assert_eq "OSC 7 absent sur un terminal sans titre (dumb)" "0" "$(TERM=dumb ps1_of | grep -c ']7;')"
 assert_eq "COOLBASH_PS1_OSC7=0 le désactive" "0" "$(TERM=xterm COOLBASH_PS1_OSC7=0 ps1_of | grep -c ']7;')"
-long="$(TERM=xterm COOLBASH_PROMPT_BELL_MS=1000 with_prompt 'COOLBASH_PROMPT_T0=$(( ${EPOCHREALTIME//[.,]/} - 2000000 )); _coolbash_prompt_build; printf %s "$PS1"')"
+long="$(TERM=xterm COOLBASH_PROMPT_BELL_MS=1000 with_prompt ''"${AGE2}"'; _coolbash_prompt_build; printf %s "$PS1"')"
 assert_contains "commande longue : sonnerie" "${long}" '\a\]'
 assert_contains "…et notification OSC 777 avec la durée" "${long}" ']777;notify;CoolBash;'
 assert_eq "commande courte : ni sonnerie ni notification" "0" "$(TERM=xterm COOLBASH_PROMPT_BELL_MS=1000 ps1_of | grep -c '777;notify')"
-assert_eq "COOLBASH_PROMPT_BELL_MS=0 désactive" "0" "$(TERM=xterm COOLBASH_PROMPT_BELL_MS=0 with_prompt 'COOLBASH_PROMPT_T0=$(( ${EPOCHREALTIME//[.,]/} - 2000000 )); _coolbash_prompt_build; printf %s "$PS1"' | grep -c '777;notify')"
+assert_eq "COOLBASH_PROMPT_BELL_MS=0 désactive" "0" "$(TERM=xterm COOLBASH_PROMPT_BELL_MS=0 with_prompt ''"${AGE2}"'; _coolbash_prompt_build; printf %s "$PS1"' | grep -c '777;notify')"
 
 # --- 11. Outils (php, node) : détection par fichier, version en cache -------
 bin="${COOLBASH_TEST_TMP}/bin"
@@ -188,13 +219,13 @@ tools() { (cd "${COOLBASH_TEST_TMP}/proj" && PATH="${bin}:${PATH}" with_prompt "
 tools_seg() { tools '_coolbash_prompt_tools v; printf %s "$v"'; }
 assert_eq "sans composer.json ni package.json : rien" "" "$(tools_seg)"
 : >"${COOLBASH_TEST_TMP}/proj/composer.json"
-assert_eq "composer.json : version php majeure.mineure" $'\ue73d 7.4' "$(tools_seg)"
+assert_eq "composer.json : version php majeure.mineure" $'\xee\x9c\xbd 7.4' "$(tools_seg)"
 : >"${COOLBASH_TEST_TMP}/proj/package.json"
-assert_eq "package.json : version node sans le v" $'\ue73d 7.4  \ue718 20.1' "$(tools_seg)"
+assert_eq "package.json : version node sans le v" $'\xee\x9c\xbd 7.4  \xee\x9c\x98 20.1' "$(tools_seg)"
 assert_eq "sans icône : nom de l'outil en préfixe" "php 7.4  node 20.1" "$(COOLBASH_PROMPT_ICONS=0 tools_seg)"
 rm -f "${COOLBASH_TEST_TMP}/php.calls"
 tools '_coolbash_prompt_tools v; _coolbash_prompt_tools v; _coolbash_prompt_tools v' >/dev/null
-assert_eq "version mise en cache : un seul lancement de php pour trois prompts" "1" "$(wc -l <"${COOLBASH_TEST_TMP}/php.calls")"
+assert_eq "version mise en cache : un seul lancement de php pour trois prompts" "1" "$(t_count <"${COOLBASH_TEST_TMP}/php.calls")"
 assert_eq "COOLBASH_PROMPT_TOOLS=0 désactive" "" "$(COOLBASH_PROMPT_TOOLS=0 tools_seg)"
 assert_eq "mode safe : désactivé" "" "$(COOLBASH_MODE=safe tools_seg)"
 assert_eq "conda : CONDA_DEFAULT_ENV dans le segment venv" "ml" "$(CONDA_DEFAULT_ENV=ml with_prompt '_coolbash_prompt_venv')"
@@ -217,10 +248,10 @@ rm -f "${pfx}/.nerdfont"
 assert_eq "pas de fichier d'état : nerd" "nerd" "$(icons)"
 
 # --- 13. 0.18.0 : titre après une commande longue, chemin façon fish, transient --
-t="$(TERM=xterm COOLBASH_PROMPT_BELL_MS=1000 with_prompt 'set -o history; history -s "make test"; COOLBASH_PROMPT_T0=$(( ${EPOCHREALTIME//[.,]/} - 2000000 )); true; _coolbash_prompt_build; printf %s "$PS1"')"
+t="$(TERM=xterm COOLBASH_PROMPT_BELL_MS=1000 with_prompt 'set -o history; history -s "make test"; '"${AGE2}"'; true; _coolbash_prompt_build; printf %s "$PS1"')"
 assert_contains "commande longue : le titre du terminal devient « ✔ commande · durée »" "${t}" ']0;✔ make test · '
 assert_eq "…à la place de user@host: dossier" "0" "$(printf '%s' "${t}" | grep -c ']0;\\u@\\h')"
-t="$(TERM=xterm COOLBASH_PROMPT_BELL_MS=1000 with_prompt 'set -o history; history -s "make test"; COOLBASH_PROMPT_T0=$(( ${EPOCHREALTIME//[.,]/} - 2000000 )); (exit 2); _coolbash_prompt_build; printf %s "$PS1"')"
+t="$(TERM=xterm COOLBASH_PROMPT_BELL_MS=1000 with_prompt 'set -o history; history -s "make test"; '"${AGE2}"'; (exit 2); _coolbash_prompt_build; printf %s "$PS1"')"
 assert_contains "commande longue en échec : ✘ dans le titre" "${t}" ']0;✘ make test'
 assert_contains "commande courte : titre user@host: dossier" "$(TERM=xterm ps1_of)" ']0;\u@\h: \w'
 deep="${COOLBASH_TEST_TMP}/projets/coolbash/modules/prompt/segments"
@@ -233,7 +264,7 @@ mkdir -p "${COOLBASH_TEST_TMP}/.config/very/long/hidden/path/here"
 # shellcheck disable=SC2088
 assert_contains "un dossier caché garde son point et sa première lettre" "$(cd "${COOLBASH_TEST_TMP}/.config/very/long/hidden/path/here" && COLUMNS=30 ps1_of)" '~/.c/v/l/h/p/here'
 assert_eq "prompt transient : désactivé par défaut" "0" "$(with_prompt 'printf %s "$PS0"' | grep -c transient)"
-assert_contains "COOLBASH_PROMPT_TRANSIENT=1 : PS0 appelle le redessin" "$(COOLBASH_PROMPT_TRANSIENT=1 with_prompt 'printf %s "$PS0"')" '_coolbash_prompt_transient'
+ps0_test "COOLBASH_PROMPT_TRANSIENT=1 : PS0 appelle le redessin" assert_contains "COOLBASH_PROMPT_TRANSIENT=1 : PS0 appelle le redessin" "$(COOLBASH_PROMPT_TRANSIENT=1 with_prompt 'printf %s "$PS0"')" '_coolbash_prompt_transient'
 tr_out="$(cd "${deep}" && COOLBASH_PROMPT_TRANSIENT=1 COLUMNS=80 with_prompt 'set -o history; history -s "ls -la"; _coolbash_prompt_build; _coolbash_prompt_transient' | cat -v)"
 assert_contains "…le redessin remonte de deux lignes et efface la suite" "${tr_out}" '^[[2A^M^[[J'
 assert_contains "…puis réaffiche chemin, chevron et commande sur une ligne" "${tr_out}" 'segments^[[0m $ ls -la'
@@ -259,13 +290,13 @@ assert_eq "aucun sous-shell pour les couleurs (printf -v)" "0" "$(grep -cE 'c\[[
 mkdir -p "${COOLBASH_TEST_TMP}/.kube"
 printf 'apiVersion: v1\ncurrent-context: dev-cluster\ncontexts: []\n' >|"${COOLBASH_TEST_TMP}/.kube/config"
 cloud() { with_prompt '_coolbash_prompt_cloud v; printf %s "$v"'; }
-assert_contains "kube : current-context de ~/.kube/config" "$(cloud)" $'\U000f10fe dev-cluster'
+assert_contains "kube : current-context de ~/.kube/config" "$(cloud)" $'\xf3\xb1\x83\xbe dev-cluster'
 assert_eq "…en couleur info, pas en rouge" "0" "$(cloud | grep -c '31m')"
 printf 'current-context: "prod-eu"\n' >|"${COOLBASH_TEST_TMP}/kc2"
 assert_contains "KUBECONFIG a priorité, guillemets retirés" "$(KUBECONFIG="${COOLBASH_TEST_TMP}/kc2" cloud)" "prod-eu"
 assert_contains "…et « prod » passe en rouge gras" "$(KUBECONFIG="${COOLBASH_TEST_TMP}/kc2" cloud)" '\e[31m\]\[\e[1m\]'
 assert_contains "COOLBASH_PROMPT_PROD : motif personnalisé" "$(COOLBASH_PROMPT_PROD=dev cloud)" '\e[31m'
-assert_contains "AWS_PROFILE : profil affiché (icône nerd)" "$(AWS_PROFILE=perso cloud)" $'\uf270 perso'
+assert_contains "AWS_PROFILE : profil affiché (icône nerd)" "$(AWS_PROFILE=perso cloud)" $'\xef\x89\xb0 perso'
 assert_contains "AWS_VAULT : pris en compte à défaut" "$(AWS_PROFILE='' AWS_VAULT=admin cloud)" "admin"
 assert_eq "COOLBASH_PROMPT_CLOUD=0 : rien" "" "$(AWS_PROFILE=perso COOLBASH_PROMPT_CLOUD=0 cloud)"
 basic="$(AWS_PROFILE=p COOLBASH_PROMPT_ICONS=basic cloud)"
@@ -277,12 +308,12 @@ printf '#!/bin/sh\nprintf "rustc 1.80.0 (abc 2024-07-21)\\n"\n' >"${bin}/rustc"
 chmod +x "${bin}/rustc"
 rm -f "${COOLBASH_TEST_TMP}/proj/composer.json" "${COOLBASH_TEST_TMP}/proj/package.json"
 : >"${COOLBASH_TEST_TMP}/proj/Cargo.toml"
-assert_eq "Cargo.toml : version de rustc, majeure.mineure" $'\ue7a8 1.80' "$(tools_seg)"
+assert_eq "Cargo.toml : version de rustc, majeure.mineure" $'\xee\x9e\xa8 1.80' "$(tools_seg)"
 printf '[toolchain]\nchannel = "1.75.0"\n' >"${COOLBASH_TEST_TMP}/proj/rust-toolchain.toml"
-assert_eq "rust-toolchain.toml : la version du projet, sans lancer rustc" $'\ue7a8 1.75' "$(tools_seg)"
+assert_eq "rust-toolchain.toml : la version du projet, sans lancer rustc" $'\xee\x9e\xa8 1.75' "$(tools_seg)"
 rm -f "${COOLBASH_TEST_TMP}/proj/rust-toolchain.toml"
 printf 'nightly\n' >"${COOLBASH_TEST_TMP}/proj/rust-toolchain"
-assert_eq "rust-toolchain : un canal nommé" $'\ue7a8 nightly' "$(tools_seg)"
+assert_eq "rust-toolchain : un canal nommé" $'\xee\x9e\xa8 nightly' "$(tools_seg)"
 rm -f "${COOLBASH_TEST_TMP}/proj/rust-toolchain" "${COOLBASH_TEST_TMP}/proj/Cargo.toml"
 
 # --- 16. 0.30.0 : OSC 133, niveau de shell, jobs stoppés -------------------------
@@ -290,7 +321,7 @@ m="$(TERM=xterm with_prompt 'true; _coolbash_prompt_build; printf %s "$PS1"')"
 assert_contains "OSC 133 : D;0 puis A ouvrent le prompt après un succès" "${m}" '\e]133;D;0\a\e]133;A\a'
 assert_contains "OSC 133 : B clôt le prompt, juste après le chevron" "${m}" '$\[\e[0m\] \[\e]133;B\a\]'
 assert_contains "OSC 133 : D;1 après un échec" "$(TERM=xterm with_prompt 'false; _coolbash_prompt_build; printf %s "$PS1"')" ']133;D;1'
-assert_contains "OSC 133 : C au début de la sortie (PS0)" "$(TERM=xterm with_prompt 'printf %s "$PS0"')" '\e]133;C\a'
+ps0_test "OSC 133 : C au début de la sortie (PS0)" assert_contains "OSC 133 : C au début de la sortie (PS0)" "$(TERM=xterm with_prompt 'printf %s "$PS0"')" '\e]133;C\a'
 assert_eq "OSC 133 : rien sur un terminal sans titre (dumb)" "0" "$(TERM=dumb with_prompt '_coolbash_prompt_build; printf %s "$PS1$PS0"' | grep -c '133;')"
 assert_eq "COOLBASH_PROMPT_OSC133=0 : rien" "0" "$(TERM=xterm COOLBASH_PROMPT_OSC133=0 with_prompt '_coolbash_prompt_build; printf %s "$PS1$PS0"' | grep -c '133;')"
 assert_eq "kitty avec sa propre intégration : rien (pas de doublon)" "0" "$(TERM=xterm-kitty KITTY_SHELL_INTEGRATION=enabled with_prompt '_coolbash_prompt_build; printf %s "$PS1$PS0"' | grep -c '133;')"
@@ -298,13 +329,13 @@ assert_eq "kitty, intégration désactivée : CoolBash émet les marques" "1" "$
 assert_eq "VTE avec vte.sh dans PROMPT_COMMAND : rien" "0" "$(TERM=xterm with_prompt 'PROMPT_COMMAND="__vte_prompt_command; $PROMPT_COMMAND"; _coolbash_prompt_build; printf %s "$PS1"' | grep -c '133;')"
 # FR : bash -c incrémente SHLVL : avec SHLVL=3 dans l'environnement, le shell de test est au niveau 4.
 assert_eq "niveau de shell : au niveau de référence, rien" "" "$(SHLVL=3 COOLBASH_SHLVL_BASE=4 with_prompt '_coolbash_prompt_shlvl')"
-assert_eq "un niveau sous la référence : ⧉ 2 (icône nerd)" $'\uf0e8 2' "$(SHLVL=3 COOLBASH_SHLVL_BASE=3 with_prompt '_coolbash_prompt_shlvl')"
+assert_eq "un niveau sous la référence : ⧉ 2 (icône nerd)" $'\xef\x83\xa8 2' "$(SHLVL=3 COOLBASH_SHLVL_BASE=3 with_prompt '_coolbash_prompt_shlvl')"
 assert_eq "deux niveaux : 3, en basic" "⧉ 3" "$(SHLVL=4 COOLBASH_SHLVL_BASE=3 COOLBASH_PROMPT_ICONS=basic with_prompt '_coolbash_prompt_shlvl')"
 assert_eq "la référence est posée (et exportée) par le premier shell" "1" "$(env -u COOLBASH_SHLVL_BASE SHLVL=7 bash --norc --noprofile -c 'source "$1"; source "$2"; [[ "$COOLBASH_SHLVL_BASE" == 8 ]] && bash -c "[[ -n \$COOLBASH_SHLVL_BASE ]] && echo 1"' _ "${CORE}" "${PROMPT}")"
 assert_eq "COOLBASH_PROMPT_SHLVL=0 : rien" "" "$(SHLVL=4 COOLBASH_SHLVL_BASE=3 COOLBASH_PROMPT_SHLVL=0 with_prompt '_coolbash_prompt_shlvl')"
-assert_contains "le niveau est dans PS1" "$(SHLVL=3 COOLBASH_SHLVL_BASE=3 ps1_of)" $'\uf0e8 2'
+assert_contains "le niveau est dans PS1" "$(SHLVL=3 COOLBASH_SHLVL_BASE=3 ps1_of)" $'\xef\x83\xa8 2'
 # FR : sans tty (CI, run.sh) il n'y a pas de job control : `jobs` est doublé par une fonction.
-assert_eq "jobs : un job stoppé est compté à part (⚙ 2 ⏸1)" $'\uf013 2 ⏸1' "$(with_prompt 'jobs() { if [[ "$1" == -sp ]]; then echo 111; else printf "111\n222\n"; fi; }; _coolbash_prompt_jobs')"
-assert_eq "jobs : aucun stoppé, pas de ⏸" $'\uf013 1' "$(with_prompt 'jobs() { [[ "$1" == -sp ]] || echo 111; }; _coolbash_prompt_jobs')"
+assert_eq "jobs : un job stoppé est compté à part (⚙ 2 ⏸1)" $'\xef\x80\x93 2 ⏸1' "$(with_prompt 'jobs() { if [[ "$1" == -sp ]]; then echo 111; else printf "111\n222\n"; fi; }; _coolbash_prompt_jobs')"
+assert_eq "jobs : aucun stoppé, pas de ⏸" $'\xef\x80\x93 1' "$(with_prompt 'jobs() { [[ "$1" == -sp ]] || echo 111; }; _coolbash_prompt_jobs')"
 
 t_done

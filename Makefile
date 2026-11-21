@@ -6,6 +6,22 @@ ROOT   := $(abspath .)
 #      forme `source $HOME/.coolbash/cli/coolbash init`).
 SOURCE_LINE = source "$(PREFIX)/cli/coolbash" init
 
+# FR : macOS — tar est bsdtar (pas de --transform ni --owner), sed -i veut un
+#      suffixe, les shells de terminal sont des shells de login (~/.bash_profile).
+UNAME := $(shell uname -s)
+ifeq ($(shell tar --version 2>/dev/null | grep -c GNU),0)
+  TAR_ROOT   := --uid 0 --gid 0
+  TAR_PREFIX  = -s ',^,coolbash-$(VERSION)/,'
+else
+  TAR_ROOT   := --owner=0 --group=0
+  TAR_PREFIX  = --transform 's,^,coolbash-$(VERSION)/,'
+endif
+# FR : pas de fichiers ._* (attributs étendus) dans les archives faites sous macOS.
+export COPYFILE_DISABLE := 1
+# FR : ligne ajoutée au fichier de login sous macOS, pour qu'il charge ~/.bashrc.
+LOGIN_DIR  = $(patsubst %/,%,$(dir $(BASHRC)))
+LOGIN_LINE = [ -n "$$BASH_VERSION" ] && [ -f "$(BASHRC)" ] && . "$(BASHRC)" \# CoolBash : shell de login → ~/.bashrc
+
 .PHONY: install update uninstall verify lint fmt test font dist stage pkg-deb pkg-arch pkg hooks clean
 VERSION := $(shell sed -n 's/^COOLBASH_VERSION="\(.*\)"/\1/p' cli/coolbash)
 DIST    := dist
@@ -62,6 +78,20 @@ install:
 	  fi; \
 	  echo '$(SOURCE_LINE)' >> "$(BASHRC)"; \
 	fi
+	@# FR : macOS — Terminal et iTerm ouvrent des shells de LOGIN : bash y lit le
+	@#      premier de ~/.bash_profile, ~/.bash_login, ~/.profile, et jamais
+	@#      ~/.bashrc. On ajoute la ligne à celui qui existe (sinon ~/.bash_profile),
+	@#      sauf s'il parle déjà de .bashrc — ou s'il EST le fichier visé par BASHRC
+	@#      (il se sourcerait lui-même). Cherché à côté de BASHRC : c'est $(HOME).
+	@if [[ "$(UNAME)" == Darwin ]]; then \
+	  login=""; \
+	  for f in "$(LOGIN_DIR)/.bash_profile" "$(LOGIN_DIR)/.bash_login" "$(LOGIN_DIR)/.profile"; do [[ -f "$$f" ]] && { login="$$f"; break; }; done; \
+	  login="$${login:-$(LOGIN_DIR)/.bash_profile}"; \
+	  if ! [[ "$$login" -ef "$(BASHRC)" ]] && ! grep -q 'bashrc' "$$login" 2>/dev/null; then \
+	    printf '%s\n' '$(LOGIN_LINE)' >> "$$login"; \
+	    echo "[CoolBash] macOS : $$login charge maintenant $(BASHRC) (shells de login)."; \
+	  fi; \
+	fi
 	@# FR : la police des icônes est un confort — son échec (pas de réseau, pas
 	@#      de xz…) ne doit jamais faire échouer l'installation.
 	@COOLBASH_PREFIX="$(PREFIX)" bash cli/coolbash-font install || true
@@ -74,6 +104,12 @@ install:
 	  else COOLBASH_PREFIX="$(PREFIX)" COOLBASH_BASHRC="$(BASHRC)" bash "$(PREFIX)/cli/coolbash-setup" --defaults >/dev/null || true; fi; \
 	fi
 	@echo "[CoolBash] Installation complete ✅"
+	@# FR : macOS — le shell par défaut est zsh : CoolBash ne se voit que dans bash.
+	@if [[ "$(UNAME)" == Darwin && "$${SHELL##*/}" != bash ]]; then \
+	  b="$$(command -v bash)"; \
+	  echo "[CoolBash] Ton shell de connexion est $${SHELL##*/} : lance « bash » pour voir CoolBash."; \
+	  echo "           Pour l'adopter : grep -qx $$b /etc/shells || echo $$b | sudo tee -a /etc/shells ; chsh -s $$b"; \
+	fi
 
 update:
 	@# FR : jamais d'installation sans suite de tests verte après le pull.
@@ -110,8 +146,16 @@ uninstall:
 	  cp -a "$$backup" "$(BASHRC)"; \
 	  echo "[CoolBash] $(BASHRC) restauré depuis $$backup (l'ancien est dans $(BASHRC).coolbash-retire-$$(date +%F))"; \
 	elif [[ -f "$(BASHRC)" ]]; then \
-	  sed -i '\#cli/coolbash"* init#d' "$(BASHRC)"; \
+	  grep -v 'cli/coolbash"* init' "$(BASHRC)" > "$(BASHRC).coolbash-tmp"; \
+	  cat "$(BASHRC).coolbash-tmp" >| "$(BASHRC)"; rm -f "$(BASHRC).coolbash-tmp"; \
 	fi
+	@# FR : macOS — la ligne ajoutée au fichier de login repart aussi.
+	@for f in "$(LOGIN_DIR)/.bash_profile" "$(LOGIN_DIR)/.bash_login" "$(LOGIN_DIR)/.profile"; do \
+	  grep -q '# CoolBash : shell de login' "$$f" 2>/dev/null || continue; \
+	  grep -v '# CoolBash : shell de login' "$$f" > "$$f.coolbash-tmp"; \
+	  cat "$$f.coolbash-tmp" >| "$$f"; rm -f "$$f.coolbash-tmp"; \
+	  [[ -s "$$f" ]] || rm -f "$$f"; \
+	done
 	@echo "[CoolBash] Uninstalled successfully."
 
 font:
@@ -127,7 +171,7 @@ SH_FILES := cli/coolbash cli/coolbash-font cli/coolbash-setup install.sh modules
 #      et /usr/bin/coolbash ; chaque utilisateur fait ensuite `coolbash install`.
 dist:
 	@mkdir -p "$(DIST)"
-	@tar -czf "$(DIST)/coolbash-$(VERSION).tar.gz" --transform 's,^,coolbash-$(VERSION)/,' --owner=0 --group=0 $(PKG_FILES)
+	@tar -czf "$(DIST)/coolbash-$(VERSION).tar.gz" $(TAR_PREFIX) $(TAR_ROOT) $(PKG_FILES)
 	@echo "[CoolBash] $(DIST)/coolbash-$(VERSION).tar.gz"
 
 stage:
@@ -152,10 +196,10 @@ pkg-deb: stage
 	  dpkg-deb -Zgzip --build --root-owner-group "$(DIST)/root" "$$deb" >/dev/null; \
 	else \
 	  tmp="$(DIST)/deb-build"; rm -rf "$$tmp"; mkdir -p "$$tmp"; \
-	  tar -C "$(DIST)/root" --owner=0 --group=0 -czf "$$tmp/data.tar.gz" ./usr; \
-	  tar -C "$(DIST)/root/DEBIAN" --owner=0 --group=0 -czf "$$tmp/control.tar.gz" ./control; \
+	  tar -C "$(DIST)/root" $(TAR_ROOT) -czf "$$tmp/data.tar.gz" ./usr; \
+	  tar -C "$(DIST)/root/DEBIAN" $(TAR_ROOT) -czf "$$tmp/control.tar.gz" ./control; \
 	  printf '2.0\n' >| "$$tmp/debian-binary"; \
-	  rm -f "$$deb"; (cd "$$tmp" && ar rcs "../../$$deb" debian-binary control.tar.gz data.tar.gz); \
+	  rm -f "$$deb"; (cd "$$tmp" && ar rc "../../$$deb" debian-binary control.tar.gz data.tar.gz); \
 	  rm -rf "$$tmp"; \
 	fi; \
 	echo "[CoolBash] $$deb"

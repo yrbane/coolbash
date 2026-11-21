@@ -38,9 +38,9 @@ _coolbash_img_backend() {
     # FR : VS Code n'affiche les images qu'avec terminal.integrated.enableImages :
     #      en caractères si on peut, sinon iTerm2 (qu'il comprend une fois réglé).
     _ib=chafa
-  elif [[ -n "${ITERM_SESSION_ID:-}${WEZTERM_EXECUTABLE:-}" || "${TERM_PROGRAM:-}" == @(iTerm.app|WezTerm|mintty|vscode) ]]; then
+  elif [[ -n "${ITERM_SESSION_ID:-}${WEZTERM_EXECUTABLE:-}" || "${TERM_PROGRAM:-}" =~ ^(iTerm\.app|WezTerm|mintty|vscode)$ ]]; then
     _ib=iterm
-  elif [[ -n "${WT_SESSION:-}" || ("${TERM:-}" == @(foot*|xterm*|mlterm*|contour*) && "${TERM:-}" != xterm-256color) ]] && { command -v img2sixel >/dev/null 2>&1 || command -v magick >/dev/null 2>&1; }; then
+  elif [[ -n "${WT_SESSION:-}" || ("${TERM:-}" =~ ^(foot|xterm|mlterm|contour) && "${TERM:-}" != xterm-256color) ]] && { command -v img2sixel >/dev/null 2>&1 || command -v magick >/dev/null 2>&1; }; then
     # FR : Windows Terminal (WT_SESSION) sait le sixel depuis la 1.22.
     _ib=sixel
   elif command -v chafa >/dev/null 2>&1 || command -v viu >/dev/null 2>&1 || command -v timg >/dev/null 2>&1; then
@@ -63,6 +63,10 @@ _coolbash_img_emit() {
   fi
 }
 
+# FR : base64 sur une seule ligne, depuis l'entrée standard. `base64 -w0` est GNU :
+#      le base64 de macOS le refuse, et coupe ou non les lignes selon la version.
+_coolbash_img_b64() { base64 | tr -d '\n'; }
+
 # FR : protocole kitty — PNG en base64 par morceaux de 4096 octets.
 #      a=T transmettre et afficher, f=100 PNG, c=colonnes (optionnel).
 _coolbash_img_kitty() {
@@ -70,11 +74,11 @@ _coolbash_img_kitty() {
   if command -v kitten >/dev/null 2>&1 && [[ -z "${TMUX:-}" ]]; then
     kitten icat --stdin=no ${cols:+--place "${cols}x${rows:-0}@0x0" --scale-up} "$file" 2>/dev/null && return 0
   fi
-  case "${file,,}" in
-    *.png) b64="$(base64 -w0 "$file")" ;;
+  case "$file" in
+    *.[pP][nN][gG]) b64="$(_coolbash_img_b64 <"$file")" ;;
     *)
       command -v magick >/dev/null 2>&1 || return 1
-      b64="$(magick "$file" png:- 2>/dev/null | base64 -w0)"
+      b64="$(magick "$file" png:- 2>/dev/null | _coolbash_img_b64)"
       ;;
   esac
   [[ -n "$b64" ]] || return 1
@@ -92,8 +96,9 @@ _coolbash_img_kitty() {
 # FR : protocole iTerm2 — un seul bloc base64, n'importe quel format.
 _coolbash_img_iterm() {
   local file="$1" cols="${2:-}" rows="${3:-}" b64 name
-  b64="$(base64 -w0 "$file")" || return 1
-  name="$(printf '%s' "${file##*/}" | base64 -w0)"
+  [[ -r "$file" ]] || return 1
+  b64="$(_coolbash_img_b64 <"$file")"
+  name="$(printf '%s' "${file##*/}" | _coolbash_img_b64)"
   _coolbash_img_emit $'\e]1337;File=inline=1;name='"${name};size=${#b64}${cols:+;width=$cols}${rows:+;height=$rows}:${b64}"$'\a'
   printf '\n'
 }
@@ -173,7 +178,7 @@ img() {
       continue
     }
     # FR : largeur automatique : jamais plus large que le PNG lui-même (≈ 8 px par colonne).
-    if ((auto)) && [[ "${f,,}" == *.png ]] && _coolbash_img_png_width "$f" px && ((px / 8 < cols)); then
+    if ((auto)) && [[ "$f" == *.[pP][nN][gG] ]] && _coolbash_img_png_width "$f" px && ((px / 8 < cols)); then
       "_coolbash_img_${backend}" "$f" "$((px / 8 > 0 ? px / 8 : 1))" "$rows"
     else
       "_coolbash_img_${backend}" "$f" "$cols" "$rows"

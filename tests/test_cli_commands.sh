@@ -13,9 +13,9 @@ assert_success "coolbash help renvoie 0" bash "${CLI}" help
 assert_contains "coolbash help affiche l'usage" "$(bash "${CLI}" help)" "Usage : coolbash <commande>"
 assert_contains "coolbash help affiche le logo" "$(bash "${CLI}" help)" "██████╗"
 assert_eq "coolbash help hors terminal : aucune séquence de couleur" "0" "$(bash "${CLI}" help | grep -c $'\e\[')"
-if command -v script >/dev/null 2>&1; then
-  assert_eq "coolbash help sous un tty avec NO_COLOR : aucune couleur" "0" "$(NO_COLOR=1 script -qec "bash '${CLI}' help" /dev/null </dev/null 2>/dev/null | grep -c $'\e\[')"
-  assert_eq "coolbash help sous un tty : le logo est coloré" "1" "$(script -qec "bash '${CLI}' help" /dev/null </dev/null 2>/dev/null | grep -c $'\e\[38;[25];.*██████╗' | awk '{print ($1>=1)?1:0}')"
+if t_has_tty; then
+  assert_eq "coolbash help sous un tty avec NO_COLOR : aucune couleur" "0" "$(NO_COLOR=1 "${T_TTY}" "bash '${CLI}' help" </dev/null 2>/dev/null | grep -c $'\e\[')"
+  assert_eq "coolbash help sous un tty : le logo est coloré" "1" "$("${T_TTY}" "bash '${CLI}' help" </dev/null 2>/dev/null | grep -c $'\e\[38;[25];.*██████╗' | awk '{print ($1>=1)?1:0}')"
 fi
 assert_contains "coolbash sans argument affiche l'usage" "$(bash "${CLI}")" "Usage : coolbash <commande>"
 assert_failure "une commande inconnue renvoie un code d'erreur" bash "${CLI}" plop
@@ -129,6 +129,19 @@ assert_contains "deps : timg n'a pas de paquet pacman, dit tel quel" "${dp}" "ti
 assert_eq "…et il n'est pas dans la commande" "0" "$(printf '%s\n' "${dp}" | grep 'sudo pacman' | grep -c 'tldr')"
 assert_not_contains "deps : sans session graphique, pas de wl-clipboard" "${dp}" "wl-clipboard"
 assert_contains "deps : sans --install, on ne lance rien" "${dp}" "deps --install pour lancer"
+# FR : Homebrew : les formules sont vérifiées dans les listes de son cache (tldr a été retirée : c'est tealdeer).
+fbrew="${COOLBASH_TEST_TMP}/fdepsbrew"
+mkdir -p "${fbrew}/bin" "${fbrew}/cache/api"
+for b in bash grep sed cat mkdir mv cp ls head tail sort tr wc cut env dirname basename cksum tee; do ln -sf "$(command -v "$b")" "${fbrew}/bin/$b" 2>/dev/null; done
+printf '#!/bin/bash\necho "brew:$*"\n' >|"${fbrew}/bin/brew"
+chmod +x "${fbrew}/bin/brew"
+printf '%s\n' cowsay tealdeer fzf git-delta shellcheck shfmt chafa libsixel imagemagick viu timg rsync git >|"${fbrew}/cache/api/formula_names.txt"
+printf 'python3|python@3.15\n' >|"${fbrew}/cache/api/formula_aliases.txt"
+dpb="$(env -i PATH="${fbrew}/bin" HOME="${home}" HOMEBREW_CACHE="${fbrew}/cache" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps 2>&1 | sed 's/\x1b\[[0-9;]*m//g')"
+assert_contains "deps : sous brew, tldr s'appelle tealdeer" "$(printf '%s\n' "${dpb}" | grep 'brew install')" "tealdeer"
+assert_contains "deps : sous brew, un alias (python3) est connu" "$(printf '%s\n' "${dpb}" | grep 'brew install')" "python3"
+assert_contains "deps : sous brew, une formule absente des listes (lolcat) est signalée" "${dpb}" "lolcat : pas dans tes dépôts"
+assert_eq "…et écartée de la commande" "0" "$(printf '%s\n' "${dpb}" | grep 'brew install' | grep -c 'lolcat')"
 dpi="$(env -i PATH="${fd}/bin" HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps --install 2>&1)"
 assert_contains "deps --install : lance la commande via sudo" "${dpi}" "sudo:pacman -S --needed"
 assert_contains "deps sous Wayland : wl-clipboard proposé" "$(env -i PATH="${fd}/bin" WAYLAND_DISPLAY=w HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" deps 2>&1)" "wl-clipboard"
@@ -216,7 +229,7 @@ rm -f "${home}/.coolbash/motd.txt" "${home}/.coolbash/theme"
 # vérification de mise à jour : due / pas due, puis détection sur un dépôt local
 rm -f "${home}/.coolbash/.update-check"
 assert_eq "update_due : sans horodatage → due" "0" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_UPDATE_CHECK=1 bash -c 'source "$1" version >/dev/null; _coolbash_update_due; echo $?' _ "${home}/.coolbash/cli/coolbash")"
-printf '%s\n' "$EPOCHSECONDS" >|"${home}/.coolbash/.update-check"
+date +%s >|"${home}/.coolbash/.update-check"
 assert_eq "update_due : horodatage frais → pas due" "1" "$(HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_UPDATE_CHECK=1 bash -c 'source "$1" version >/dev/null; _coolbash_update_due; echo $?' _ "${home}/.coolbash/cli/coolbash")"
 assert_eq "update_due : COOLBASH_UPDATE_CHECK=0 → jamais" "1" "$(
   rm -f "${home}/.coolbash/.update-check"
@@ -229,7 +242,7 @@ git -C "${home}/clone" init -q 2>/dev/null
 git -C "${home}/clone" add -A >/dev/null 2>&1
 git -C "${home}/clone" -c user.email=t@t -c user.name=t commit -qm init >/dev/null 2>&1
 git clone -q "${home}/clone" "${up}/remote" 2>/dev/null
-sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="99.0.0"/' "${up}/remote/cli/coolbash"
+sed_i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="99.0.0"/' "${up}/remote/cli/coolbash"
 git -C "${up}/remote" -c user.email=t@t -c user.name=t commit -qam "99.0.0" >/dev/null 2>&1
 git -C "${up}/remote" branch -M main >/dev/null 2>&1
 git clone -q "${up}/remote" "${up}/local" 2>/dev/null
@@ -237,7 +250,7 @@ git -C "${up}/local" checkout -q HEAD~1 2>/dev/null
 git -C "${up}/local" branch -f main >/dev/null 2>&1
 HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_REPO="${up}/local" bash -c 'source "$1" version >/dev/null; _coolbash_update_check' _ "${home}/.coolbash/cli/coolbash"
 assert_eq "update_check : origin/main plus récent → .update-available = 99.0.0" "99.0.0" "$(cat "${home}/.coolbash/.update-available" 2>/dev/null)"
-sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="0.0.1"/' "${up}/remote/cli/coolbash"
+sed_i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="0.0.1"/' "${up}/remote/cli/coolbash"
 git -C "${up}/remote" -c user.email=t@t -c user.name=t commit -qam "0.0.1" >/dev/null 2>&1
 HOME="${home}" COOLBASH_PREFIX="${home}/.coolbash" COOLBASH_REPO="${up}/local" bash -c 'source "$1" version >/dev/null; _coolbash_update_check' _ "${home}/.coolbash/cli/coolbash"
 assert_no_path "update_check : version distante plus ancienne → pas d'alerte" "${home}/.coolbash/.update-available"
@@ -274,7 +287,7 @@ assert_contains "tidy : aperçu — lignes retirées (nvm)" "${ty}" "Retirées"
 assert_contains "tidy : aperçu — export PATH devient path_prepend" "${ty}" 'path_prepend "/opt/bin"'
 assert_contains "tidy : aperçu — PATH=\$PATH:X devient path_append" "${ty}" 'path_append "/opt/tail"'
 assert_contains "tidy : aperçu — l'alias est déplacé" "${ty}" "alias ll="
-assert_eq "tidy : aperçu — le fichier n'est pas touché" "8" "$(wc -l <"${home}/.bashrc")"
+assert_eq "tidy : aperçu — le fichier n'est pas touché" "8" "$(t_count <"${home}/.bashrc")"
 cli_home tidy --apply >/dev/null
 assert_eq "tidy --apply : il reste le commentaire et la ligne source" "# mon bashrc
 source \"\$HOME/.coolbash/cli/coolbash\" init" "$(cat "${home}/.bashrc")"
@@ -379,7 +392,7 @@ assert_eq "tidy : refuse un .bashrc compilé" "1" "$(
   cli_home tidy >/dev/null 2>&1
   echo $?
 )"
-sed -i 's/^# COOLBASH-COMPILED .*/# COOLBASH-COMPILED 0.1.0/' "${home}/.bashrc"
+sed_i 's/^# COOLBASH-COMPILED .*/# COOLBASH-COMPILED 0.1.0/' "${home}/.bashrc"
 assert_contains "doctor : un compilé d'une autre version demande une recompilation" "$(cli_home doctor)" "recompile"
 # setup : mode compiled → compile --write ; retour au mode source → une ligne
 # FR : 27 questions avant celle du mode (la 28e) — pas de configuration existante ici.
@@ -449,7 +462,7 @@ printf '# mon bashrc\nalias ll="ls -l"\n' >|"${fhome}/.bashrc"
 assert_contains "doctor : ligne source absente → propose --fix" "$(fcli_home doctor)" "doctor --fix répare : bashrc"
 assert_contains "doctor --fix : ajoute la ligne source" "$(fcli_home doctor --fix)" "ligne source ajoutée"
 assert_contains "…dans le ~/.bashrc" "$(cat "${fhome}/.bashrc")" 'cli/coolbash" init'
-assert_eq "…l'original est sauvegardé" "1" "$(compgen -G "${fhome}/.bashrc.avant-coolbash-*" | wc -l)"
+assert_eq "…l'original est sauvegardé" "1" "$(compgen -G "${fhome}/.bashrc.avant-coolbash-*" | t_count)"
 assert_eq "…et doctor repasse au vert (code 0)" "0" "$(
   fcli_home doctor >/dev/null
   echo $?

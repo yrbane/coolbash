@@ -22,36 +22,67 @@ CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/coolbash"
 # shellcheck disable=SC1091
 [[ -r "${CLI%/*}/../share/lang/_lang.bash" ]] && source "${CLI%/*}/../share/lang/_lang.bash"
 declare -F _coolbash_lang_init >/dev/null 2>&1 && _coolbash_lang_init "${CLI%/*}/../share/lang"
-declare -F _coolbash_t >/dev/null 2>&1 || _coolbash_t() { printf '%s' "$1"; }
+# FR : sans share/lang (script copié seul) : français, et les replis portables.
+if ! declare -F _coolbash_t >/dev/null 2>&1; then
+  _coolbash_t() { printf '%s' "$1"; }
+  _coolbash_say() {
+    local _cs_f="$1"
+    shift
+    # shellcheck disable=SC2059
+    printf "$_cs_f" "$@"
+  }
+  _coolbash_date() { printf -v "$1" '%s' "$(PATH="${PATH}:/usr/bin:/bin" date "+$2")"; }
+fi
 VERSION="$(sed -n 's/^COOLBASH_VERSION="\(.*\)"/\1/p' "$CLI" 2>/dev/null)"
 DEFAULTS=0
 [[ "${1:-}" == --defaults ]] && DEFAULTS=1
 REUSE=0
 
-declare -A CHOSEN=()  # variable → valeur choisie (différente du défaut)
-declare -A CURRENT=() # variable → valeur du config.bash existant
+# FR : trois tables « réglage → valeur » : CHOSEN (valeur choisie, différente du
+#      défaut), CURRENT (valeur du config.bash existant), SINCE (version où le
+#      réglage est apparu). Une variable par entrée, TABLE__REGLAGE, plutôt qu'un
+#      tableau associatif : le bash 3.2 de macOS n'en a pas.
+_set() { printf -v "$1__$2" '%s' "$3"; }
+_del() { unset "$1__$2"; }
+_has() {
+  local _h="$1__$2"
+  [[ -n "${!_h+x}" ]]
+}
+# FR : _keys TABLE → ses réglages, un par ligne.
+_keys() {
+  local _k
+  for _k in $(compgen -A variable "$1__"); do printf '%s\n' "${_k#"$1"__}"; done
+}
+_count() {
+  local _c
+  _c="$(compgen -A variable "$1__")"
+  # shellcheck disable=SC2086  # FR : un nom de variable par mot, c'est voulu
+  set -- $_c
+  printf '%s' "$#"
+}
 CONFIG_VERSION=""
 
 # FR : version de CoolBash où chaque réglage est apparu — pour ne poser que les
 #      questions nouvelles quand on reprend une configuration.
-declare -A SINCE=(
-  [COOLBASH_MODE]=0.1.0 [COOLBASH_PROMPT_EMOJI]=0.2.0 [COOLBASH_PROMPT_MIN_MS]=0.3.0
-  [COOLBASH_MOTD]=0.4.0 [COOLBASH_PS0_STAMP]=0.5.0 [COOLBASH_PROMPT_ICONS]=0.6.0
-  [COOLBASH_PROMPT_GIT]=0.7.0 [COOLBASH_PROMPT_TOOLS]=0.7.0 [COOLBASH_PROMPT_BELL_MS]=0.7.0
-  [COOLBASH_FZF]=0.9.0 [COOLBASH_NVM_LAZY]=0.10.0 [COOLBASH_STARTUP_TIME]=0.11.0
-  [COOLBASH_FORTUNE]=0.13.0 [COOLBASH_MOTD_HIDE]=0.15.0 [COOLBASH_SERVE_PORT]=0.17.0
-  [COOLBASH_PROMPT_PATH_FISH]=0.18.0 [COOLBASH_PROMPT_TRANSIENT]=0.18.0
-  [COOLBASH_PROMPT_THEME]=0.19.0 [COOLBASH_UPDATE_CHECK]=0.19.0
-  [COOLBASH_J]=0.20.0 [COOLBASH_CNF]=0.20.0 [COOLBASH_GIT_GUARD]=0.21.0
-  [COOLBASH_HOOKS]=0.22.0 [COOLBASH_PROMPT_CLOUD]=0.23.0 [COOLBASH_INSTALL_MODE]=0.26.0
-  [COOLBASH_PROMPT_OSC133]=0.30.0 [COOLBASH_HIST_SECRETS]=0.30.0 [COOLBASH_TMUX_SSH]=0.32.0
-)
+for kv in \
+  COOLBASH_MODE=0.1.0 COOLBASH_PROMPT_EMOJI=0.2.0 COOLBASH_PROMPT_MIN_MS=0.3.0 COOLBASH_MOTD=0.4.0 \
+  COOLBASH_PS0_STAMP=0.5.0 COOLBASH_PROMPT_ICONS=0.6.0 COOLBASH_PROMPT_GIT=0.7.0 \
+  COOLBASH_PROMPT_TOOLS=0.7.0 COOLBASH_PROMPT_BELL_MS=0.7.0 COOLBASH_FZF=0.9.0 \
+  COOLBASH_NVM_LAZY=0.10.0 COOLBASH_STARTUP_TIME=0.11.0 COOLBASH_FORTUNE=0.13.0 \
+  COOLBASH_MOTD_HIDE=0.15.0 COOLBASH_SERVE_PORT=0.17.0 COOLBASH_PROMPT_PATH_FISH=0.18.0 \
+  COOLBASH_PROMPT_TRANSIENT=0.18.0 COOLBASH_PROMPT_THEME=0.19.0 COOLBASH_UPDATE_CHECK=0.19.0 \
+  COOLBASH_J=0.20.0 COOLBASH_CNF=0.20.0 COOLBASH_GIT_GUARD=0.21.0 COOLBASH_HOOKS=0.22.0 \
+  COOLBASH_PROMPT_CLOUD=0.23.0 COOLBASH_INSTALL_MODE=0.26.0 COOLBASH_PROMPT_OSC133=0.30.0 \
+  COOLBASH_HIST_SECRETS=0.30.0 COOLBASH_TMUX_SSH=0.32.0; do
+  _set SINCE "${kv%%=*}" "${kv#*=}"
+done
+unset kv
 
 # FR : relit le config.bash actuel : sa version et les valeurs déjà choisies.
 if [[ -r "$CONFIG" ]]; then
   while IFS= read -r line; do
     [[ "$line" =~ ^#\ CoolBash\ ([0-9.]+) ]] && CONFIG_VERSION="${BASH_REMATCH[1]}"
-    [[ "$line" =~ ^export\ (COOLBASH_[A-Z_]+)=\"\$\{[A-Z_]+:-(.*)\}\"$ ]] && CURRENT[${BASH_REMATCH[1]}]="${BASH_REMATCH[2]}"
+    [[ "$line" =~ ^export\ (COOLBASH_[A-Z_]+)=\"\$\{[A-Z_]+:-(.*)\}\"$ ]] && _set CURRENT "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
   done <"$CONFIG"
 fi
 
@@ -77,8 +108,9 @@ _newer() {
 _skip() { # $1 = variable
   ((REUSE)) || return 1
   [[ -n "$CONFIG_VERSION" ]] || return 1
-  _newer "${SINCE[$1]:-0.0.0}" "$CONFIG_VERSION" && return 1
-  if [[ -n "${CURRENT[$1]+x}" ]]; then CHOSEN[$1]="${CURRENT[$1]}"; fi
+  local since="SINCE__$1" current="CURRENT__$1"
+  _newer "${!since:-0.0.0}" "$CONFIG_VERSION" && return 1
+  if _has CURRENT "$1"; then _set CHOSEN "$1" "${!current}"; fi
   return 0
 }
 
@@ -89,7 +121,8 @@ _theme_preview() { COOLBASH_PREFIX="$COOLBASH_PREFIX" bash "$CLI" theme --previe
 #      Si PREVIEW nomme une fonction, chaque option est suivie de son aperçu,
 #      et « v N » affiche l'aperçu complet de l'option N avant de répondre.
 _choice() {
-  local var="$1" q="$2" def="$3" i=0 n reply val cur="${CURRENT[$1]:-$3}" idx_cur=1
+  local var="$1" q="$2" def="$3" i=0 n reply val cur="CURRENT__$1" idx_cur=1
+  cur="${!cur:-$3}"
   _skip "$var" && return 0
   shift 3
   local -a vals=() labels=()
@@ -122,12 +155,13 @@ _choice() {
   done
   [[ "$reply" =~ ^[0-9]+$ && "$reply" -ge 1 && "$reply" -le ${#vals[@]} ]] || reply="$idx_cur"
   val="${vals[reply - 1]}"
-  if [[ "$val" == "$def" ]]; then unset 'CHOSEN[$var]'; else CHOSEN[$var]="$val"; fi
+  if [[ "$val" == "$def" ]]; then _del CHOSEN "$var"; else _set CHOSEN "$var" "$val"; fi
 }
 
 # FR : _yesno VAR "question" "défaut(1|0)" — 1 = oui.
 _yesno() {
-  local var="$1" q="$2" def="$3" cur="${CURRENT[$1]:-$3}" reply val hint
+  local var="$1" q="$2" def="$3" cur="CURRENT__$1" reply val hint
+  cur="${!cur:-$3}"
   _skip "$var" && return 0
   if [[ "$cur" == 1 ]]; then hint="$(_coolbash_t 'O/n')"; else hint="$(_coolbash_t 'o/N')"; fi
   printf '
@@ -136,17 +170,18 @@ _yesno() {
     reply=""
     printf '\n'
   else read -r reply || reply=""; fi
-  case "${reply,,}" in
-    o | oui | y | yes) val=1 ;;
-    n | non | no) val=0 ;;
+  case "$reply" in
+    [oO] | [oO][uU][iI] | [yY] | [yY][eE][sS]) val=1 ;;
+    [nN] | [nN][oO][nN] | [nN][oO]) val=0 ;;
     *) val="$cur" ;;
   esac
-  if [[ "$val" == "$def" ]]; then unset 'CHOSEN[$var]'; else CHOSEN[$var]="$val"; fi
+  if [[ "$val" == "$def" ]]; then _del CHOSEN "$var"; else _set CHOSEN "$var" "$val"; fi
 }
 
 # FR : _text VAR "question" "défaut" [regex de validation]
 _text() {
-  local var="$1" q="$2" def="$3" re="${4:-.*}" cur="${CURRENT[$1]:-$3}" reply
+  local var="$1" q="$2" def="$3" re="${4:-.*}" cur="CURRENT__$1" reply
+  cur="${!cur:-$3}"
   _skip "$var" && return 0
   printf '
 %s [%s] : ' "$(_coolbash_t "$q")" "${cur:-$(_coolbash_t vide)}"
@@ -159,13 +194,14 @@ _text() {
     _coolbash_say '  valeur ignorée (attendu : %s), on garde « %s »\n' "$re" "$cur"
     reply="$cur"
   }
-  if [[ "$reply" == "$def" ]]; then unset 'CHOSEN[$var]'; else CHOSEN[$var]="$reply"; fi
+  if [[ "$reply" == "$def" ]]; then _del CHOSEN "$var"; else _set CHOSEN "$var" "$reply"; fi
 }
 
 # FR : _multi VAR "question" "défaut (mots)" mot1 mot2 … — plusieurs numéros
 #      séparés par des espaces ; « 0 » = aucun, vide = actuel.
 _multi() {
-  local var="$1" q="$2" def="$3" cur="${CURRENT[$1]:-$3}" reply i n val="" w
+  local var="$1" q="$2" def="$3" cur="CURRENT__$1" reply i n val="" w
+  cur="${!cur:-$3}"
   _skip "$var" && return 0
   shift 3
   local -a words=("$@")
@@ -191,7 +227,7 @@ _multi() {
       [[ "$w" =~ ^[0-9]+$ && "$w" -ge 1 && "$w" -le ${#words[@]} ]] && val+="${val:+ }${words[w - 1]}"
     done
   fi
-  if [[ "$val" == "$def" ]]; then unset 'CHOSEN[$var]'; else CHOSEN[$var]="$val"; fi
+  if [[ "$val" == "$def" ]]; then _del CHOSEN "$var"; else _set CHOSEN "$var" "$val"; fi
 }
 
 _coolbash_say '\e[1mCoolBash %s — configuration interactive\e[0m\n' "$VERSION"
@@ -201,7 +237,7 @@ if [[ -n "$CONFIG_VERSION" ]]; then
   if ((DEFAULTS)); then
     REUSE=1
   else
-    _coolbash_say '\nUne configuration existe (CoolBash %s, %d réglage(s)).\n' "$CONFIG_VERSION" "${#CURRENT[@]}"
+    _coolbash_say '\nUne configuration existe (CoolBash %s, %d réglage(s)).\n' "$CONFIG_VERSION" "$(_count CURRENT)"
     _coolbash_say '  \e[1m1) La reprendre\e[0m — seules les questions apparues depuis la %s sont posées\n' "$CONFIG_VERSION"
     _coolbash_say '  2) Tout revoir\n'
     _coolbash_say 'Choix [1] : '
@@ -209,7 +245,10 @@ if [[ -n "$CONFIG_VERSION" ]]; then
     [[ "$reply" == 2 ]] || REUSE=1
   fi
   if ((REUSE)); then
-    for var in "${!CURRENT[@]}"; do CHOSEN[$var]="${CURRENT[$var]}"; done
+    for var in $(_keys CURRENT); do
+      ref="CURRENT__$var"
+      _set CHOSEN "$var" "${!ref}"
+    done
     if ! _newer "$VERSION" "$CONFIG_VERSION"; then
       _coolbash_say 'Configuration de la %s reprise telle quelle : rien de nouveau à régler.\n' "$CONFIG_VERSION"
     else
@@ -228,7 +267,7 @@ _choice COOLBASH_PROMPT_ICONS "Icônes du prompt :" nerd \
   "nerd|Nerd Font (police installée par coolbash install)" "basic|Unicode standard (⎇ ⚗ ⏱), sans police spéciale" "0|aucune"
 _choice COOLBASH_PROMPT_EMOJI "Emoji de session en tête du prompt :" "" \
   "|un emoji au hasard à chaque shell" "none|aucun" "🐧|toujours le pingouin" "🚀|toujours la fusée"
-[[ "${CHOSEN[COOLBASH_PROMPT_EMOJI]:-}" == none ]] && CHOSEN[COOLBASH_PROMPT_EMOJI]=""
+[[ "${CHOSEN__COOLBASH_PROMPT_EMOJI:-}" == none ]] && CHOSEN__COOLBASH_PROMPT_EMOJI=""
 _yesno COOLBASH_PROMPT_GIT "Segment git (branche, état, avance/retard, stash) ?" 1
 _yesno COOLBASH_PROMPT_TOOLS "Versions php / node / rust dans les projets ?" 1
 _yesno COOLBASH_PROMPT_CLOUD "Contexte Kubernetes et profil AWS ?" 1
@@ -269,28 +308,37 @@ _choice COOLBASH_INSTALL_MODE "Comment CoolBash est chargé :" source \
 _title "Récapitulatif"
 # FR : même tout au défaut, le fichier est écrit (en-tête seul) : il porte la
 #      version, et la prochaine mise à jour ne reposera que les questions nouvelles.
-if ((${#CHOSEN[@]} == 0)); then
+if (($(_count CHOSEN) == 0)); then
   _say "Tout est au réglage par défaut : rien à écrire, seule la version est notée."
 else
-  for var in "${!CHOSEN[@]}"; do printf '  %-28s = %s\n' "$var" "${CHOSEN[$var]:-(vide)}"; done | sort
+  for var in $(_keys CHOSEN); do
+    ref="CHOSEN__$var"
+    printf '  %-28s = %s\n' "$var" "${!ref:-(vide)}"
+  done | sort
 fi
 mkdir -p "${COOLBASH_PREFIX}" || exit 1
+now=""
+_coolbash_date now '%Y-%m-%d %H:%M'
 {
-  printf '# CoolBash %s — réglages choisis par `coolbash setup` le %s.\n' "$VERSION" "$(printf '%(%Y-%m-%d %H:%M)T' -1)"
+  printf '# CoolBash %s — réglages choisis par `coolbash setup` le %s.\n' "$VERSION" "$now"
   printf '# Sourcé avant les modules. Une variable posée dans le ~/.bashrc avant la ligne\n'
   printf '# source garde la priorité (${X:-…}). `coolbash setup` pour changer, `coolbash config`\n'
   printf '# pour tout voir.\n'
-  for var in "${!CHOSEN[@]}"; do printf 'export %s="${%s:-%s}"\n' "$var" "$var" "${CHOSEN[$var]}"; done | sort
+  for var in $(_keys CHOSEN); do
+    ref="CHOSEN__$var"
+    printf 'export %s="${%s:-%s}"\n' "$var" "$var" "${!ref}"
+  done | sort
 } >|"${CONFIG}.new" && mv -f "${CONFIG}.new" "$CONFIG" || exit 1
 _coolbash_say '\n\e[32m[CoolBash]\e[0m écrit : %s\n' "$CONFIG"
 
 # --- ~/.bashrc : compilé ou une ligne source --------------------------------------------
 BASHRC="${COOLBASH_BASHRC:-${HOME}/.bashrc}"
-if [[ "${CHOSEN[COOLBASH_INSTALL_MODE]:-source}" == compiled ]]; then
+if [[ "${CHOSEN__COOLBASH_INSTALL_MODE:-source}" == compiled ]]; then
   COOLBASH_BASHRC="$BASHRC" bash "$CLI" compile --write || exit 1
 elif [[ -f "$BASHRC" ]] && grep -q '^# COOLBASH-COMPILED ' "$BASHRC"; then
   # FR : retour au mode source depuis un ~/.bashrc compilé : la ligne source suffit.
-  cp -a "$BASHRC" "${BASHRC}.compile-$(printf '%(%Y-%m-%d-%H%M%S)T' -1)"
+  _coolbash_date now '%Y-%m-%d-%H%M%S'
+  cp -a "$BASHRC" "${BASHRC}.compile-${now}"
   printf 'source "%s/cli/coolbash" init\n' "${COOLBASH_PREFIX}" >|"$BASHRC"
   _coolbash_say "\e[32m[CoolBash]\e[0m %s repasse en mode source (l'ancien est gardé à côté)\n" "$BASHRC"
 fi

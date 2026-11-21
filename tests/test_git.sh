@@ -43,7 +43,7 @@ rm -f "${repo}/c"
 sha_a="$(git -C "${repo}" log --format=%H --grep='^a$')"
 printf 'a corrigé\n' >"${repo}/a"
 git -C "${repo}" add a
-assert_eq "gfix <sha> : fixup + autosquash, toujours deux commits" "2" "$(ing "gfix ${sha_a} >/dev/null 2>&1; git log --oneline | wc -l")"
+assert_eq "gfix <sha> : fixup + autosquash, toujours deux commits" "2" "$(ing "gfix ${sha_a} >/dev/null 2>&1; git log --oneline | wc -l" | tr -d ' ')"
 assert_eq "gfix : la correction est dans le commit visé" "a corrigé" "$(git -C "${repo}" show "$(git -C "${repo}" log --format=%H --grep='^a$'):a")"
 assert_eq "gfix : aucun commit fixup! restant" "0" "$(git -C "${repo}" log --format=%s | grep -c fixup)"
 assert_eq "gfix sans argument → usage, code 1" "1" "$(ing 'gfix >/dev/null 2>&1; echo $?')"

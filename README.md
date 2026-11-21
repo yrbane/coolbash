@@ -1,7 +1,7 @@
 # 🧊 CoolBash
 
 [![CI](https://github.com/yrbane/coolbash/actions/workflows/ci.yml/badge.svg)](https://github.com/yrbane/coolbash/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.35.2-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.36.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Make your Bash cool again.**  
@@ -30,6 +30,45 @@ Recharge ensuite ton shell :
 ```bash
 source ~/.bashrc
 ```
+
+### 🍎 macOS
+
+CoolBash tourne avec le bash que macOS livre — `/bin/bash` 3.2 (2007) — sans rien installer
+d'autre, et avec le bash de Homebrew si tu en as un :
+
+```bash
+make install               # depuis le clone
+bash -l                    # ou un nouvel onglet, si bash est ton shell
+```
+
+Le même code sert de bash 3.2 à bash 5 ; ce que le vieux bash ne sait pas faire est éteint,
+le reste est identique :
+
+| Avec `/bin/bash` 3.2                         | Pourquoi                                         |
+|----------------------------------------------|--------------------------------------------------|
+| pas d'heure sous la commande, pas de titre « commande en cours », pas de prompt transient | `PS0` date de bash 4.4 |
+| durée de la dernière commande à la seconde près, affichée à partir de 2 s | pas de `PS0` ni d'`EPOCHREALTIME` : elle vient de l'horodatage de l'historique |
+| pas de suggestion « commande introuvable »   | `command_not_found_handle` date de bash 4.0      |
+| complétions de bash-completion non chargées au premier Tab | `complete -D` date de bash 4.1     |
+| pas d'`autocd`, `globstar`, `dirspell`, `checkjobs` | options de bash 4.0                       |
+
+`brew install bash` rend tout cela d'un coup, sans réinstaller CoolBash.
+
+Ce que l'installation fait de particulier sous macOS :
+
+- **Fichier de login** — Terminal et iTerm ouvrent des shells de login, qui ne lisent pas
+  `~/.bashrc`. Une ligne est ajoutée au premier de `~/.bash_profile`, `~/.bash_login`,
+  `~/.profile` qui existe (sinon `~/.bash_profile` est créé) pour qu'il charge `~/.bashrc` ;
+  `make uninstall` la retire, `coolbash doctor` la vérifie.
+- **Police** — la Nerd Font va dans `~/Library/Fonts/coolbash-nerd`.
+- **Shell par défaut** — zsh le reste. Pour adopter bash :
+  `echo "$(command -v bash)" | sudo tee -a /etc/shells && chsh -s "$(command -v bash)"`.
+- **MOTD** — pas de `/proc` : `sysctl`, `vm_stat` et `pmset` donnent les mêmes lignes.
+  Le temps de démarrage n'affiche que la part de CoolBash : l'âge du processus, qui donne le
+  total sous Linux, vient de `/proc`, et macOS n'en offre pas d'équivalent à la milliseconde.
+- **Commande introuvable** (bash ≥ 4) — la formule Homebrew qui la fournit est lue dans le
+  cache de brew, sans réseau et sans lancer brew.
+- `coolbash deps` propose les paquets Homebrew.
 
 ---
 
@@ -224,8 +263,14 @@ make fmt                # applique shfmt (options dans .editorconfig)
 La CI épingle **shellcheck 0.11.0** et **shfmt 3.14.1** : les mêmes versions localement évitent
 les avertissements propres à une version. Trois jobs : Ubuntu, Debian 13 sous un utilisateur
 normal, **installation à froid** (Debian nue, `install.sh`, premier shell : le MOTD, le temps
-de démarrage et le prompt sont capturés et vérifiés), et **macOS** (pas de `/proc`, `df` BSD :
-lint complet et fumée — install, init, prompt, MOTD, doctor).
+de démarrage et le prompt sont capturés et vérifiés), et **macOS** (outils BSD, pas de
+`/proc`) : lint complet, puis la suite de tests **deux fois** — sous le `/bin/bash` 3.2 du
+système et sous le bash de Homebrew — et une fumée sous bash 3.2 (install, init, prompt,
+MOTD, doctor). Les assertions propres à Linux (`/proc`, `makepkg`) ou à un bash récent (`PS0`,
+`complete -D`) sont marquées « ignoré » là où elles n'ont pas de sens.
+
+Lancer la suite sous un bash précis : `/bin/bash tests/run.sh` — le bash qui lance les tests
+est celui qui est testé.
 
 | Fichier                       | Ce qui est vérifié                                                                 |
 | ----------------------------- | ---------------------------------------------------------------------------------- |
@@ -343,6 +388,11 @@ n'apparaît que si elle a quelque chose à dire.
 | À faire          | `todo.txt`, cinq tâches ouvertes au plus | —                                    |
 
 `COOLBASH_MOTD_HIDE="battery load"` tait les lignes citées.
+
+Sous **macOS**, les mêmes lignes viennent d'un `sysctl` (noyau, uptime, modèle, mémoire, cœurs,
+charge), de `SystemVersion.plist` (version de macOS), de `vm_stat` (mémoire disponible) et de
+`pmset -g batt` (batterie). `Disk (/):` est le volume de données APFS (`/System/Volumes/Data`),
+pas le volume système scellé ; `Reboot required` et `Failed units` sont propres à Linux.
 
 ### 💬 Citations du MOTD
 

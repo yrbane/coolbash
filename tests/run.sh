@@ -24,7 +24,7 @@ for t in "${ROOT}"/tests/test_*"${pattern}"*.sh; do
   [[ -f "$t" ]] || continue
   name="$(basename "$t" .sh)"
   printf '\e[1m▶ %s\e[0m\n' "${name}"
-  if bash "$t"; then pass=$((pass + 1)); else fail=$((fail + 1)); fi
+  if "${BASH}" "$t"; then pass=$((pass + 1)); else fail=$((fail + 1)); fi
 done
 
 printf '\n%d fichier(s) OK, %d en échec\n' "${pass}" "${fail}"

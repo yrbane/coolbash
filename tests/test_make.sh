@@ -46,7 +46,7 @@ n_src=$#
 set -- "${PREFIX}"/share/fortunes/*.txt
 assert_eq "autant de thèmes installés que dans le dépôt" "${n_src}" "$#"
 assert_eq "autant de modules installés que dans le dépôt" \
-  "$(find "${CLONE}/modules" -name '*.bash' | wc -l)" "$(find "${PREFIX}/modules" -name '*.bash' | wc -l)"
+  "$(find "${CLONE}/modules" -name '*.bash' | t_count)" "$(find "${PREFIX}/modules" -name '*.bash' | t_count)"
 assert_eq "le chemin du clone est mémorisé pour coolbash update" "${CLONE}" "$(cat "${PREFIX}/.repo")"
 assert_eq "une seule ligne source ajoutée au bashrc" "1" "$(grep -c 'cli/coolbash' "${BASHRC}")"
 assert_contains "le contenu initial du bashrc est préservé" "$(cat "${BASHRC}")" "export FOO=1"
@@ -59,7 +59,7 @@ assert_eq "sourcer le bashrc charge CoolBash sans PREFIX ni erreur" "prefix= fn=
 # FR : `coolbash update` est exécuté PAR ~/.coolbash/cli/coolbash ; réécrire ce fichier
 #      pendant que bash le lit donnait « erreur de syntaxe près de ;; » en fin d'update.
 #      Le script ci-dessous se réinstalle lui-même en cours de route, comme update.
-ino_before="$(stat -c %i "${PREFIX}/cli/coolbash")"
+ino_before="$(t_inode "${PREFIX}/cli/coolbash")"
 cat >"${COOLBASH_TEST_TMP}/selfupdate.sh" <<EOF
 cp "${PREFIX}/cli/coolbash" "${COOLBASH_TEST_TMP}/cli.bak"
 { printf '# %0300d\n' 0; cat "${COOLBASH_TEST_TMP}/cli.bak"; } > "${CLONE}/cli/coolbash"
@@ -68,7 +68,7 @@ printf '\n_coolbash_selftest() { bash "%s"; make -s -C "%s" install PREFIX="%s" 
   "${COOLBASH_TEST_TMP}/selfupdate.sh" "${CLONE}" "${PREFIX}" "${BASHRC}" "$(printf 'true %.0s\n' $(seq 1 40))" >>"${PREFIX}/cli/coolbash"
 out="$(COOLBASH_SELFTEST=1 bash "${PREFIX}/cli/coolbash" version 2>&1 >/dev/null)"
 assert_empty "une CLI qui se réinstalle pendant son exécution ne produit aucune erreur" "${out}"
-assert_eq "…car le fichier installé est un nouvel inode (mv), pas une réécriture" "1" "$([[ "$(stat -c %i "${PREFIX}/cli/coolbash")" != "${ino_before}" ]] && echo 1)"
+assert_eq "…car le fichier installé est un nouvel inode (mv), pas une réécriture" "1" "$([[ "$(t_inode "${PREFIX}/cli/coolbash")" != "${ino_before}" ]] && echo 1)"
 cp "${COOLBASH_TEST_ROOT}/cli/coolbash" "${CLONE}/cli/coolbash"
 mk install >/dev/null
 
@@ -106,8 +106,8 @@ printf '# mon bashrc\nexport FOO=1\n# coolbash rocks (commentaire à préserver)
 rm -f "${PREFIX}/config.bash"
 
 # --- install depuis un terminal : setup n'interroge pas pendant les tests -----------
-if command -v script >/dev/null 2>&1; then
-  tty_out="$(timeout 120 script -qec "make -s -C '${CLONE}' install PREFIX='${PREFIX}' BASHRC='${BASHRC}'" /dev/null 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g')"
+if t_has_tty; then
+  tty_out="$(t_timeout 120 "${T_TTY}" "make -s -C '${CLONE}' install PREFIX='${PREFIX}' BASHRC='${BASHRC}'" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g')"
   assert_not_contains "make install sous un tty : aucune question posée (COOLBASH_SETUP_DEFAULTS=1)" "${tty_out}" "Choix ["
   assert_contains "…et l'installation va au bout" "${tty_out}" "Installation complete"
 else
@@ -130,6 +130,36 @@ assert_failure "make uninstall PREFIX=<clone> refuse de supprimer le dépôt" \
   make -s -C "${CLONE}" uninstall PREFIX="${CLONE}" BASHRC="${COOLBASH_TEST_TMP}/bashrc2"
 assert_file "…et le clone est toujours là" "${CLONE}/Makefile"
 assert_file "…avec ses modules" "${CLONE}/modules/00-core.bash"
+
+# --- macOS : le fichier de login charge ~/.bashrc (0.36.0) ---------------------------
+if t_darwin; then
+  lg="${COOLBASH_TEST_TMP}/login"
+  mkdir -p "${lg}/a" "${lg}/b" "${lg}/c"
+  lmk() { make -s -C "${CLONE}" "$2" PREFIX="${lg}/$1/.coolbash" BASHRC="${lg}/$1/.bashrc" 2>&1; }
+  lmk a install >/dev/null
+  assert_eq "macOS : sans fichier de login, ~/.bash_profile est créé et charge ~/.bashrc" "1" "$(grep -c "\. \"${lg}/a/.bashrc\" # CoolBash" "${lg}/a/.bash_profile" 2>/dev/null)"
+  assert_contains "…et un bash de login charge bien CoolBash" "$(HOME="${lg}/a" COOLBASH_PREFIX="${lg}/a/.coolbash" MOTD_DISABLE=1 "${BASH}" -lc 'type -t coolbash' 2>/dev/null)" "function"
+  lmk a install >/dev/null
+  assert_eq "…une seule fois, même après une réinstallation" "1" "$(grep -c 'CoolBash : shell de login' "${lg}/a/.bash_profile")"
+  lmk a uninstall >/dev/null
+  assert_no_path "make uninstall retire le ~/.bash_profile qu'il avait créé" "${lg}/a/.bash_profile"
+  printf 'export BAR=1\n' >"${lg}/b/.profile"
+  lmk b install >/dev/null
+  assert_no_path "macOS : un ~/.profile existant n'est pas masqué par un ~/.bash_profile" "${lg}/b/.bash_profile"
+  assert_eq "…c'est lui qui reçoit la ligne" "1" "$(grep -c 'CoolBash : shell de login' "${lg}/b/.profile")"
+  lmk b uninstall >/dev/null
+  assert_eq "make uninstall lui rend son contenu" "export BAR=1" "$(cat "${lg}/b/.profile")"
+  printf '[ -f ~/.bashrc ] && . ~/.bashrc\n' >"${lg}/c/.bash_profile"
+  lmk c install >/dev/null
+  assert_eq "macOS : un fichier de login qui charge déjà ~/.bashrc n'est pas touché" "[ -f ~/.bashrc ] && . ~/.bashrc" "$(cat "${lg}/c/.bash_profile")"
+  doc="$(HOME="${lg}/c" COOLBASH_PREFIX="${lg}/c/.coolbash" COOLBASH_BASHRC="${lg}/c/.bashrc" "${BASH}" "${lg}/c/.coolbash/cli/coolbash" doctor 2>&1)"
+  assert_contains "doctor macOS : le fichier de login est vérifié" "${doc}" ".bash_profile charge ~/.bashrc"
+  : >|"${lg}/c/.bash_profile"
+  HOME="${lg}/c" COOLBASH_PREFIX="${lg}/c/.coolbash" COOLBASH_BASHRC="${lg}/c/.bashrc" COOLBASH_FONT=0 "${BASH}" "${lg}/c/.coolbash/cli/coolbash" doctor --fix >/dev/null 2>&1
+  assert_eq "doctor --fix macOS : la ligne de login est remise" "1" "$(grep -c 'CoolBash : shell de login' "${lg}/c/.bash_profile")"
+else
+  t_skip "fichier de login (macOS seulement)"
+fi
 
 # --- update : pull → tests → install, et rien n'est installé si un test échoue -
 upd="${COOLBASH_TEST_TMP}/upd"
@@ -158,13 +188,13 @@ assert_no_path "…et n'installe rien" "${upd}/.coolbash/cli/coolbash"
 
 # --- update annonce la version installée -------------------------------------
 rm -f "${upd}/clone/tests/test_ko.sh"
-sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.0.0"/' "${upd}/clone/cli/coolbash"
+sed_i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.0.0"/' "${upd}/clone/cli/coolbash"
 git -C "${upd}/clone" add -A
 git -C "${upd}/clone" commit -qm "v1.0.0"
 git -C "${upd}/clone" push -q
 out="$(mkup 2>&1)"
 assert_contains "première installation : version annoncée" "${out}" "1.0.0"
-sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.1.0"/' "${upd}/clone/cli/coolbash"
+sed_i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.1.0"/' "${upd}/clone/cli/coolbash"
 printf '# Changelog\n\n## 1.1.0 — 2026-01-01 · « Test »\n### Ajouté\n- une nouveauté de test\n\n## 1.0.0 — 2025-12-31 · « Base »\n- ancienne\n' >|"${upd}/clone/CHANGELOG.md"
 git -C "${upd}/clone" add -A
 git -C "${upd}/clone" commit -qm "v1.1.0"
@@ -177,7 +207,7 @@ assert_eq "…pas celles de la 1.0.0" "0" "$(printf '%s\n' "${out}" | grep -c 'a
 assert_file "update copie le CHANGELOG dans le préfixe" "${upd}/.coolbash/CHANGELOG.md"
 assert_contains "update sans changement : déjà à jour" "$(mkup 2>&1)" "déjà à jour (1.1.0)"
 printf '#!/usr/bin/env bash\nexit 1\n' >"${upd}/clone/tests/test_ko.sh"
-sed -i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.2.0"/' "${upd}/clone/cli/coolbash"
+sed_i 's/^COOLBASH_VERSION=.*/COOLBASH_VERSION="1.2.0"/' "${upd}/clone/cli/coolbash"
 git -C "${upd}/clone" add -A
 git -C "${upd}/clone" commit -qm "v1.2.0 cassée"
 git -C "${upd}/clone" push -q
@@ -246,7 +276,7 @@ assert_contains "…avec le CHANGELOG et les citations" "$(deb_files)" "./usr/sh
 assert_eq "…le wrapper est exécutable" "1" "$(deb_files | grep './usr/bin/coolbash$' | grep -c '^-rwxr-xr-x')"
 if command -v makepkg >/dev/null 2>&1 && [[ $EUID -ne 0 ]]; then
   assert_success "make pkg-arch produit le paquet Arch (makepkg)" make -s -C "${pk}" pkg-arch
-  assert_eq "…dist/arch/coolbash-<version>-1-any.pkg.tar.*" "1" "$(compgen -G "${pk}/dist/arch/coolbash-${pkver}-1-any.pkg.tar.*" | wc -l)"
+  assert_eq "…dist/arch/coolbash-<version>-1-any.pkg.tar.*" "1" "$(compgen -G "${pk}/dist/arch/coolbash-${pkver}-1-any.pkg.tar.*" | t_count)"
   assert_contains "…avec /usr/share/coolbash et /usr/bin/coolbash" "$(tar -tf "${pk}"/dist/arch/coolbash-"${pkver}"-1-any.pkg.tar.* 2>/dev/null)" "usr/bin/coolbash"
 else
   t_skip "makepkg absent (ou root) : paquet Arch non construit ici"

@@ -12,6 +12,8 @@ FONT="${COOLBASH_TEST_ROOT}/cli/coolbash-font"
 home="${COOLBASH_TEST_TMP}/home"
 bin="${COOLBASH_TEST_TMP}/bin"
 mkdir -p "${home}" "${bin}" "${COOLBASH_TEST_TMP}/src"
+# FR : ~/Library/Fonts sous macOS (le seul dossier utilisateur que le système lit).
+if t_darwin; then fontdir="${home}/Library/Fonts/coolbash-nerd"; else fontdir="${home}/.local/share/fonts/coolbash-nerd"; fi
 
 # FR : faux fc-list — ne « voit » que les .ttf du HOME jetable.
 cat >"${bin}/fc-list" <<'EOF'
@@ -31,8 +33,13 @@ font() { env -u SSH_CONNECTION -u SSH_TTY -u SSH_CLIENT HOME="${home}" XDG_DATA_
 # --- statut ------------------------------------------------------------------
 font status >/dev/null
 assert_eq "status : 1 quand aucune Nerd Font n'est installée" "1" "$?"
-HOME="${home}" PATH="/nonexistent" /bin/bash "${FONT}" status >/dev/null 2>&1
-assert_eq "status : 2 quand fc-list est absent (indéterminé)" "2" "$?"
+HOME="${home}" PATH="/nonexistent" "${BASH}" "${FONT}" status >/dev/null 2>&1
+rc=$?
+if t_darwin; then
+  assert_eq "status sous macOS : sans fc-list, les dossiers de polices répondent (1 = absente)" "1" "${rc}"
+else
+  assert_eq "status : 2 quand fc-list est absent (indéterminé)" "2" "${rc}"
+fi
 
 # --- installation ------------------------------------------------------------
 if ! command -v curl >/dev/null 2>&1; then
@@ -41,24 +48,34 @@ else
   out="$(COOLBASH_FONT_TEST=0 font install)"
   rc=$?
   assert_eq "COOLBASH_FONT=0 : rien n'est installé, code 0" "0" "${rc}"
-  assert_no_path "…et aucun dossier de police créé" "${home}/.local/share/fonts/coolbash-nerd"
+  assert_no_path "…et aucun dossier de police créé" "${fontdir}"
 
   out="$(font install)"
   rc=$?
   assert_eq "install réussit" "0" "${rc}"
-  assert_file "la police est extraite dans ~/.local/share/fonts/coolbash-nerd" "${home}/.local/share/fonts/coolbash-nerd/FakeNerdFont-Regular.ttf"
-  assert_no_path "seuls les quatre styles utiles sont gardés (pas les 96 variantes)" "${home}/.local/share/fonts/coolbash-nerd/FakeNerdFontMono-Thin.ttf"
+  assert_file "la police est extraite dans le dossier de polices de l'utilisateur" "${fontdir}/FakeNerdFont-Regular.ttf"
+  assert_no_path "seuls les quatre styles utiles sont gardés (pas les 96 variantes)" "${fontdir}/FakeNerdFontMono-Thin.ttf"
   assert_contains "le message dit de choisir la police dans le terminal" "${out}" "terminal"
   font status >/dev/null
   assert_eq "status : 0 après installation" "0" "$?"
   assert_contains "seconde installation : déjà présente, rien à faire" "$(font install)" "déjà"
 
-  rm -rf "${home}/.local"
+  rm -rf "${home}/.local" "${home}/Library"
   out="$(COOLBASH_FONT_URL_TEST="file://${COOLBASH_TEST_TMP}/absent.tar.xz" font install)"
   rc=$?
   assert_eq "téléchargement impossible : code 1" "1" "${rc}"
   assert_contains "…avec le repli conseillé" "${out}" "COOLBASH_PROMPT_ICONS=basic"
-  assert_no_path "…et pas de dossier à moitié rempli" "${home}/.local/share/fonts/coolbash-nerd"
+  assert_no_path "…et pas de dossier à moitié rempli" "${fontdir}"
+fi
+
+# --- macOS : la police posée par une version < 0.36.0 est déplacée --------------
+if t_darwin && command -v curl >/dev/null 2>&1; then
+  mkdir -p "${home}/.local/share/fonts/coolbash-nerd"
+  : >"${home}/.local/share/fonts/coolbash-nerd/FakeNerdFont-Regular.ttf"
+  font install >/dev/null
+  assert_file "macOS : la police va dans ~/Library/Fonts" "${fontdir}/FakeNerdFont-Regular.ttf"
+  assert_no_path "…et l'ancien dossier ~/.local/share/fonts/coolbash-nerd est retiré" "${home}/.local/share/fonts/coolbash-nerd"
+  rm -rf "${home}/.local" "${home}/Library"
 fi
 
 # --- make install : appelle l'installateur, n'échoue jamais à cause de lui ---
@@ -69,13 +86,13 @@ assert_success "make install réussit même si la police est introuvable" mk COO
 assert_file "coolbash-font est installé à côté de la CLI" "${home}/.coolbash/cli/coolbash-font"
 if command -v curl >/dev/null 2>&1; then
   assert_success "make install installe la police" mk COOLBASH_FONT=1 COOLBASH_FONT_URL="${url}"
-  assert_file "…au bon endroit" "${home}/.local/share/fonts/coolbash-nerd/FakeNerdFont-Regular.ttf"
+  assert_file "…au bon endroit" "${fontdir}/FakeNerdFont-Regular.ttf"
 fi
 
 # --- doctor ------------------------------------------------------------------
 doctor() { env -u SSH_CONNECTION -u SSH_TTY -u SSH_CLIENT "$@" HOME="${home}" PATH="${bin}:${PATH}" COOLBASH_PREFIX="${home}/.coolbash" bash "${home}/.coolbash/cli/coolbash" doctor 2>&1; }
 command -v curl >/dev/null 2>&1 && assert_contains "doctor : police présente" "$(doctor)" "Nerd Font installée"
-rm -rf "${home}/.local"
+rm -rf "${home}/.local" "${home}/Library"
 doc="$(doctor)"
 rc=$?
 assert_contains "doctor : police absente signalée" "${doc}" "Nerd Font absente"
@@ -93,9 +110,9 @@ if command -v curl >/dev/null 2>&1; then
   assert_eq "make install note l'absence de police dans .nerdfont (même avec COOLBASH_FONT=0)" "1" "$(cat "${home}/.coolbash/.nerdfont")"
   mk COOLBASH_FONT=1 COOLBASH_FONT_URL="${url}" >/dev/null 2>&1
   assert_eq "…puis sa présence après installation" "0" "$(cat "${home}/.coolbash/.nerdfont")"
-  assert_file "police en place avant uninstall" "${home}/.local/share/fonts/coolbash-nerd/FakeNerdFont-Regular.ttf"
+  assert_file "police en place avant uninstall" "${fontdir}/FakeNerdFont-Regular.ttf"
   out="$(env HOME="${home}" PATH="${bin}:${PATH}" make -s -C "${CLONE}" uninstall PREFIX="${home}/.coolbash" BASHRC="${home}/.bashrc" 2>&1)"
-  assert_no_path "make uninstall retire la police installée par CoolBash" "${home}/.local/share/fonts/coolbash-nerd"
+  assert_no_path "make uninstall retire la police installée par CoolBash" "${fontdir}"
   assert_contains "…et le dit" "${out}" "olice"
 fi
 

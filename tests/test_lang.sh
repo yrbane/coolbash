@@ -19,17 +19,25 @@ lg() {
 }
 
 # --- la table ne rouille pas : chaque clé existe encore dans le source ------------------
-missing="$(bash --norc --noprofile -c '
-  declare -gA COOLBASH_MSG; source "$1/share/lang/en.bash"
-  for k in "${!COOLBASH_MSG[@]}"; do
+# FR : la table est chargée par le socle (_coolbash_lang_load), comme en vrai :
+#      tableau associatif (bash ≥ 4.2) ou tableaux parallèles (bash 3.2, macOS).
+LANG_DUMP='
+  source "$1/share/lang/_lang.bash"; _coolbash_lang_load "$1/share/lang/en.bash"
+  if ((COOLBASH_BASH >= 402)); then
+    COOLBASH_MSG_K=("${!COOLBASH_MSG[@]}"); COOLBASH_MSG_V=("${COOLBASH_MSG[@]}")
+  fi'
+missing="$(bash --norc --noprofile -c "${LANG_DUMP}"'
+  for k in "${COOLBASH_MSG_K[@]}"; do
     grep -rqF -- "$k" "$1/cli" "$1/modules" && continue
     grep -rqF -- "${k//\"/\\\"}" "$1/cli" "$1/modules" && continue
     printf "%s\n" "$k"
   done' _ "${COOLBASH_TEST_ROOT}")"
 assert_empty "en.bash : chaque clé est un texte encore présent dans cli/ ou modules/" "${missing}"
-n_keys="$(bash --norc --noprofile -c 'declare -gA COOLBASH_MSG; source "$1"; echo "${#COOLBASH_MSG[@]}"' _ "${COOLBASH_TEST_ROOT}/share/lang/en.bash")"
+n_keys="$(bash --norc --noprofile -c "${LANG_DUMP}"'; echo "${#COOLBASH_MSG_K[@]}"' _ "${COOLBASH_TEST_ROOT}")"
 assert_eq "en.bash : plus de 300 messages traduits" "1" "$([[ "${n_keys}" -gt 300 ]] && echo 1 || echo 0)"
-assert_empty "en.bash : aucune traduction vide" "$(bash --norc --noprofile -c 'declare -gA COOLBASH_MSG; source "$1"; for k in "${!COOLBASH_MSG[@]}"; do [[ -n "${COOLBASH_MSG[$k]}" ]] || echo "$k"; done' _ "${COOLBASH_TEST_ROOT}/share/lang/en.bash")"
+assert_eq "en.bash : une entrée par ligne COOLBASH_MSG[…]=… (le chargeur de bash 3.2 les lit une à une)" "$(grep -c '^COOLBASH_MSG\[' "${COOLBASH_TEST_ROOT}/share/lang/en.bash")" "${n_keys}"
+assert_empty "en.bash : aucune traduction vide" "$(bash --norc --noprofile -c "${LANG_DUMP}"'; for i in "${!COOLBASH_MSG_K[@]}"; do [[ -n "${COOLBASH_MSG_V[i]}" ]] || echo "${COOLBASH_MSG_K[i]}"; done' _ "${COOLBASH_TEST_ROOT}")"
+assert_empty "en.bash : aucune clé ne contient « ]= » (séparateur du chargeur de bash 3.2)" "$(bash --norc --noprofile -c "${LANG_DUMP}"'; for k in "${COOLBASH_MSG_K[@]}"; do [[ "$k" == *"]="* ]] && echo "$k"; done' _ "${COOLBASH_TEST_ROOT}")"
 
 # --- détection de la langue --------------------------------------------------------------
 assert_eq "sans rien : français" "fr|todo : pas de tâche n° 9" "$(lg 'printf "%s|" "$COOLBASH_LANG"; todo done 9')"

@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.36.0 — 2026-11-21 · « Sous macOS aussi »
+### Ajouté
+- **macOS** : CoolBash s'installe et tourne sous macOS, avec le `/bin/bash` 3.2 du système comme avec le bash de Homebrew. La suite de tests y passe en entier sous les deux.
+- **bash 3.2 → 5** : un seul code, lisible par bash 3.2. Tableaux associatifs, `mapfile`, `printf '%(…)T'`, `${x,,}`, `local -n`, `$'\u…'` et `EPOCHREALTIME` passent par un socle (`share/lang/_lang.bash`) qui prend la voie sans processus quand le bash la connaît, un repli sinon. Sous bash < 4.4, ce qui n'existe pas est éteint : heure sous la commande, titre « commande en cours » et prompt transient (`PS0`), chargement différé des complétions (`complete -D`, 4.1), « commande introuvable » (4.0), `autocd`/`globstar`/`dirspell`/`checkjobs` (4.0) ; la durée de la dernière commande vient de l'horodatage de l'historique, à la seconde, à partir de 2 s.
+- Temps de démarrage sous bash < 5 : mesuré par le mot-clé `time`, sans processus — total, détail `verbose` par module et `coolbash bench` compris. `timer` fait de même.
+- « Commande introuvable » : la formule Homebrew qui fournit la commande (`brew install …`), lue dans le cache de brew — ni réseau, ni Ruby.
+- `make install` sous macOS ajoute au fichier de login (le premier de `~/.bash_profile`, `~/.bash_login`, `~/.profile` qui existe, sinon `~/.bash_profile`) la ligne qui charge `~/.bashrc` : Terminal et iTerm ouvrent des shells de login, qui ne le lisent pas. Un fichier qui parle déjà de `.bashrc` n'est pas touché ; `make uninstall` retire la ligne ; `coolbash doctor` la vérifie et `doctor --fix` la remet.
+- MOTD sous macOS : OS, modèle, noyau, uptime, disque, mémoire, charge et batterie, lus par un `sysctl`, `SystemVersion.plist`, `vm_stat` et `pmset` (chemins absolus). `Disk (/):` est le volume de données APFS, pas le volume système scellé ; les autres volumes système ne sont pas listés.
+- La Nerd Font va dans `~/Library/Fonts/coolbash-nerd` sous macOS (là où le système la lit) ; celle qu'une version précédente avait posée dans `~/.local/share/fonts` est retirée. Sans `fc-list`, sa présence est lue dans les dossiers de polices. `xz` n'est plus exigé quand `tar` est bsdtar.
+- `/opt/homebrew/bin` entre dans le PATH sur Mac Apple Silicon ; la complétion charge le `bash-completion@2` de Homebrew.
+### Corrigé
+- `make install` lancé avec le `/bin/bash` 3.2 de macOS affichait des dizaines d'erreurs (`declare: -g: invalid option`, `bad substitution`, `declare: -A: invalid option`, `COOLBASH_MODE: unbound variable`) puis « Installation complete ✅ » : l'installation, `coolbash setup`, la CLI, les modules et un `~/.bashrc` compilé tournent maintenant sous ce bash.
+- La fonction `coolbash` lance la CLI avec le bash du shell courant (`$BASH`), pas le premier `bash` du PATH : `doctor` et `bench` parlent du shell réellement utilisé.
+- Historique sous bash 3.2 : parti d'un historique vide, `history -a` n'écrivait rien de la session (bogue de ce bash) — le fichier est alors réécrit par `history -w`.
+- `coolbash deps --install` sous Homebrew : la formule `tldr` n'existe plus (« No available formula with the name "tldr" », rien n'était installé) — c'est `tealdeer`. Chaque formule est maintenant vérifiée dans les listes du cache de brew, comme avec pacman et apt : un nom inconnu est signalé et écarté de la commande.
+- `img` : `base64 -w0` (GNU) est remplacé par `base64 | tr -d '\n'` — le `base64` de macOS refusait l'option, aucune image ne s'affichait dans iTerm2 ni kitty.
+- `coolbash bench` sous macOS : le `script` de BSD n'a pas `-c`.
+- Complétion de `coolbash sync` : `sed` de BSD ne connaît pas `\+`, aucun hôte n'était proposé.
+- `make dist` et `make pkg-deb` avec bsdtar (`--transform` et `--owner` sont GNU) ; `make uninstall` n'utilise plus `sed -i`.
+- Alias : `ls -G` quand `ls` ne connaît pas `--color` ; `free` n'est plus aliasé s'il n'existe pas ; `/usr/games` n'entre dans le PATH que s'il existe.
+### Modifié
+- Tests : portables GNU / BSD (`sed -i`, `stat -c`, `wc -l`, `script -qec`, `grep -P`, `timeout`, `base64 -w0`), le `bash` des tests est celui qui les lance, et `ITERM_SESSION_ID` n'y entre plus. Les tests tournent sous le bash qui les lance, 3.2 compris (`/bin/bash tests/run.sh`) ; la CI macOS lance la suite sous `/bin/bash` 3.2 et sous le bash de Homebrew.
+- `j` et `hstats` comptent dans `awk` (plus de tableau associatif) ; les symboles et couleurs du prompt sont des variables `COOLBASH_PROMPT_SYM_<nom>` / `COOLBASH_PROMPT_COLOR_<nom>` au lieu de tableaux associatifs — à adapter si un `90-local-overrides` les modifiait.
+
 ## 0.35.2 — 2026-10-08 · « Quand apt dit 404 »
 ### Modifié
 - `coolbash deps --install` : si `apt install` échoue, le code d'apt est rendu et un conseil s'affiche. Un 404 qui persiste après `apt-get update` (vu sur Debian 13 : les listes servies par le cache étaient périmées, mbedtls 3.6.5 demandé alors que Debian propose 3.6.6) se règle par `sudo rm -rf /var/lib/apt/lists/* && sudo apt-get update` ; `--fix-missing` installe le reste tout de suite.

@@ -22,10 +22,15 @@ else
     alias ls='ls --color=auto --group-directories-first'
     alias ll='ls -alF --color=auto --group-directories-first'
     alias la='ls -A --color=auto --group-directories-first'
-  else
+  elif command ls --color=auto -d / >/dev/null 2>&1; then
     alias ls='ls --color=auto'
     alias ll='ls -alF --color=auto'
     alias la='ls -A --color=auto'
+  else
+    # FR : ls de BSD (macOS avant la 12) : -G, pas de --color.
+    alias ls='ls -G'
+    alias ll='ls -alFG'
+    alias la='ls -AG'
   fi
 fi
 
@@ -36,7 +41,7 @@ alias egrep='grep -E --color=auto'
 
 # FR: Affichages pratiques.
 alias df='df -h'
-alias free='free -h'
+command -v free >/dev/null 2>&1 && alias free='free -h' # FR : absent de macOS
 
 # FR: Sécurité douce (n'affecte pas les scripts).
 alias rm='rm -i'
